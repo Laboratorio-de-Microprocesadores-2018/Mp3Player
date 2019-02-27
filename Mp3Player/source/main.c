@@ -42,59 +42,24 @@
 
 #include "mp3dec.h"
 #include "fsl_gpio.h"
-#include "Vumeter.h"
+//#include "Vumeter.h"
 #include "Button.h"
 #include "LedMatrix.h"
 #include "Input.h"
 #include "ILI9341.h"
+#include "FileExplorer.h"
 
 /*
  * @brief   Application entry point.
  */
 
 
-int16_t  samples[NSAMPLES];
+//int16_t  samples[NSAMPLES];
 Color OSHO[]={{.val=0x262261},{.val=0x8E44AD},{.val=0xEFEFEF},{.val=0x636363},{.val=0xC1C1C1}};
 
 Color colors[3];
 int i;
 
-
-
-void nextColor(void * b)
-{
-	i=(i+1)%3;
-	LedMatrix_PlainColor(colors[i]);
-}
-
-void prevColor(void * b)
-{
-	i=(i+3-1)%3;
-	LedMatrix_PlainColor(colors[i]);
-}
-
-void whiteScreen(void * b)
-{
-	Color c = {.val = 0x141414};
-	c.R = 15;
-	LedMatrix_PlainColor(c);
-}
-void decreaseBrightness(void * b)
-{
-	if(colors[i].RGB[i]>=10)
-		colors[i].RGB[i]-=10;
-	LedMatrix_PlainColor(colors[i]);
-}
-void increaseBrightness(void * b)
-{
-	if(colors[i].RGB[i]<250)
-		colors[i].RGB[i]+=10;
-	LedMatrix_PlainColor(colors[i]);
-}
-void clearScreen(void * b)
-{
-	LedMatrix_Clear();
-}
 
 
 int main(void)
@@ -103,8 +68,23 @@ int main(void)
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
     BOARD_InitBootPeripherals();
+    BOARD_InitDebugConsole();
 
-    //ILI9341_Init();
+    FE_Init();
+
+    int a=0,g=0;
+    while(1)
+    {
+    	a++;
+    	if(a>1000)
+    		a=0;
+    	if(FE_check4Drive())
+    	{
+    		g=1;
+    		PRINTF("\r\nCard inserted\r\n");
+    	}
+    }
+/*    //ILI9341_Init();
 
     LedMatrix_Init();
 
@@ -147,4 +127,53 @@ int main(void)
 */
     return 0 ;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void nextColor(void * b)
+{
+	i=(i+1)%3;
+	LedMatrix_PlainColor(colors[i]);
+}
+
+void prevColor(void * b)
+{
+	i=(i+3-1)%3;
+	LedMatrix_PlainColor(colors[i]);
+}
+
+void whiteScreen(void * b)
+{
+	Color c = {.val = 0x141414};
+	c.R = 15;
+	LedMatrix_PlainColor(c);
+}
+void decreaseBrightness(void * b)
+{
+	if(colors[i].RGB[i]>=10)
+		colors[i].RGB[i]-=10;
+	LedMatrix_PlainColor(colors[i]);
+}
+void increaseBrightness(void * b)
+{
+	if(colors[i].RGB[i]<250)
+		colors[i].RGB[i]+=10;
+	LedMatrix_PlainColor(colors[i]);
+}
+void clearScreen(void * b)
+{
+	LedMatrix_Clear();
+}
+
 

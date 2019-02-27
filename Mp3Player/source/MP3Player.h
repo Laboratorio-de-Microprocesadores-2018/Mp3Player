@@ -11,7 +11,8 @@
 #include <stdbool.h>
 
 bool MP3_Init();
-
+void MP3_Tick();
+void MP3_Play();
 
 
 #endif /* MP3PLAYER_H_ */
