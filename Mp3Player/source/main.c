@@ -71,16 +71,21 @@ int main(void)
     BOARD_InitDebugConsole();
 
     FE_Init();
-
-    int a=0,g=0;
+    char path[256];
+    uint16_t n=3;
+    strcpy(path, "/");
+    FILINFO files[3];
     while(1)
     {
-    	a++;
-    	if(a>1000)
-    		a=0;
-    	if(FE_check4Drive())
+    	if(FE_check4Drive()== kStatus_Success)
     	{
-    		g=1;
+    		if(FE_mountDrive()== kStatus_Success)
+    		{
+    			FE_DirN(path,&n,files);
+    			PRINTF("%d",n);
+    		}
+
+
     		PRINTF("\r\nCard inserted\r\n");
     	}
     }
