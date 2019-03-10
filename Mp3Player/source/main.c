@@ -40,7 +40,7 @@
 #include "MK64F12.h"
 #include "fsl_debug_console.h"
 
-#include "mp3dec.h"
+
 #include "fsl_gpio.h"
 //#include "Vumeter.h"
 #include "Button.h"
@@ -48,6 +48,7 @@
 #include "Input.h"
 #include "ILI9341.h"
 #include "FileExplorer.h"
+#include "MP3Player.h"
 
 /*
  * @brief   Application entry point.
@@ -71,24 +72,29 @@ int main(void)
     BOARD_InitDebugConsole();
 
     FE_Init();
+
+    MP3_Init();
+
     char path[256];
-    uint16_t n=3;
-    strcpy(path, "/");
-    FILINFO files[3];
+	uint16_t n=10;
+	strcpy(path, "/");
+	FILINFO files[10];
+
+	if(FE_check4Drive()== kStatus_Success)
+	{
+		if(FE_mountDrive()== kStatus_Success)
+		{
+			FE_DirN(path,&n,&files);
+			PRINTF("%d",n);
+		}
+
+	}
+
+ 	MP3_Play(files[1].fname);
     while(1)
-    {
-    	if(FE_check4Drive()== kStatus_Success)
-    	{
-    		if(FE_mountDrive()== kStatus_Success)
-    		{
-    			FE_DirN(path,&n,files);
-    			PRINTF("%d",n);
-    		}
+     	MP3_Tick();
 
 
-    		PRINTF("\r\nCard inserted\r\n");
-    	}
-    }
 /*    //ILI9341_Init();
 
     LedMatrix_Init();
@@ -114,7 +120,7 @@ int main(void)
     while(1);
 
 
-/*
+
     Vumeter_Init();
 
 

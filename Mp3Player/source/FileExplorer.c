@@ -1,7 +1,3 @@
-/*
- * FileExplorer.c
- */
-
 #include "FileExplorer.h"
 #include "stdbool.h"
 
