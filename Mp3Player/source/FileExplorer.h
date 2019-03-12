@@ -8,6 +8,13 @@
 #include "stdbool.h"
 
 
+#define FE_EOF(fp) 		 f_eof(fp)
+#define FE_Error(fp) 	 f_error(fp)
+#define FE_Size(fp) 	 f_size(fp)
+#define FE_Rewind(fp) 	 f_rewind(fp)
+#define FE_RewindDir(dp) f_rewinddir(dp)
+#define FE_RmDir(path) 	 f_rmdir(path)
+#define FE_Unmount(path) f_unmount(path)
 
 status_t FE_Init();
 status_t FE_check4Drive();

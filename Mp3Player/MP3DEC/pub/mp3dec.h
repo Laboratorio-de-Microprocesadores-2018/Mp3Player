@@ -84,7 +84,7 @@ extern "C" {
 #define MAX_NGRAN		2		/* max granules */
 #define MAX_NCHAN		2		/* max channels */
 #define MAX_NSAMP		576		/* max samples per channel, per granule (576 default) */
-
+#define MAX_SAMPLES_PER_FRAME (MAX_NGRAN * MAX_NCHAN  * MAX_NSAMP)
 /* map to 0,1,2 to make table indexing easier */
 typedef enum {
 	MPEG1 =  0,
@@ -94,7 +94,7 @@ typedef enum {
 
 typedef void *HMP3Decoder;
 
-enum {
+typedef enum {
 	ERR_MP3_NONE =                  0,
 	ERR_MP3_INDATA_UNDERFLOW =     -1,
 	ERR_MP3_MAINDATA_UNDERFLOW =   -2,
@@ -110,7 +110,7 @@ enum {
 	ERR_MP3_INVALID_SUBBAND =      -12,
 
 	ERR_UNKNOWN =                  -9999
-};
+}MP3Error;
 
 typedef struct _MP3FrameInfo {
 	int bitrate;
@@ -121,6 +121,22 @@ typedef struct _MP3FrameInfo {
 	int layer;
 	int version;
 } MP3FrameInfo;
+
+typedef struct {
+	int32_t syncWord      : 11;
+	int32_t version       : 2;
+	int32_t layer         : 2;
+	int32_t protection    : 1;
+	int32_t bitrate       : 4;
+	int32_t samplingFreq  : 2;
+	int32_t padding       : 1;
+	int32_t private 	  : 1;
+	int32_t channelMode   : 2;
+	int32_t modeExtension : 2;
+	int32_t copyright     : 1;
+	int32_t original      : 1;
+	int32_t emphasis      : 2;
+}MP3FrameHeader;
 
 /* public API */
 HMP3Decoder MP3InitDecoder(void);

@@ -90,7 +90,10 @@ int main(void)
 
 	}
 
- 	MP3_Play(files[1].fname);
+	uint32_t duration = 0;
+	MP3_ComputeSongDuration(files[5].fname,&duration);
+
+ 	MP3_Play(files[5].fname);
     while(1)
      	MP3_Tick();
 

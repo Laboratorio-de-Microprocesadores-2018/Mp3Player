@@ -5,6 +5,10 @@
 #include "fsl_dmamux.h"
 #include "fsl_pit.h"
 #include "assert.h"
+
+#define  AUDIO_BUFFER_SIZE 2304
+#define  CIRC_BUFFER_LEN 10
+
 #define USE_PIT 1
 
 #define AUDIO_PDB_BASEADDR PDB0
@@ -25,8 +29,13 @@
 #define AUDIO_PIT PIT
 #define AUDIO_PIT_CHNL  kPIT_Chnl_0
 
+typedef struct{
+	uint16_t samples[AUDIO_BUFFER_SIZE];
+	uint16_t nSamples;
+	uint32_t sampleRate;
+}PCM_AudioFrame;
 
-static uint16_t PCM_SAMPLES[CIRC_BUFFER_LEN+1][SAMPLES_PER_FRAME];
+static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
 static uint8_t circBufferHead;
 static uint8_t circBufferTail;
 
@@ -81,16 +90,27 @@ status_t Audio_Init()
 }
 
 
+void Audio_ResetBuffers()
+{
+	for(int i=0; i<CIRC_BUFFER_LEN; i++)
+	{
+		memset(audioFrame[i].samples,0,AUDIO_BUFFER_SIZE);
+		audioFrame[i].nSamples = AUDIO_BUFFER_SIZE;
+		audioFrame[i].sampleRate = 44100;
+	}
+	circBufferHead=0;
+	circBufferTail=0;
+}
 
 void Audio_Play()
 {
 	EDMA_PrepareTransfer(&transferConfig,
-						 (void *)(PCM_SAMPLES[circBufferTail]),
+						 (void *)(audioFrame[circBufferTail].samples),
 						 sizeof(uint16_t),
 						 (void *)DAC_DATA_REG_ADDR,
 						 sizeof(uint16_t),
 						 sizeof(uint16_t),						// One sample per request
-						 SAMPLES_PER_FRAME * sizeof(uint16_t),	// Transfer an entire frame
+						 AUDIO_BUFFER_SIZE * sizeof(uint16_t),	// Transfer an entire frame
 						 kEDMA_MemoryToPeripheral);
 
 	EDMA_SetTransferConfig(AUDIO_DMA_BASEADDR, AUDIO_DMA_CHANNEL, &transferConfig, NULL);
@@ -117,15 +137,18 @@ void Audio_Resume()
 }
 uint16_t * Audio_GetBackBuffer()
 {
-	return PCM_SAMPLES[circBufferTail];
+	return audioFrame[circBufferTail].samples;
 }
 
-void Audio_FillBackBuffer(int16_t* samples)
+void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate)
 {
-	for(int i=0; i<SAMPLES_PER_FRAME; i++)
+	for(int i=0; i<nSamples; i++)
 	{
-		PCM_SAMPLES[circBufferHead][i] = ((uint16_t)(samples[i]+32768))>>4;
+		audioFrame[circBufferHead].samples[i] = ((uint16_t)(samples[i]+32768))>>4;
 	}
+
+	audioFrame[circBufferHead].nSamples = nSamples;
+	audioFrame[circBufferHead].sampleRate = sampleRate;
 
 	// Make this push atomic operation
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
@@ -133,7 +156,7 @@ void Audio_FillBackBuffer(int16_t* samples)
 	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 }
 
-void Audio_SetSampleRate(uint16_t sr)
+void Audio_SetSampleRate(uint32_t sr)
 {
 #if USE_PIT == 1
 	PIT_SetTimerPeriod(AUDIO_PIT, AUDIO_PIT_CHNL, CLOCK_GetFreq(kCLOCK_BusClk)/sr+1);
@@ -282,7 +305,7 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
     if (index > SAMPLES_PER_FRAME)
     {
         BUFFER_POP;
-        activeBuffer = PCM_SAMPLES[circBufferTail];
+        activeBuffer = audioFrame[circBufferTail];
         index = 0U;
     }
 
@@ -302,13 +325,16 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
 
     index += DAC_DATL_COUNT;
 #elif USE_PIT == 1
+
+    Audio_SetSampleRate(audioFrame[circBufferTail].sampleRate);
+
     EDMA_PrepareTransfer(&transferConfig,
-						 (void *)(PCM_SAMPLES[circBufferTail]),
+						 (void *)(audioFrame[circBufferTail].samples),
 						 sizeof(uint16_t),
 						 (void *)DAC_DATA_REG_ADDR,
 						 sizeof(uint16_t),
 						 sizeof(uint16_t),						// One sample per request
-						 SAMPLES_PER_FRAME * sizeof(uint16_t),	// Transfer an entire frame
+						 audioFrame[circBufferTail].nSamples * sizeof(uint16_t),	// Transfer an entire frame
 						 kEDMA_MemoryToPeripheral);
     BUFFER_POP;
 
