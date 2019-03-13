@@ -348,6 +348,8 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
     index += DAC_DATL_COUNT;
 #elif USE_PIT == 1
 
+    assert(BUFFER_IS_EMPTY==false);
+
     Audio_SetSampleRate(audioFrame[circBufferTail].sampleRate);
 
     EDMA_PrepareTransfer(&transferConfig,

@@ -2,10 +2,12 @@
 #include "Audio.h"
 #include "FileExplorer.h"
 #include "mp3dec.h"
-#include "../Helix/Pub/Mp3Dec.h"
+#include "Mp3Dec.h"
 
 #include "math.h"
 #include "assert.h"
+
+#include "fsl_debug_console.h"
 
 #define  READ_BUFFER_SIZE  (1024*8)
 
@@ -95,6 +97,8 @@ static void MP3_PlayCurrentSong()
 
 	if(result == FR_OK)
 	{
+		PRINTF("Playing '%s' \n",currentFileInfo.fname);
+
 		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME);
 
 		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
@@ -155,11 +159,14 @@ void MP3_PlayPause()
 	{
 		Audio_Pause();
 		status = PAUSE;
+		PRINTF("Paused\n");
 	}
 	else if(status == PAUSE)
 	{
 		Audio_Resume();
 		status = PLAYING;
+		PRINTF("Playing '%s' \n",currentFileInfo.fname);
+
 	}
 }
 

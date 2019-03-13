@@ -93,7 +93,7 @@ int main(void)
 		if(FE_mountDrive()== kStatus_Success)
 		{
 			FE_DirN(path,&n,files);
-			PRINTF("%d",n);
+			PRINTF("%d\n",n);
 		}
 
 	}
