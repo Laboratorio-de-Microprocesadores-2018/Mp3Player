@@ -31,7 +31,7 @@ void Button_Attach(struct Button* handle, ButtonEvent event, ButtonCallback cb)
 }
 
 
-ButtonEvent getButtonEvent(struct Button* handle)
+ButtonEvent Button_GetEvent(struct Button* handle)
 {
 	return (ButtonEvent)(handle->event);
 }

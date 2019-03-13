@@ -55,19 +55,27 @@
  */
 
 
-//int16_t  samples[NSAMPLES];
-Color OSHO[]={{.val=0x262261},{.val=0x8E44AD},{.val=0xEFEFEF},{.val=0x636363},{.val=0xC1C1C1}};
+uint8_t ReadSW2()
+{
+	return SW2_READ();
+}
 
-Color colors[3];
+uint8_t ReadSW3()
+{
+	return SW3_READ();
+}
+
 int i;
-
-
 
 int main(void)
 {
   	/* Init board hardware. */
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
+
+    BOARD_InitButtonsPins();
+    BOARD_InitLEDsPins();
+
     BOARD_InitBootPeripherals();
     BOARD_InitDebugConsole();
 
@@ -84,18 +92,79 @@ int main(void)
 	{
 		if(FE_mountDrive()== kStatus_Success)
 		{
-			FE_DirN(path,&n,&files);
+			FE_DirN(path,&n,files);
 			PRINTF("%d",n);
 		}
 
 	}
 
 	uint32_t duration = 0;
-	MP3_ComputeSongDuration(files[5].fname,&duration);
+	//MP3_ComputeSongDuration(files[2].fname,&duration);
 
- 	MP3_Play(files[5].fname);
-    while(1)
+	MP3_Play("",0);
+
+
+ 	Button SW2,SW3;
+
+	Button_Init(&SW2,ReadSW2, 0);
+	Button_Init(&SW3,ReadSW3, 0);
+
+	Button_Start(&SW2);
+	Button_Start(&SW3);
+
+	LED_GREEN_ON();
+
+	while(1)
+	{
+		ButtonEvent SW2Event,SW3Event;
+
+		static uint32_t count;
+		count++;
+		if(count == 0xFFF)
+		{
+			count = 0;
+			Button_Tick();
+		}
+
+
+		if(SW2Event != Button_GetEvent(&SW2))
+		{
+			SW2Event = Button_GetEvent(&SW2);
+			switch(SW2Event)
+			{
+			case PRESS_DOWN:
+				MP3_PlayPause();
+				LED_RED_TOGGLE();
+				LED_GREEN_TOGGLE();
+				break;
+			case PRESS_UP:
+				break;
+			case LONG_PRESS_HOLD:
+				LED_BLUE_TOGGLE();
+			break;
+			}
+		}
+
+		if(SW3Event != Button_GetEvent(&SW3))
+		{
+			SW3Event = Button_GetEvent(&SW3);
+			switch(SW3Event)
+			{
+			case PRESS_DOWN:
+				MP3_Next();
+				LED_BLUE_ON();
+				break;
+			case PRESS_UP:
+				LED_BLUE_OFF();
+				break;
+			case LONG_PRESS_HOLD:
+				MP3_Prev();
+			break;
+			}
+		}
+
      	MP3_Tick();
+    }
 
 
 /*    //ILI9341_Init();
@@ -140,54 +209,6 @@ int main(void)
 	Vumeter_Display();
 */
     return 0 ;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void nextColor(void * b)
-{
-	i=(i+1)%3;
-	LedMatrix_PlainColor(colors[i]);
-}
-
-void prevColor(void * b)
-{
-	i=(i+3-1)%3;
-	LedMatrix_PlainColor(colors[i]);
-}
-
-void whiteScreen(void * b)
-{
-	Color c = {.val = 0x141414};
-	c.R = 15;
-	LedMatrix_PlainColor(c);
-}
-void decreaseBrightness(void * b)
-{
-	if(colors[i].RGB[i]>=10)
-		colors[i].RGB[i]-=10;
-	LedMatrix_PlainColor(colors[i]);
-}
-void increaseBrightness(void * b)
-{
-	if(colors[i].RGB[i]<250)
-		colors[i].RGB[i]+=10;
-	LedMatrix_PlainColor(colors[i]);
-}
-void clearScreen(void * b)
-{
-	LedMatrix_Clear();
 }
 
 

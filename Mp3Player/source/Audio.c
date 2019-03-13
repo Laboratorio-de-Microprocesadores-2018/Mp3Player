@@ -36,8 +36,9 @@ typedef struct{
 }PCM_AudioFrame;
 
 static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
-static uint8_t circBufferHead;
-static uint8_t circBufferTail;
+static volatile uint8_t circBufferHead;
+static volatile uint8_t circBufferTail;
+
 
 // Circular buffer
 #define BUFFER_POP  circBufferTail = (circBufferTail+1)%CIRC_BUFFER_LEN
@@ -76,6 +77,7 @@ status_t Audio_Init()
 	PDB_Configuration();
 #elif USE_PIT==1
 	PIT_Configuration();
+	PIT_StartTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
 #endif
 	/* Initialize DAC. */
 	DAC_Configuration();
@@ -122,18 +124,26 @@ void Audio_Play()
 	// Free back buffer
 	BUFFER_POP;
 
-	PIT_StartTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+	//PIT_StartTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+}
+
+void Audio_Stop()
+{
+	EDMA_AbortTransfer(&DMA_Handle);
+	//PIT_StopTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+	Audio_ResetBuffers();
 }
 
 void Audio_Pause()
 {
-	pausePending = true;
-	PIT_StopTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+	EDMA_StopTransfer(&DMA_Handle);
+	//PIT_StopTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
 }
 
 void Audio_Resume()
 {
-	PIT_StartTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+	//PIT_StartTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
+	EDMA_StartTransfer(&DMA_Handle);
 }
 uint16_t * Audio_GetBackBuffer()
 {
@@ -167,8 +177,20 @@ void Audio_SetSampleRate(uint32_t sr)
 
 bool Audio_BackBufferIsFree()
 {
-	return !BUFFER_IS_FULL;
+	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+	bool b = !BUFFER_IS_FULL;
+	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+	return b;
 }
+
+bool Audio_BackBufferIsEmpty()
+{
+	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+	bool b = !BUFFER_IS_EMPTY;
+	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+	return b;
+}
+
 
 
 
@@ -339,7 +361,7 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
     BUFFER_POP;
 
 	EDMA_SetTransferConfig(AUDIO_DMA_BASEADDR, AUDIO_DMA_CHANNEL, &transferConfig, NULL);
-	EDMA_SubmitTransfer(&DMA_Handle, &transferConfig);
+	//EDMA_SubmitTransfer(&DMA_Handle, &transferConfig);
 	/* Enable transfer. */
 	EDMA_StartTransfer(&DMA_Handle);
 #endif

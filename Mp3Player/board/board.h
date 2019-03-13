@@ -130,6 +130,12 @@
 #define LED_BLUE_TOGGLE() \
     GPIO_PortToggle(BOARD_LED_BLUE_GPIO, 1U << BOARD_LED_BLUE_GPIO_PIN) /*!< Toggle on target LED_BLUE */
 
+#define SW2_READ() \
+	GPIO_PinRead(BOARD_SW2_GPIO, BOARD_SW2_GPIO_PIN);
+
+#define SW3_READ() \
+	GPIO_PinRead(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN);
+
 /* The SDHC instance/channel used for board */
 #define BOARD_SDHC_CD_GPIO_IRQ_HANDLER PORTB_IRQHandler
 

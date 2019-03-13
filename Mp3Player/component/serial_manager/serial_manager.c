@@ -13,7 +13,7 @@
 
 #if (defined(SERIAL_MANAGER_NON_BLOCKING_MODE) && (SERIAL_MANAGER_NON_BLOCKING_MODE > 0U))
 
-#include "generic_list.h"
+//#include "generic_list.h"
 
 /*
  * The OSA_USED macro can only be defined when the OSA component is used.

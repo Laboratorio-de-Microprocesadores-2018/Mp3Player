@@ -62,6 +62,7 @@ void Button_Attach(struct Button* handle, ButtonEvent event, ButtonCallback cb);
   * @param  handle: the button handle struct.
   * @retval button event.
   */
+
 ButtonEvent Button_GetEvent(struct Button* handle);
 
 /**
@@ -79,7 +80,7 @@ int  Button_Start(struct Button* handle);
 void Button_Stop(struct Button* handle);
 
 /**
-  * @brief  Invokke this function periodically.
+  * @brief  Invoke this function periodically.
   * @param  None.
   * @retval None
   */

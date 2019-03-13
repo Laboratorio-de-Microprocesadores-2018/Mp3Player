@@ -21,20 +21,22 @@ static MP3FrameInfo mp3FrameInfo;
 
 /* Current file */
 static FIL currentFile;
+static FILINFO currentFileInfo;
+//static DIR currentDir;
+static char curPath[256];
+static uint8_t filesIndexLut[MAX_FILES_PER_DIR];
+static uint8_t curSong;
+
 
 static uint8_t readBuf[READ_BUFFER_SIZE];
 static uint8_t * readPtr;
 static uint32_t bytesLeft;
 
-int outOfData, eofReached;
-
 static int16_t audioBuf[MAX_SAMPLES_PER_FRAME];
-
-static int16_t audioBuf[MAX_SAMPLES_PER_FRAME];
-static char currPath[256];
 
 static uint32_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint32_t bytesLeft);
 static status_t MP3_DecodeFrame();
+static void MP3_PlayCurrentSong();
 
 status_t MP3_Init()
 {
@@ -51,31 +53,51 @@ status_t MP3_Init()
 	Audio_Init();
 	status = IDLE;
 
-
-	for(int i=0; i<MAX_SAMPLES_PER_FRAME; i++)
-	{
-		//audioBuf[i] = (int16_t)(((uint16_t)(((float)i/(float)MAX_SAMPLES_PER_FRAME)*65536))-32768);
-		audioBuf[i] = sin( (float)i/MAX_SAMPLES_PER_FRAME * 2 * 3.14)*32767;
-
-	}
-
-		//audioBuf[i] = (int16_t)(((uint16_t)(((float)i/(float)MAX_SAMPLES_PER_FRAME)*65536))-32768);
-
 	return kStatus_Success;
 }
 
 
-void MP3_Play(char * path)
+void MP3_Play(char * dirPath, uint8_t index)
 {
+	if(status == PLAYING)
+		MP3_Stop();
 
-	FRESULT result = FE_OpenFile(&currentFile, path, FA_READ);
 
-	assert(result == FR_OK);
+	strcpy(curPath,dirPath);
+
+	// Sort files
+	/*
+
+	FE_GetSortedFiles(filesIndexLut,&numberOfSongs) Funcion de marcos
+	uint8_t i = 0;
+	while(filesIndexLut[i]!=index && filesIndexLut[i]!=EOF) i++;
+	if(filesIndexLut[i]==index)
+		curSong = i;
+	*/
+
+	// TEMPORAL
+	curSong = index;
+	filesIndexLut[curSong] = index;
+
+
+	MP3_PlayCurrentSong();
+}
+
+static void MP3_PlayCurrentSong()
+{
+	// Open file
+	FRESULT result = FE_OpenFileN(  curPath,
+									&currentFile,
+									&currentFileInfo,
+									FA_READ,
+									filesIndexLut[curSong],
+									"*.mp3");
 
 	if(result == FR_OK)
 	{
 		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME);
 
+		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
 		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
 		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
 
@@ -87,16 +109,59 @@ void MP3_Play(char * path)
 		status = PLAYING;
 	}
 
-	// Abrir el archivo
-	// Sincronizar con helix
-	// Decodificar el primer frame
-	// Pasar al status PLAYING
+}
+
+void MP3_Stop()
+{
+	if(status == PLAYING)
+	{
+		Audio_Stop();
+		FE_CloseFile(&currentFile);
+	}
+}
+
+void MP3_Next()
+{
+	if(status == PLAYING)
+		MP3_Stop();
+
+	/* DESCOMENTAR CUANDO ESTE LO DE GENERAR LA PLAYLIST
+	// Move to next song in current folder
+	curSong++;
+
+	// Wrap around if reached the end
+	if(filesIndexLut[curSong]==EOF)
+		curSong = 0;
+	*/
+	filesIndexLut[curSong]++;
+
+	MP3_PlayCurrentSong();
 
 
 
 }
 
+void MP3_Prev()
+{
+	if(status == PLAYING)
+			MP3_Stop();
 
+
+}
+
+void MP3_PlayPause()
+{
+	if(status==PLAYING)
+	{
+		Audio_Pause();
+		status = PAUSE;
+	}
+	else if(status == PAUSE)
+	{
+		Audio_Resume();
+		status = PLAYING;
+	}
+}
 
 void MP3_Tick()
 {
@@ -118,14 +183,24 @@ void MP3_Tick()
 									 mp3FrameInfo.samprate * 2);
 			else
 			{
-
+				status = PLAYING_LAST_FRAMES;
 			}
 
 		}
 		break;
 
 	case PLAYING_LAST_FRAMES:
+		// Wait to audio buffer empties
+		if(Audio_BackBufferIsEmpty())
+		{
+			// When empties stop playback and close file
+			Audio_Stop();
+			FE_CloseFile(&currentFile);
+			MP3_Next();
+		}
+
 		break;
+
 	case PAUSE_PENDING:
 
 		break;
@@ -174,8 +249,8 @@ static status_t MP3_DecodeFrame()
 
 			if (nRead == 0)
 			{
-				eofReached = 1;	/* end of file */
-				outOfData = 1;
+				//eofReached = 1;	/* end of file */
+				//outOfData = 1;
 			}
 
 			bytesLeft += nRead;
@@ -184,7 +259,7 @@ static status_t MP3_DecodeFrame()
 		}
 
 		/* Find start of next MP3 frame - assume EOF if no sync found */
-		uint32_t offset = MP3FindSyncWord(readPtr, bytesLeft);
+		int32_t offset = MP3FindSyncWord(readPtr, bytesLeft);
 
 		if (offset < 0)
 		{
@@ -218,7 +293,6 @@ static status_t MP3_DecodeFrame()
 			continue;
 
 		case ERR_MP3_INDATA_UNDERFLOW:
-			outOfData = 1;
 			break;
 
 		case ERR_MP3_MAINDATA_UNDERFLOW:
@@ -228,7 +302,7 @@ static status_t MP3_DecodeFrame()
 		case ERR_MP3_FREE_BITRATE_SYNC:
 
 		default:
-			outOfData = 1;
+
 			break;
 		}
 	}

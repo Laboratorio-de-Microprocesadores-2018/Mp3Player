@@ -7,6 +7,7 @@
 #include "ff.h"
 #include "stdbool.h"
 
+#define MAX_FILES_PER_DIR 255
 
 #define FE_EOF(fp) 		 f_eof(fp)
 #define FE_Error(fp) 	 f_error(fp)
@@ -36,9 +37,14 @@ static inline FRESULT FE_CloseFile (FIL* fp )
 	return f_close(fp);
 }
 
+static inline FRESULT FE_OpenDir (DIR* dp, const char* path)
+{
+	return f_opendir(dp,path);
+}
 
+/**
+ * @brief Open the nth file in the dir which matches the pattern
+ */
 
-
-
-
+FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, uint8_t n, const char * pattern);
 #endif /* FILEEXPLORER_H_ */

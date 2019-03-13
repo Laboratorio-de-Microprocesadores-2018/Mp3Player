@@ -148,3 +148,31 @@ status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 	return retVal;
 }
 
+
+
+/**
+ * @brief Open the nth file in the given dir which matches the pattern
+ */
+
+FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, uint8_t n, const char * pattern)
+{
+    DIR dir;
+
+    FRESULT res = f_findfirst(&dir, fileInfo, path, pattern);
+
+    if(res == FR_OK)
+    {
+    	while( (n--)>0 && res==FR_OK && fileInfo->fname[0] )
+    		 res = f_findnext(&dir, fileInfo);
+
+    	res = f_open(fp,fileInfo->fname,mode);
+    }
+    else
+    {
+
+    }
+
+    f_closedir(&dir);
+
+    return res;
+}

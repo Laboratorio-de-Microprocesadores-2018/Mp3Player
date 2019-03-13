@@ -9,7 +9,7 @@
 #ifndef _FSL_COMMON_H_
 #define _FSL_COMMON_H_
 
-#include <assert.h>
+#include "Assert.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
