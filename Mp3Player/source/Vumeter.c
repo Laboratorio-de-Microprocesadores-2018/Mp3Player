@@ -1,4 +1,4 @@
-/*#include "Vumeter.h"
+#include "Vumeter.h"
 #include "LedMatrix.h"
 #define ARM_MATH_CM4
 #include "arm_math.h"
@@ -11,15 +11,18 @@ static arm_rfft_fast_instance_f32 fftInstance;
 
 static uint16_t binLimits[NBINS+1];
 
+static bool backBufferEmpty;
+
 // Static colors
 
-static Color Green  = {.RGB={0,40,0}};
-static Color Yellow = {.RGB={40,40,0}};
-static Color Orange = {.RGB={60,25,5}};
-static Color Red    = {.RGB={40,0,0}};
+static Color Green  = {.RGB={0,20,0}};
+static Color Yellow = {.RGB={14,14,0}};
+static Color Orange = {.RGB={18,6,1}};
+static Color Red    = {.RGB={20,0,0}};
 static Color White  = {.RGB={20,20,20}};
 static Color Clear  = {.RGB={0,0,0}};
 static Color Blue   = {.RGB={0,0,40}};
+
 // Vumeter screen
 static Color screen[8][8];
 
@@ -35,11 +38,26 @@ void Vumeter_Init()
 	for(int i=1; i<=NBINS; i++)
 		binLimits[i]=(pow(10,i*step)+0.5);
 
+	backBufferEmpty = true;
+
 
 }
-// ~760us xxxx Ahora tarda 1.2~1.3ms (Si se modifica la funcion, medir de vuelta!)
-void Vumeter_Generate(int16_t * s)
+
+bool Vumeter_BackBufferEmpty()
 {
+	return backBufferEmpty;
+}
+
+// ~760us xxxx Ahora tarda 1.2~1.3ms (Si se modifica la funcion, medir de vuelta!)
+void Vumeter_Generate(int16_t * ss)
+{
+	backBufferEmpty = false;
+
+	// Take only one channel samples (skip right channel)
+	int16_t s[NSAMPLES];
+	for(int i=0; i<NSAMPLES; i++)
+		s[i]=ss[2*i];
+
 	// Convert samples to float
 	float32_t samples[NSAMPLES];
 	arm_q15_to_float(s,samples,NSAMPLES);
@@ -60,15 +78,15 @@ void Vumeter_Generate(int16_t * s)
 	}
 
 	// Find its maximum
-	float32_t max;
-	uint32_t index;
-	arm_max_f32(mean, NBINS, &max, &index);
+//	float32_t max;
+//	uint32_t index;
+//	arm_max_f32(mean, NBINS, &max, &index);
 
 	// Convert to an integer to send to bars on the display
+	// (constrain 0-NBINS)
 	uint8_t binValues[NBINS] = {};
 	for(int i=0; i<NBINS; i++)
-		binValues[i] = MIN(MAX((uint8_t)((mean[i]+0.5)/max*NBINS), 0), NBINS); // Constrain 0-NBINS
-
+		binValues[i] = MIN(MAX((uint8_t)((mean[i]+1)/2.5*NBINS), 0), NBINS);
 
 
 	uint8_t offsetX =  MATRIX_HEIGHT-1;
@@ -98,15 +116,24 @@ void Vumeter_Generate(int16_t * s)
 		}
 	}
 
+
+
 }
 // ~190us
 void Vumeter_Display()
 {
-	LedMatrix_PrintScreen(screen);
+	backBufferEmpty = true;
+
+	LedMatrix_PrintScreen((Color*)screen);
 	//LedMatrix_PlainColor(Blue);
 }
 
 void Vumeter_Clear()
 {
+	for(int y=0; y<MATRIX_HEIGHT; y++)
+		for(int x=0; x < MATRIX_HEIGHT; x++)
+			screen[x][y] = Clear;
+	backBufferEmpty = true;
 
-}*/
+	LedMatrix_Clear();
+}

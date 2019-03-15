@@ -33,12 +33,12 @@ typedef struct{
 	uint16_t samples[AUDIO_BUFFER_SIZE];
 	uint16_t nSamples;
 	uint32_t sampleRate;
+	uint32_t frameNumber;
 }PCM_AudioFrame;
 
 static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
 static volatile uint8_t circBufferHead;
 static volatile uint8_t circBufferTail;
-
 
 // Circular buffer
 #define BUFFER_POP  circBufferTail = (circBufferTail+1)%CIRC_BUFFER_LEN
@@ -150,7 +150,16 @@ uint16_t * Audio_GetBackBuffer()
 	return audioFrame[circBufferTail].samples;
 }
 
-void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate)
+
+uint32_t Audio_GetCurrentFrameNumber()
+{
+	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+	uint32_t n = audioFrame[circBufferTail].frameNumber;
+	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+	return n;
+}
+
+void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
 {
 	for(int i=0; i<nSamples; i++)
 	{
@@ -159,6 +168,7 @@ void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRa
 
 	audioFrame[circBufferHead].nSamples = nSamples;
 	audioFrame[circBufferHead].sampleRate = sampleRate;
+	audioFrame[circBufferHead].frameNumber = frameNumber;
 
 	// Make this push atomic operation
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
@@ -349,6 +359,7 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
 #elif USE_PIT == 1
 
     assert(BUFFER_IS_EMPTY==false);
+
 
     Audio_SetSampleRate(audioFrame[circBufferTail].sampleRate);
 

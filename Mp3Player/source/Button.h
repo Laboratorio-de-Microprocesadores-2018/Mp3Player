@@ -27,6 +27,7 @@ typedef enum {
 
 typedef struct Button {
 	uint16_t ticks;
+	uint8_t ID;
 	uint8_t  repeat : 4;
 	uint8_t  event : 4;
 	uint8_t  state : 3;
@@ -46,7 +47,7 @@ typedef struct Button {
   * @param  active_level: pressed GPIO level.
   * @retval None
   */
-void Button_Init(struct Button* handle, uint8_t(*pinLevel)(), uint8_t activeLevel);
+void Button_Init(struct Button* handle, uint8_t(*pinLevel)(), uint8_t activeLevel, uint8_t ID);
 
 /**
   * @brief  Attach the button event callback function.

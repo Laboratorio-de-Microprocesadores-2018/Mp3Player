@@ -25,4 +25,7 @@ uint8_t Input_ReadEncoderDirection();
 void Input_Attach(ButtonID button, ButtonEvent ev, ButtonCallback);
 void Input_AttachEncoderInc(InputCallback c);
 void Input_AttachEncoderDec(InputCallback c);
+
+void Input_GetEvent(ButtonID * button, ButtonEvent * ev);
+
 #endif /* INPUT_H_ */

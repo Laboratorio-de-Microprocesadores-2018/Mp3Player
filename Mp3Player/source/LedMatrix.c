@@ -32,11 +32,12 @@
 #define PADDING_SIZE 13
 #define TRANSFER_SIZE 384U         /* Transfer dataSize */
 #define TRANSFER_BAUDRATE 2500000U /* Transfer baudrate 2.5Mhz */
-#define TX_CHANNEL 0
-#define RX_CHANNEL 1
-#define INTERMEDIARY_CHANNEL 2
+#define TX_CHANNEL 3
+#define RX_CHANNEL 4
+#define INTERMEDIARY_CHANNEL 5
 
-#define DELAY3s {uint64_t counter = 0xFFFFFF; while(counter--);}
+#define COLOR_TEST 0
+
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
 /////////////////////////////////////////////////////////////////////////////////
@@ -264,6 +265,7 @@ void LedMatrix_PlainColor(Color c)
 
 void LedMatrix_ShortColorTest(void)
 {
+#if (COLOR_TEST==1)
 	uint64_t counter;
 
 	//  Colores estaticos
@@ -315,6 +317,7 @@ void LedMatrix_ShortColorTest(void)
 	LedMatrix_Clear();
 	counter = 0xFFF;
 	while(counter--);
+#endif
 
 }
 void LedMatrix_ColorTest(void)

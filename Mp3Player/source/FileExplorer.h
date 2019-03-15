@@ -42,9 +42,16 @@ static inline FRESULT FE_OpenDir (DIR* dp, const char* path)
 	return f_opendir(dp,path);
 }
 
+bool FE_DriveStatus();
+
 /**
  * @brief Open the nth file in the dir which matches the pattern
  */
 
 FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, uint8_t n, const char * pattern);
+
+/**
+ *
+ */
+uint8_t FE_CountFilesMatching(const char * path, const char * pattern);
 #endif /* FILEEXPLORER_H_ */

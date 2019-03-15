@@ -1,37 +1,8 @@
-/*
- * Copyright 2016-2018 NXP Semiconductor, Inc.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * o Redistributions of source code must retain the above copyright notice, this list
- *   of conditions and the following disclaimer.
- *
- * o Redistributions in binary form must reproduce the above copyright notice, this
- *   list of conditions and the following disclaimer in the documentation and/or
- *   other materials provided with the distribution.
- *
- * o Neither the name of NXP Semiconductor, Inc. nor the names of its
- *   contributors may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
- 
 /**
  * @file    main.c
  * @brief   Application entry point.
  */
+
 #include <stdio.h>
 #include "board.h"
 #include "peripherals.h"
@@ -42,7 +13,7 @@
 
 
 #include "fsl_gpio.h"
-//#include "Vumeter.h"
+
 #include "Button.h"
 #include "LedMatrix.h"
 #include "Input.h"
@@ -83,31 +54,27 @@ int main(void)
 
     MP3_Init();
 
-    char path[256];
-	uint16_t n=10;
-	strcpy(path, "/");
-	FILINFO files[10];
+   // Input_Init();
+
 
 	if(FE_check4Drive()== kStatus_Success)
 	{
 		if(FE_mountDrive()== kStatus_Success)
 		{
-			FE_DirN(path,&n,files);
-			PRINTF("%d\n",n);
-		}
+			uint8_t k = FE_CountFilesMatching("/","*.mp3");
 
+			PRINTF("There are %d mp3 files in root folder\n",k);
+		}
 	}
 
 	uint32_t duration = 0;
 	//MP3_ComputeSongDuration(files[2].fname,&duration);
 
-	MP3_Play("",0);
-
 
  	Button SW2,SW3;
 
-	Button_Init(&SW2,ReadSW2, 0);
-	Button_Init(&SW3,ReadSW3, 0);
+	Button_Init(&SW2,ReadSW2, 0,0);
+	Button_Init(&SW3,ReadSW3, 0,1);
 
 	Button_Start(&SW2);
 	Button_Start(&SW3);
@@ -116,7 +83,47 @@ int main(void)
 
 	while(1)
 	{
+		static bool prevStatus=false;
+
+		bool status = FE_DriveStatus();
+
+		if(status != prevStatus)
+		{
+			prevStatus=status;
+			if(status==true)
+			{
+				if(FE_mountDrive()== kStatus_Success)
+				{
+					PRINTF("Card Inserted\n");
+					MP3_Play("/",0);
+				}
+			}
+
+		}
+
+//		ButtonEvent ev;
+//		ButtonID ID;
+//
+//		Input_GetEvent(&ID,&ev);
+//		switch(ID)
+//		{
+//		case NEXT:
+//			break;
+//		case PREV:
+//			break;
+//		case PLAY:
+//			break;
+//		case MENU:
+//			break;
+//		case SELECT:
+//			break;
+//		}
+
 		ButtonEvent SW2Event,SW3Event;
+
+
+     	MP3_Tick();
+
 
 		static uint32_t count;
 		count++;
@@ -151,19 +158,20 @@ int main(void)
 			switch(SW3Event)
 			{
 			case PRESS_DOWN:
-				MP3_Next();
 				LED_BLUE_ON();
-				break;
 			case PRESS_UP:
 				LED_BLUE_OFF();
 				break;
-			case LONG_PRESS_HOLD:
+			case SINGLE_CLICK:
+				MP3_Next();
+				break;
+			case DOUBLE_CLICK:
 				MP3_Prev();
 			break;
 			}
 		}
 
-     	MP3_Tick();
+
     }
 
 

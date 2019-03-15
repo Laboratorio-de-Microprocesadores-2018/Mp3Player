@@ -8,9 +8,10 @@
 #include "clock_config.h"
 
 /* Get source clock for PIT driver */
-#define PIT_SOURCE_CLOCK CLOCK_GetFreq(kCLOCK_BusClk)
-#define PIT_HANDLER PIT0_IRQHandler
-#define PIT_IRQ_ID PIT0_IRQn
+#define INPUT_PIT_SOURCE_CLOCK CLOCK_GetFreq(kCLOCK_BusClk)
+#define INPUT_PIT_HANDLER PIT0_IRQHandler
+#define INPUT_PIT_IRQ_ID PIT0_IRQn
+#define INPUT_PIT_CHNL kPIT_Chnl_1
 
 #define INPUT_FTM FTM2
 #define FTM_QUAD_DECODER_MODULO 20U
@@ -42,6 +43,7 @@ Button playButton;
 Button selectButton;
 
 Button * buttons[NumberOfButtons] = {&prevButton,&nextButton,&menuButton,&playButton,&selectButton};
+ButtonEvent buttonsEvents[NumberOfButtons];
 
 InputCallback inc,dec;
 
@@ -94,6 +96,21 @@ uint8_t Input_ReadEncoderDirection()
 	return (uint8_t)(FTM_GetQuadDecoderFlags(INPUT_FTM) & kFTM_QuadDecoderCountingIncreaseFlag);
 }
 
+void Input_GetEvent(ButtonID * b, ButtonEvent * ev)
+{
+	for(int i=0; i<NumberOfButtons; i++)
+	{
+		if(buttonsEvents[i] != Button_GetEvent(buttons[i]))
+		{
+			buttonsEvents[i] = Button_GetEvent(buttons[i]);
+
+			(*b) = (ButtonID)buttons[i]->ID;
+			(*ev)= buttonsEvents[i];
+			return;
+		}
+	}
+}
+
 void Input_Init()
 {
     /* Ports Clock Gate Control: Clock enabled */
@@ -143,19 +160,19 @@ void Input_Init()
     PORT_SetPinConfig(PORTB, 18, &portConfig);
     PORT_SetPinConfig(PORTB, 19, &portConfig);
 
-    Button_Init(&prevButton, Input_ReadPrevButton, 0);
+    Button_Init(&prevButton, Input_ReadPrevButton, 0,PREV);
     Button_Start(&prevButton);
 
-    Button_Init(&nextButton, Input_ReadNextButton, 0);
+    Button_Init(&nextButton, Input_ReadNextButton, 0,NEXT);
     Button_Start(&nextButton);
 
-    Button_Init(&menuButton, Input_ReadMenuButton, 0);
+    Button_Init(&menuButton, Input_ReadMenuButton, 0,MENU);
     Button_Start(&menuButton);
 
-    Button_Init(&playButton, Input_ReadPlayButton, 0);
+    Button_Init(&playButton, Input_ReadPlayButton, 0,PLAY);
     Button_Start(&playButton);
 
-    Button_Init(&selectButton, Input_ReadSelectButton, 0);
+    Button_Init(&selectButton, Input_ReadSelectButton, 0,SELECT);
     Button_Start(&selectButton);
 
     /* Initialize FTM module */
@@ -187,23 +204,23 @@ void Input_Init()
 	PIT_Init(PIT, &pitConfig);
 
 	/* Set timer period for channel 0 */
-	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, MSEC_TO_COUNT(BUTTON_TICK_INTERVAL_MS, PIT_SOURCE_CLOCK));
+	PIT_SetTimerPeriod(PIT, INPUT_PIT_CHNL, MSEC_TO_COUNT(BUTTON_TICK_INTERVAL_MS, INPUT_PIT_SOURCE_CLOCK));
 
 	/* Enable timer interrupts for channel 0 */
-	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
+	PIT_EnableInterrupts(PIT, INPUT_PIT_CHNL, kPIT_TimerInterruptEnable);
 
 	/* Enable at the NVIC */
-	EnableIRQ(PIT_IRQ_ID);
+	EnableIRQ(INPUT_PIT_IRQ_ID);
 
 	/* Start channel 0 */
-	PIT_StartTimer(PIT, kPIT_Chnl_0);
+	PIT_StartTimer(PIT, INPUT_PIT_CHNL);
 
 }
 
-void PIT_HANDLER(void)
+void INPUT_PIT_HANDLER(void)
 {
     /* Clear interrupt flag.*/
-    PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
+    PIT_ClearStatusFlags(PIT, INPUT_PIT_CHNL, kPIT_TimerFlag);
     Button_Tick();
 
     static uint8_t lastCount;

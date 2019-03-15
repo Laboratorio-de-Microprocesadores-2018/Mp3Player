@@ -165,7 +165,10 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
     	while( (n--)>0 && res==FR_OK && fileInfo->fname[0] )
     		 res = f_findnext(&dir, fileInfo);
 
-    	res = f_open(fp,fileInfo->fname,mode);
+    	char filePath[255];
+    	sprintf(filePath,"%s/%s",path,fileInfo->fname);
+    	res = f_open(fp,filePath,mode);
+
     }
     else
     {
@@ -175,4 +178,31 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
     f_closedir(&dir);
 
     return res;
+}
+bool FE_DriveStatus()
+{
+	if(disk_status(g_fileSystem.pdrv)==STA_NODISK)
+		return false;
+	else
+		return true;
+}
+
+uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
+{
+	uint8_t n = 0;
+	DIR dir;
+	FILINFO fileInfo;
+	FRESULT res = f_findfirst(&dir, &fileInfo, path, pattern);
+
+
+	if(res == FR_OK && fileInfo.fname[0])
+	{
+		n++;
+		while(f_findnext(&dir, &fileInfo)==FR_OK && fileInfo.fname[0])
+			n++;
+	}
+
+	f_closedir(&dir);
+
+	return n;
 }

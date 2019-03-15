@@ -15,13 +15,14 @@ static struct Button* head_handle = NULL;
   */
 static void Button_Handler(struct Button* handle);
 
-void Button_Init(struct Button* handle, uint8_t(*pinLevel)(), uint8_t activeLevel)
+void Button_Init(struct Button* handle, uint8_t(*pinLevel)(), uint8_t activeLevel, uint8_t ID)
 {
 	memset(handle, 0, sizeof(struct Button));
 	handle->event = (uint8_t)NONE_PRESS;
 	handle->halButtonLevel = pinLevel;
 	handle->buttonLevel = handle->halButtonLevel();
 	handle->activeLevel = activeLevel;
+	handle->ID = ID;
 }
 
 

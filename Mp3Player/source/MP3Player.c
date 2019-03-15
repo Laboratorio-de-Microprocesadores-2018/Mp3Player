@@ -2,7 +2,7 @@
 #include "Audio.h"
 #include "FileExplorer.h"
 #include "mp3dec.h"
-#include "Mp3Dec.h"
+#include "Vumeter.h"
 
 #include "math.h"
 #include "assert.h"
@@ -10,7 +10,8 @@
 #include "fsl_debug_console.h"
 
 #define  READ_BUFFER_SIZE  (1024*8)
-
+/* Every 3 frames the vumeter is updated */
+#define VUMETER_UPDATE_MODULO 3
 
 /* Player status */
 typedef enum{IDLE,PLAYING,PLAYING_LAST_FRAMES,PAUSE_PENDING,PAUSE}MP3_Status;
@@ -36,7 +37,10 @@ static uint32_t bytesLeft;
 
 static int16_t audioBuf[MAX_SAMPLES_PER_FRAME];
 
-static uint32_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint32_t bytesLeft);
+static uint32_t frameCounter;
+static float playbackTime;
+
+static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint16_t * nRead);
 static status_t MP3_DecodeFrame();
 static void MP3_PlayCurrentSong();
 
@@ -53,6 +57,9 @@ status_t MP3_Init()
 	}
 
 	Audio_Init();
+
+	Vumeter_Init();
+
 	status = IDLE;
 
 	return kStatus_Success;
@@ -101,14 +108,16 @@ static void MP3_PlayCurrentSong()
 
 		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME);
 
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100);
+		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
 
 		Audio_Play();
 
 		readPtr = readBuf;
 		bytesLeft = 0;
+		frameCounter = 0;
+		playbackTime = 0;
 
 		status = PLAYING;
 	}
@@ -117,16 +126,15 @@ static void MP3_PlayCurrentSong()
 
 void MP3_Stop()
 {
-	if(status == PLAYING)
-	{
-		Audio_Stop();
-		FE_CloseFile(&currentFile);
-	}
+	Audio_Stop();
+	Vumeter_Clear();
+	FE_CloseFile(&currentFile);
+	status = IDLE;
 }
 
 void MP3_Next()
 {
-	if(status == PLAYING)
+	if(status != IDLE)
 		MP3_Stop();
 
 	/* DESCOMENTAR CUANDO ESTE LO DE GENERAR LA PLAYLIST
@@ -141,16 +149,17 @@ void MP3_Next()
 
 	MP3_PlayCurrentSong();
 
-
-
 }
 
 void MP3_Prev()
 {
-	if(status == PLAYING)
-			MP3_Stop();
+	if(status != IDLE)
+		MP3_Stop();
 
+	if(playbackTime <5 && filesIndexLut[curSong] > 0)
+		filesIndexLut[curSong]--;
 
+	MP3_PlayCurrentSong();
 }
 
 void MP3_PlayPause()
@@ -184,16 +193,35 @@ void MP3_Tick()
 		// Decode as many frames as possible
 		while(Audio_BackBufferIsFree())
 		{
-			if(MP3_DecodeFrame()==kStatus_Success)
+			status_t s = MP3_DecodeFrame();
+			if(s==kStatus_Success)
+			{
+				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
+					Vumeter_Generate(audioBuf);
+
 				Audio_FillBackBuffer(audioBuf,
 									 mp3FrameInfo.outputSamps,
-									 mp3FrameInfo.samprate * 2);
-			else
+									 mp3FrameInfo.samprate * 2,
+									 frameCounter++);
+
+				playbackTime += mp3FrameInfo.outputSamps / ((float)mp3FrameInfo.samprate * 2);
+
+			}
+			else if(s == kStatus_OutOfRange)
 			{
 				status = PLAYING_LAST_FRAMES;
+				break;
 			}
-
+			else if(s == kStatus_Fail)
+			{
+				MP3_Stop();
+				break;
+			}
 		}
+
+		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
+			Vumeter_Display();
+
 		break;
 
 	case PLAYING_LAST_FRAMES:
@@ -220,28 +248,30 @@ void MP3_Tick()
 /**
  *    @brief
  */
-static uint32_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint32_t bytesLeft)
+static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint16_t * nRead)
 {
 	/* Move the left bytes from the end to the front */
 	memmove(readBuf,readPtr,bytesLeft);
 
-	uint32_t nRead;
 	/* Read a maximum of bytesLeft bytes from current file */
-    FE_ReadFile(fp, (void *)(readBuf+bytesLeft), READ_BUFFER_SIZE-bytesLeft, &nRead);
+    FRESULT res = FE_ReadFile(fp, (void *)(readBuf+bytesLeft), READ_BUFFER_SIZE-bytesLeft, nRead);
+
+    if(res != FR_OK)
+    	return kStatus_Fail;
 
 	/* Zero-pad to avoid finding false sync word after last frame (from old data in readBuf) */
-	if (nRead < (READ_BUFFER_SIZE - bytesLeft) )
-		memset(readBuf+bytesLeft+nRead, 0, READ_BUFFER_SIZE-bytesLeft-nRead);
+	if ( (*nRead) < (READ_BUFFER_SIZE - bytesLeft) )
+		memset(readBuf+bytesLeft+(*nRead), 0, READ_BUFFER_SIZE-bytesLeft-(*nRead));
 
-	return nRead;
+	return kStatus_Success;
 }
 
 static status_t MP3_DecodeFrame()
 {
     uint8_t wordAlign = 0;
 	bool frameDecoded = 0;
-    uint32_t nRead = 0;
-
+    uint16_t nRead = 0;
+    status_t s = kStatus_Success;
 
     while (frameDecoded==false && FE_EOF(&currentFile)==false )
 	{
@@ -252,13 +282,10 @@ static status_t MP3_DecodeFrame()
 			//wordAlign = (4-(bytesLeft&3)) & 3;
 
 			/* Fill read buffer */
-			nRead = MP3_FillReadBuffer(&currentFile,readBuf, readPtr, bytesLeft);
+			s = MP3_FillReadBuffer(&currentFile,readBuf, readPtr, bytesLeft, &nRead);
 
-			if (nRead == 0)
-			{
-				//eofReached = 1;	/* end of file */
-				//outOfData = 1;
-			}
+			if(s==kStatus_Fail)
+				break;
 
 			bytesLeft += nRead;
 			readPtr = readBuf;
@@ -294,6 +321,7 @@ static status_t MP3_DecodeFrame()
 			MP3GetLastFrameInfo(mp3Decoder, &mp3FrameInfo);
 			frameDecoded = true;
 			break;
+
 		case ERR_MP3_INVALID_FRAMEHEADER:
 			readPtr++;
 			bytesLeft--;
@@ -314,7 +342,12 @@ static status_t MP3_DecodeFrame()
 		}
 	}
 
-   return FE_EOF(&currentFile);
+    if(FE_EOF(&currentFile))
+    	return kStatus_OutOfRange;
+    else
+    	return s;
+
+
 }
 
 status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
@@ -331,7 +364,8 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 	assert(result == FR_OK);
 
 	bytesLeft = 0;
-
+	status_t s;
+	uint32_t nRead;
 	if(result == FR_OK)
 	{
 
@@ -343,8 +377,11 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 				// Align to 4 bytes
 				//wordAlign = (4-(bytesLeft&3)) & 3;
 
-				// Fill read buffer
-				uint32_t nRead = MP3_FillReadBuffer(&file,readBuf, readPtr, bytesLeft);
+				/* Fill read buffer */
+				s = MP3_FillReadBuffer(&currentFile,readBuf, readPtr, bytesLeft, &nRead);
+
+				if(s!=FR_OK)
+					break;
 
 				bytesLeft += nRead;
 				readPtr = readBuf;
