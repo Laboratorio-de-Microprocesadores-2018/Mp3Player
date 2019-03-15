@@ -119,12 +119,16 @@ DRESULT sd_disk_ioctl(uint8_t physicalDrive, uint8_t command, void *buffer)
 
 DSTATUS sd_disk_status(uint8_t physicalDrive)
 {
-    if (physicalDrive != SDDISK)
-    {
-        return STA_NOINIT;
-    }
+	if (physicalDrive != SDDISK)
+	{
+		return STA_NOINIT;
+	}
 
-    return 0;
+	if(SD_IsCardPresent(0)==false)
+		return STA_NODISK;
+	else
+		return 0;
+
 }
 
 DSTATUS sd_disk_initialize(uint8_t physicalDrive)
