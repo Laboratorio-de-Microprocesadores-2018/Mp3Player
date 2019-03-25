@@ -9,7 +9,9 @@
 #include "fsl_sd_disk.h"
 #include "fsl_debug_console.h"
 
-static FATFS g_fileSystem; /* File system object */
+//static FATFS g_fileSystem; /* File system object */
+static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
+
 
 /*! @brief SDMMC host detect card configuration */
 static const sdmmchost_detect_card_t s_sdCardDetect = {
@@ -20,6 +22,7 @@ static const sdmmchost_detect_card_t s_sdCardDetect = {
 #endif
     .cdTimeOut_ms = (0U),//Checks only one time
 };
+
 
 
 
@@ -59,10 +62,8 @@ status_t FE_Init()
 	 PORT_SetPinConfig(PORTE, 6, &porte6_pin7_config);   /* PORTE6 (pin 7) is configured as PTE6 */
 
 	 SYSMPU_Enable(SYSMPU, false);
-}
 
-status_t FE_check4Drive()
-{
+
 	 /* Save host information. */
 	    g_sd.host.base = SD_HOST_BASEADDR;
 	    g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
@@ -74,31 +75,56 @@ status_t FE_check4Drive()
 	    /* SD host init function */
 	    if (SD_HostInit(&g_sd) != kStatus_Success)
 	    {
-	        PRINTF("\r\nSD host init fail\r\n");
+	        //PRINTF("\r\nSD host init fail\r\n");
 	        return kStatus_Fail;
 	    }
-	    /* power off card */
-	    SD_PowerOffCard(g_sd.host.base, g_sd.usrParam.pwr);
-	    /* wait card insert */
-	    if (SD_WaitCardDetectStatus(SD_HOST_BASEADDR, &s_sdCardDetect, true) == kStatus_Success)
-	    {
-	        PRINTF("\r\nCard inserted.\r\n");
-	        /* power on the card */
-	        SD_PowerOnCard(g_sd.host.base, g_sd.usrParam.pwr);
-	    }
-	    else
-	    {
-	        //PRINTF("\r\nCard detect fail.\r\n");
-	        return kStatus_Fail;
-	    }
+
+
+}
+
+status_t FE_check4Drive()
+{
+//
+//	 /* Save host information. */
+//	    g_sd.host.base = SD_HOST_BASEADDR;
+//	    g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
+//	    /* card detect type */
+//	    g_sd.usrParam.cd = &s_sdCardDetect;
+//	#if defined DEMO_SDCARD_POWER_CTRL_FUNCTION_EXIST
+//	    g_sd.usrParam.pwr = &s_sdCardPwrCtrl;
+//	#endif
+//	    /* SD host init function */
+//	    if (SD_HostInit(&g_sd) != kStatus_Success)
+//	    {
+//	        PRINTF("\r\nSD host init fail\r\n");
+//	        return kStatus_Fail;
+//	    }
+//
+//	    /* power off card */
+//	    SD_PowerOffCard(g_sd.host.base, g_sd.usrParam.pwr);
+//
+//
+//	    /* wait card insert */
+//	    if (SD_WaitCardDetectStatus(SD_HOST_BASEADDR, &s_sdCardDetect, true) == kStatus_Success)
+//	    {
+//	        PRINTF("\r\nCard inserted.\r\n");
+//	        /* power on the card */
+//	        SD_PowerOnCard(g_sd.host.base, g_sd.usrParam.pwr);
+//	    }
+//	    else
+//	    {
+//	        //PRINTF("\r\nCard detect fail.\r\n");
+//	        return kStatus_Fail;
+//	    }
 
 	    return kStatus_Success;
 }
 
-status_t FE_mountDrive()
+status_t FE_mountDrive(FE_drive drive)
 {
-	const TCHAR driverNumberBuffer[3U] = {SDDISK + '0', ':', '/'};
-	if (!f_mount(&g_fileSystem, driverNumberBuffer, 0U))
+	g_fileSystems[drive].pdrv=drive;
+	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
+	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 0U))
 	    {
 	    	if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
 	    	{
@@ -117,6 +143,24 @@ status_t FE_mountDrive()
 	        return kStatus_Fail;
 	    }
 }
+
+status_t FE_SetCurrDrive(FE_drive drive)
+{
+	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
+
+	if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
+	{
+		return kStatus_Success;
+
+	}
+	else
+	{
+		PRINTF("Change drive failed.\r\n");
+		return kStatus_Fail;
+	}
+}
+
+
 
 status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 {
@@ -179,9 +223,9 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
 
     return res;
 }
-bool FE_DriveStatus()
+bool FE_DriveStatus(FE_drive drive)
 {
-	if(disk_status(g_fileSystem.pdrv)==STA_NODISK)
+	if(disk_status(g_fileSystems[drive].pdrv)==STA_NODISK)
 		return false;
 	else
 		return true;
