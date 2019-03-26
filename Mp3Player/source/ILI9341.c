@@ -14,8 +14,8 @@
 #define ILI9341_PCS_FOR_TRANSFER kDSPI_MasterPcs0
 
 #define ILI9341_DMA DMA0
-#define ILI9341_TX_REQ kDmaRequestMux0SPI0Rx
-#define ILI9341_RX_REQ kDmaRequestMux0SPI0Tx
+#define ILI9341_TX_REQ kDmaRequestMux0SPI0Tx
+#define ILI9341_RX_REQ kDmaRequestMux0SPI0Rx
 
 #define DATA_COMMAND_GPIO 	GPIOC
 #define DATA_COMMAND_PORT 	PORTC
@@ -25,21 +25,19 @@
 #define RESET_PORT 	PORTC
 #define RESET_PIN	12
 
-#define TRANSFER_BAUDRATE 1000000U
+#define TRANSFER_BAUDRATE 500000U
 
 
 
+
+static dspi_master_edma_handle_t SPI_Handle;
+static edma_handle_t SPI_DMA_RxRegToRxDataHandle;
+static edma_handle_t SPI_DMA_TxDataToIntermediaryHandle;
+static edma_handle_t SPI_DMA_IntermediaryToTxRegHandle;
+static dspi_transfer_t transfer;
 static uint32_t SPI_COMMAND;
 
-
-dspi_master_edma_handle_t SPI_DMA_Handle;
-edma_handle_t SPI_DMA_RxRegToRxDataHandle;
-
-edma_handle_t SPI_DMA_TxDataToIntermediaryHandle;
-
-edma_handle_t SPI_DMA_IntermediaryToTxRegHandle;
-
-volatile bool isTransferCompleted = false;
+static volatile bool isTransferCompleted = false;
 
 
 static void ILI9341_InitSequence();
@@ -48,7 +46,7 @@ static void ILI9341_InitSequence();
 
 void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
 {
-
+	 isTransferCompleted = true;
 }
 
 
@@ -118,12 +116,15 @@ void ILI9341_Init()
 	EDMA_CreateHandle(&(SPI_DMA_TxDataToIntermediaryHandle), ILI9341_DMA, masterIntermediaryChannel);
 	EDMA_CreateHandle(&(SPI_DMA_IntermediaryToTxRegHandle), ILI9341_DMA, masterTxChannel);
 
-	DSPI_MasterTransferCreateHandleEDMA(ILI9341_SPI, &SPI_DMA_Handle, DSPI_MasterUserCallback,
+	DSPI_MasterTransferCreateHandleEDMA(ILI9341_SPI, &SPI_Handle, DSPI_MasterUserCallback,
 										NULL, &SPI_DMA_RxRegToRxDataHandle,
 										&SPI_DMA_TxDataToIntermediaryHandle,
 										&SPI_DMA_IntermediaryToTxRegHandle);
 
 	isTransferCompleted = true;
+
+
+
 
 
 	ILI9341_Reset();
@@ -247,7 +248,16 @@ void ILI9341_SendCommand(uint8_t command)
 void ILI9341_SendData(uint8_t * data, uint32_t len)
 {
 	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,1);
-	// IMPLEMENTAR
+	/* Config transfer */
+	transfer.txData = data;
+	transfer.rxData = NULL;
+	transfer.dataSize = len;
+	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
+	isTransferCompleted = false;
+
+	status_t s = DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
+
+	assert(s==kStatus_Success);
 
 }
 
@@ -255,4 +265,6 @@ void ILI9341_SendRepeatedData(uint8_t * data,uint8_t len,uint32_t n)
 {
 	// Implementar
 }
+
+
 
