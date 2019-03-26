@@ -29,7 +29,6 @@
 
 
 
-
 static dspi_master_edma_handle_t SPI_Handle;
 static edma_handle_t SPI_DMA_RxRegToRxDataHandle;
 static edma_handle_t SPI_DMA_TxDataToIntermediaryHandle;
