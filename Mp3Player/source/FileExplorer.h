@@ -17,9 +17,12 @@
 #define FE_RmDir(path) 	 f_rmdir(path)
 #define FE_Unmount(path) f_unmount(path)
 
+typedef enum{FE_USB=1,FE_SD=2}FE_drive;
+
 status_t FE_Init();
 status_t FE_check4Drive();
-status_t FE_mountDrive();
+status_t FE_mountDrive(FE_drive drive);
+status_t FE_SetCurrDrive(FE_drive drive);
 status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content);
 void FE_DeInit();
 
@@ -42,7 +45,7 @@ static inline FRESULT FE_OpenDir (DIR* dp, const char* path)
 	return f_opendir(dp,path);
 }
 
-bool FE_DriveStatus();
+bool FE_DriveStatus(FE_drive drive);
 
 /**
  * @brief Open the nth file in the dir which matches the pattern
