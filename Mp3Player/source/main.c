@@ -125,7 +125,7 @@ int main(void)
 
 		static uint32_t count;
 		count++;
-		if(count == 0xFFF)
+		if(count == 0x4FF)
 		{
 			count = 0;
 			Button_Tick();
@@ -157,6 +157,7 @@ int main(void)
 			{
 			case PRESS_DOWN:
 				LED_BLUE_ON();
+				break;
 			case PRESS_UP:
 				LED_BLUE_OFF();
 				break;
