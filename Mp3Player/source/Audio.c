@@ -6,10 +6,8 @@
 #include "fsl_pit.h"
 #include "assert.h"
 
-
-
 #define  AUDIO_BUFFER_SIZE 2304
-#define  CIRC_BUFFER_LEN 10
+#define  CIRC_BUFFER_LEN 2
 
 
 #define AUDIO_DAC DAC0
@@ -143,15 +141,16 @@ uint32_t Audio_GetCurrentFrameNumber()
 void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
 {
 	// Average stereo channels
-	for(int i=0; i<nSamples; i+=2)
+	for(int i=0; i<nSamples; i++)
 	{
-		uint16_t L = ((uint16_t)(samples[i]+32768))>>4;
-		uint16_t R = ((uint16_t)(samples[i+1]+32768))>>4;
-
+		uint16_t L = ((uint16_t)(samples[2*i]+32768))>>4;
+		uint16_t R = ((uint16_t)(samples[2*i+1]+32768))>>4;
 		audioFrame[DMA_Handle.tail].samples[i] = L/2 + R/2;
+		//audioFrame[DMA_Handle.tail].samples[i] = ((uint16_t)(samples[i]+32768))>>4;
+
 	}
 
-	audioFrame[DMA_Handle.tail].nSamples = nSamples;
+	audioFrame[DMA_Handle.tail].nSamples = nSamples/2;
 	audioFrame[DMA_Handle.tail].sampleRate = sampleRate;
 	audioFrame[DMA_Handle.tail].frameNumber = frameNumber;
 
@@ -161,7 +160,7 @@ void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRa
 							 (void *)DAC_DATA_REG_ADDR,
 							 sizeof(uint16_t),
 							 sizeof(uint16_t),	// One sample per request
-							 nSamples * sizeof(uint16_t),// Transfer an entire frame
+							 audioFrame[DMA_Handle.tail].nSamples * sizeof(uint16_t),// Transfer an entire frame
 							 kEDMA_MemoryToPeripheral);
 
     EDMA_SubmitTransfer(&DMA_Handle, &transferConfig);
@@ -175,7 +174,8 @@ void Audio_SetSampleRate(uint32_t sr)
 bool Audio_BackBufferIsFree()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	bool b = (DMA_Handle.tcdUsed == 0);
+	//bool b = DMA_Handle.tcdUsed < DMA_Handle.tcdSize;
+	bool b = (DMA_Handle.tail+1)%DMA_Handle.tcdSize != DMA_Handle.header;
 	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 	return b;
 }
@@ -183,17 +183,19 @@ bool Audio_BackBufferIsFree()
 bool Audio_BackBufferIsEmpty()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	bool b = DMA_Handle.tcdUsed < DMA_Handle.tcdSize;
+	bool b = (DMA_Handle.tcdUsed == 0);
 	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 	return b;
 }
 
 static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDone, uint32_t tcds)
 {
-	if(transferDone)
+	if(transferDone==false)
 	{
-		Audio_SetSampleRate(audioFrame[DMA_Handle.header].sampleRate);
+
 	}
+	Audio_SetSampleRate(audioFrame[DMA_Handle.header].sampleRate);
+
 }
 
 static void EDMA_Configuration(void)
