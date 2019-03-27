@@ -201,7 +201,7 @@ void MP3_Tick()
 
 				Audio_FillBackBuffer(audioBuf,
 									 mp3FrameInfo.outputSamps,
-									 mp3FrameInfo.samprate * 2,
+									 mp3FrameInfo.samprate,
 									 frameCounter++);
 
 				playbackTime += mp3FrameInfo.outputSamps / ((float)mp3FrameInfo.samprate * 2);
@@ -405,6 +405,9 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 			switch (MP3GetNextFrameInfo(mp3Decoder, &mp3FrameInfo, readPtr))
 			{
 			case ERR_MP3_NONE:
+//				duration += (float)mp3FrameInfo.outputSamps / (float)mp3FrameInfo.samprate;
+//				readPtr += 300; // Fijarse que no se pase del arreglo
+//				break;
 				duration = FE_Size(&file)*8/(float)mp3FrameInfo.bitrate;
 				*(seconds) = (uint32_t)duration;
 
@@ -420,6 +423,8 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 			}
 
 		}
+
+
 	/*
 	if(result == FR_OK)
 	{

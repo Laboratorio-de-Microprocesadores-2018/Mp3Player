@@ -56,18 +56,7 @@ int main(void)
 
    // Input_Init();
 
-
-	if(FE_check4Drive()== kStatus_Success)
-	{
-		if(FE_mountDrive()== kStatus_Success)
-		{
-			uint8_t k = FE_CountFilesMatching("/","*.mp3");
-
-			PRINTF("There are %d mp3 files in root folder\n",k);
-		}
-	}
-
-	uint32_t duration = 0;
+	//uint32_t duration = 0;
 	//MP3_ComputeSongDuration(files[2].fname,&duration);
 
 
@@ -79,27 +68,36 @@ int main(void)
 	Button_Start(&SW2);
 	Button_Start(&SW3);
 
-	LED_GREEN_ON();
 
-	while(1)
-	{
-		static bool prevStatus=false;
+    static bool prevStatus = false;
+    while(1)
+    {
+    	bool status = FE_DriveStatus(FE_SD);
+    	if(status != prevStatus)
+    	{
+    		prevStatus = status;
+    		if(status == true)
+    		{
+    			PRINTF("Card inserted\n");
+    			if(FE_mountDrive(FE_SD)== kStatus_Success)
+    			{
+    				PRINTF("Card mounted\n");
 
-		bool status = FE_DriveStatus();
+    				uint8_t k = FE_CountFilesMatching("/","*.mp3");
 
-		if(status != prevStatus)
-		{
-			prevStatus=status;
-			if(status==true)
-			{
-				if(FE_mountDrive()== kStatus_Success)
-				{
-					PRINTF("Card Inserted\n");
-					MP3_Play("/",0);
-				}
-			}
+    				PRINTF("There are %d mp3 files in root folder\n",k);
 
-		}
+    				MP3_Play("/",0);
+    				LED_GREEN_ON();
+
+
+    			}
+    		}
+    		else
+    		{
+    			PRINTF("Card removed\n");
+    		}
+    	}
 
 //		ButtonEvent ev;
 //		ButtonID ID;
