@@ -6,6 +6,8 @@
 #include "fsl_dspi_edma.h"
 #include "fsl_edma.h"
 #include "fsl_dmamux.h"
+#include "fsl_common.h"
+#include "fsl_debug_console.h"
 
 #define ILI9341_SPI SPI0
 #define DSPI_MASTER_CLK_SRC DSPI0_CLK_SRC
@@ -36,8 +38,6 @@ static edma_handle_t SPI_DMA_IntermediaryToTxRegHandle;
 static dspi_transfer_t transfer;
 static uint32_t SPI_COMMAND;
 
-static volatile bool isTransferCompleted = false;
-
 
 static void ILI9341_InitSequence();
 
@@ -45,7 +45,11 @@ static void ILI9341_InitSequence();
 
 void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
 {
-	 isTransferCompleted = true;
+	/* Esta mal el driver, creo. Segun "50.5.1 How to manage queues" en el reference manual
+	 despues de mandar por dema una QUEUE tenes que flushear las FIFOS y borrar el flag de EOQ
+	 cosa que en el callback EDMA_DspiMasterCallback en fsl_dspi_edma.c NO HACE! */
+	 DSPI_FlushFifo(ILI9341_SPI, true, true);
+	 DSPI_ClearStatusFlags(base, (uint32_t)(kDSPI_EndOfQueueFlag));
 }
 
 
@@ -89,6 +93,7 @@ void ILI9341_Init()
 	masterConfig.enableRxFifoOverWrite = false;
 	masterConfig.enableModifiedTimingFormat = false;
 	masterConfig.samplePoint = kDSPI_SckToSin0Clock;
+
 	DSPI_MasterInit(ILI9341_SPI, &masterConfig, DSPI_MASTER_CLK_FREQ);
 
 	// Command for pushing data to SPI buffer
@@ -101,14 +106,14 @@ void ILI9341_Init()
 	masterTxChannel = 5U;
 	masterIntermediaryChannel = 6U;
 	DMAMUX_Init(DMAMUX);
-	DMAMUX_SetSource(DMAMUX, masterRxChannel,ILI9341_TX_REQ);
+	DMAMUX_SetSource(DMAMUX, masterTxChannel,ILI9341_TX_REQ);
 	DMAMUX_EnableChannel(DMAMUX, masterRxChannel);
-	DMAMUX_SetSource(DMAMUX, masterTxChannel,ILI9341_RX_REQ);
+	DMAMUX_SetSource(DMAMUX, masterRxChannel,ILI9341_RX_REQ);
 	DMAMUX_EnableChannel(DMAMUX, masterTxChannel);
 
 	edma_config_t DMA_Config;
 	EDMA_GetDefaultConfig(&DMA_Config);
-	DMA_Config.enableDebugMode = true;
+	DMA_Config.enableDebugMode = false;
 	EDMA_Init(ILI9341_DMA, &DMA_Config);
 
 	EDMA_CreateHandle(&(SPI_DMA_RxRegToRxDataHandle), ILI9341_DMA, masterRxChannel);
@@ -119,11 +124,6 @@ void ILI9341_Init()
 										NULL, &SPI_DMA_RxRegToRxDataHandle,
 										&SPI_DMA_TxDataToIntermediaryHandle,
 										&SPI_DMA_IntermediaryToTxRegHandle);
-
-	isTransferCompleted = true;
-
-
-
 
 
 	ILI9341_Reset();
@@ -136,6 +136,11 @@ void ILI9341_Reset()
 	uint64_t c = 1320000;
 	while(c>0) c--;
 	GPIO_PinWrite(RESET_GPIO,RESET_PIN,1);
+}
+
+bool ILI9341_IsBusy()
+{
+	return SPI_Handle.state == kDSPI_Busy;
 }
 
 static void ILI9341_InitSequence()
@@ -239,20 +244,43 @@ void ILI9341_SendByte(ILI9341_MsgType type, uint8_t byte)
 
 void ILI9341_SendCommand(uint8_t command)
 {
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,0);
+	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,COMMAND);
 	DSPI_MasterWriteCommandDataBlocking(ILI9341_SPI, (SPI_COMMAND & 0xFFFF0000) | command);
 }
 
+void ILI9341_SendDataBlocking(uint8_t * data, uint32_t len)
+{
+	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+
+	uint8_t rxData[5300];
+
+	dspi_transfer_t transfer;
+	transfer.txData = data;
+	transfer.rxData = rxData;
+	transfer.dataSize = len;
+	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0;
+
+	for(int i=0; i<len;i++)
+		DSPI_MasterWriteCommandDataBlocking(ILI9341_SPI, (SPI_COMMAND & 0xFFFF0000) | data[i]);
+
+	return;
+
+	status_t s = DSPI_MasterTransferBlocking(ILI9341_SPI, &transfer);
+
+	if(s != kStatus_Success)
+		PRINTF("ERROR IN TRANSFER\n");
+
+}
 
 void ILI9341_SendData(uint8_t * data, uint32_t len)
 {
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,1);
+	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+
 	/* Config transfer */
 	transfer.txData = data;
 	transfer.rxData = NULL;
 	transfer.dataSize = len;
-	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
-	isTransferCompleted = false;
+	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0;//| kDSPI_MasterPcsContinuous;
 
 	status_t s = DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
 
@@ -262,6 +290,8 @@ void ILI9341_SendData(uint8_t * data, uint32_t len)
 
 void ILI9341_SendRepeatedData(uint8_t * data,uint8_t len,uint32_t n)
 {
+	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+
 	// Implementar
 }
 

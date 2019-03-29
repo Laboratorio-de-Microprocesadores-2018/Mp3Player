@@ -1,11 +1,11 @@
 #ifndef ILI9341_H_
 #define ILI9341_H_
-#include "stdint.h"
+#include <stdint.h>
+#include <stdbool.h>
+
 // Screen dimensions
 #define ILI9341_TFTWIDTH    240
 #define ILI9341_TFTHEIGHT   320
-
-
 
 // Screen control codes
 typedef enum
@@ -70,10 +70,46 @@ typedef enum
 
 typedef enum {COMMAND,DATA}ILI9341_MsgType;
 
+/**
+ * 	Initialize TFT display
+ */
 void ILI9341_Init();
+
+
+/**
+ * Reset display
+ */
 void ILI9341_Reset();
+
+
+/**
+ * Send a byte to the display (data or command)
+ */
 void ILI9341_SendByte(ILI9341_MsgType type, uint8_t data);
+
+
+/**
+ * Send a command
+ */
 void ILI9341_SendCommand(uint8_t command);
+
+
+/**
+ * Send data using DMA (non-blocking)
+ */
 void ILI9341_SendData(uint8_t * data, uint32_t len);
+
+
+/**
+ * Send repeated data using DMA ¡¡¡¡¡NOT IMPLEMENTED!!!!
+ */
 void ILI9341_SendRepeatedData(uint8_t * data, uint8_t len, uint32_t n);
+
+
+/**
+ *  Return true if there is a transfer happening through DMA
+ */
+bool ILI9341_IsBusy();
+
+
 #endif /* ILI9341_H_ */
