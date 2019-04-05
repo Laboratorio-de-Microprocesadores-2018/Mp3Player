@@ -40,7 +40,7 @@ typedef struct{
 static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
 
 #define TCD_QUEUE_SIZE CIRC_BUFFER_LEN
-AT_NONCACHEABLE_SECTION_ALIGN(edma_tcd_t tcdMemoryPoolPtr[TCD_QUEUE_SIZE + 1], sizeof(edma_tcd_t));
+AT_NONCACHEABLE_SECTION_ALIGN(static edma_tcd_t tcdMemoryPoolPtr[TCD_QUEUE_SIZE + 1], sizeof(edma_tcd_t));
 
 
 /*
