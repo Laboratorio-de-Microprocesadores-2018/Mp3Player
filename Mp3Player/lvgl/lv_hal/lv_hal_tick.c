@@ -36,7 +36,7 @@
  **********************/
 static uint32_t sys_time = 0;
 static volatile uint8_t tick_irq_flag;
-
+extern unsigned int g_eventTimeMilliseconds;
 /**********************
  *      MACROS
  **********************/
