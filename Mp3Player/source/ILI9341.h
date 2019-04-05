@@ -91,14 +91,14 @@ void ILI9341_SendByte(ILI9341_MsgType type, uint8_t data);
 /**
  * Send a command
  */
-void ILI9341_SendCommand(uint8_t command);
+void ILI9341_SendCommand(uint16_t command);
 
 
 /**
  * Send data using DMA (non-blocking)
  */
 void ILI9341_SendData(uint8_t * data, uint32_t len);
-
+void ILI9341_SendDataBlocking(uint8_t * data, uint32_t len);
 
 /**
  * Send repeated data using DMA ¡¡¡¡¡NOT IMPLEMENTED!!!!

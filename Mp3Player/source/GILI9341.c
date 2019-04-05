@@ -30,7 +30,8 @@ void GILI9341_Flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_col
 
 	ILI9341_SendData((void*)color_map, sizeof(lv_color_t)*size); // Each color is 16bit
 
-	//lv_flush_ready();
+
+
 }
 
 void GILI9341_Fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t color)
@@ -44,14 +45,21 @@ void GILI9341_Fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t co
 
 	uint32_t size = (x2 - x1 + 1) * (y2 - y1 + 1);
 
-	static uint16_t colors[LV_VDB_SIZE];
+	assert(size<LV_VDB_SIZE*2);
 
+	static uint16_t colors[LV_VDB_SIZE*2];
 	for(int i=0; i<size;i++)
 		colors[i]=color.full;
 
-	assert(size<LV_VDB_SIZE);
-
 	ILI9341_SendData((uint8_t*)colors,sizeof(lv_color_t)*size);
+
+
+	/* ESTO NO ANDA (todavia) Es para evitar hacer un arreglo y llenarlo todo del mismo color
+	static lv_color_t c;
+	c = color;
+	ILI9341_SendRepeatedData((uint8_t)&color,sizeof(lv_color_t),size);
+	return;
+	*/
 }
 
 void GILI9341_Map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_p)
@@ -73,9 +81,9 @@ void GILI9341_Map(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color
 
 	uint32_t size = (x2 - x1 + 1) * (y2 - y1 + 1);
 
-	ILI9341_SendData((uint8_t*)color_p, size * 2); // Each color is 16bit
 
-	//lv_flush_ready();
+	ILI9341_SendData((uint8_t*)color_p, size * sizeof(lv_color_t));
+
 }
 
 
