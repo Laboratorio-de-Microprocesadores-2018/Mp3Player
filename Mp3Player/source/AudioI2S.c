@@ -4,6 +4,7 @@
 
 #include "fsl_sai_edma.h"
 #include "fsl_dmamux.h"
+#include "fsl_port.h"
 #include "assert.h"
 
 #define  AUDIO_BUFFER_SIZE 2304
@@ -48,6 +49,11 @@ static sai_transfer_format_t SAI_TransferFormat;
 
 status_t Audio_Init()
 {
+	PORT_SetPinMux(PORTC, 8, kPORT_MuxAlt4);	/* PORTC8  is configured as I2S0_TX_MCLK */
+	PORT_SetPinMux(PORTC, 1, kPORT_MuxAlt6);    /* PORTC1  is configured as I2S0_TXD0  */
+	PORT_SetPinMux(PORTB, 19, kPORT_MuxAlt4);   /* PORTB19 is configured as I2S0_TX_FS */
+	PORT_SetPinMux(PORTB, 18, kPORT_MuxAlt4);   /* PORTB18 is configured as I2S0_TX_BCLK*/
+
 	/* Initialize DMAMUX. */
 	DMAMUX_Configuration();
 
