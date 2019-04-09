@@ -4,7 +4,6 @@
 #include "fsl_port.h"
 #include "fsl_dspi.h"
 #include "fsl_dspi_edma.h"
-#include "fsl_edma.h"
 #include "fsl_dmamux.h"
 #include "fsl_common.h"
 #include "fsl_debug_console.h"
