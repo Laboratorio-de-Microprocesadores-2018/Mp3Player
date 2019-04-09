@@ -1,23 +1,17 @@
 #include "Audio.h"
+
+#if AUDIO_OUTPUT == DAC
+
 #include "fsl_dac.h"
 #include "fsl_edma.h"
-#include "fsl_pdb.h"
 #include "fsl_dmamux.h"
 #include "fsl_pit.h"
-#include "assert.h"
 
 #define  AUDIO_BUFFER_SIZE 2304
 #define  CIRC_BUFFER_LEN 2
 
 
 #define AUDIO_DAC DAC0
-#define AUDIO_DMA_CHANNEL 0U
-#define AUDIO_DMA_DAC_SOURCE 45U
-#define AUDIO_DMA_BASEADDR DMA0
-#define DAC_DATA_REG_ADDR 0x400cc000U //DAC_GetBufferAddress(AUDIO_DAC)
-#define AUDIO_DMA_IRQ_ID DMA0_IRQn
-
-
 #define AUDIO_DMA_CHANNEL 0U
 #define AUDIO_DMA_DAC_SOURCE 45U
 #define AUDIO_DMA_BASEADDR DMA0
@@ -249,3 +243,4 @@ static void DAC_Configuration(void)
 }
 
 
+#endif
