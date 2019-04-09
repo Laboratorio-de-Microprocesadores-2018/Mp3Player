@@ -85,6 +85,8 @@ extern "C" {
 #define MAX_NCHAN		2		/* max channels */
 #define MAX_NSAMP		576		/* max samples per channel, per granule (576 default) */
 
+#define MAX_SAMPLES_PER_FRAME (MAX_NGRAN * MAX_NCHAN  * MAX_NSAMP)
+
 /* map to 0,1,2 to make table indexing easier */
 typedef enum {
 	MPEG1 =  0,

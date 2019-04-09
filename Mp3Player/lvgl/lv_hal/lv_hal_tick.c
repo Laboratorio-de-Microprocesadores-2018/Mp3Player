@@ -9,7 +9,7 @@
 #ifdef LV_CONF_INCLUDE_SIMPLE
 #include "lv_conf.h"
 #else
-#include "../../lv_conf.h"
+#include "../lv_conf.h"
 #endif
 
 #include "lv_hal_tick.h"
@@ -36,7 +36,7 @@
  **********************/
 static uint32_t sys_time = 0;
 static volatile uint8_t tick_irq_flag;
-
+extern unsigned int g_eventTimeMilliseconds;
 /**********************
  *      MACROS
  **********************/

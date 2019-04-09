@@ -21,9 +21,6 @@
 #include "FileExplorer.h"
 #include "MP3Player.h"
 
-
-#include "fsl_sd.h"
-
 /*
  * @brief   Application entry point.
  */
@@ -56,106 +53,51 @@ int main(void)
     FE_Init();
 
     MP3_Init();
-    bool prevStatus=false;
-
-    while(1)
-    {
-    	bool status = FE_DriveStatus(FE_SD);
-
-
-		if(status != prevStatus)
-		{
-			FE_mountDrive(FE_SD);
-			PRINTF("Card Inserted\n");
-			FILINFO dir[3];
-			uint16_t n=3;
-			char buff[256];
-			strcpy(buff, "/");
-			status_t a=FE_DirN(buff,&n,dir);
-			if(a==kStatus_Success)
-				PRINTF("1\n");
-			else
-				PRINTF("0\n");
-		}
-    }
-
-//    if(FE_check4Drive()== kStatus_Success)
-//  	{
-//    		if(FE_mountDrive()== kStatus_Success)
-//    		PRINTF("Card Inserted\n");
-//  	}
-//
-//    while(1)
-//	{
-//		static bool prevStatus=false;
-//
-//		bool status = FE_DriveStatus();
-//
-//		if(status != prevStatus)
-//		{
-//			prevStatus=status;
-//			if(status==true)
-//			{
-//				if(FE_mountDrive()== kStatus_Success)
-//				{
-//					PRINTF("Card Inserted\n");
-//				}
-//			}
-//			else
-//				PRINTF("Card Extracted\n");
-//
-//		}
-//	}
-
-
-
 
    // Input_Init();
 
+	//uint32_t duration = 0;
+	//MP3_ComputeSongDuration(files[2].fname,&duration);
 
-//	if(FE_check4Drive()== kStatus_Success)
-//	{
-//		if(FE_mountDrive()== kStatus_Success)
-//		{
-//			uint8_t k = FE_CountFilesMatching("/","*.mp3");
-//
-//			PRINTF("There are %d mp3 files in root folder\n",k);
-//		}
-//	}
-//
-//	uint32_t duration = 0;
-//	//MP3_ComputeSongDuration(files[2].fname,&duration);
-//
-//
-// 	Button SW2,SW3;
-//
-//	Button_Init(&SW2,ReadSW2, 0,0);
-//	Button_Init(&SW3,ReadSW3, 0,1);
-//
-//	Button_Start(&SW2);
-//	Button_Start(&SW3);
-//
-//	LED_GREEN_ON();
-//
-//	while(1)
-//	{
-//		static bool prevStatus=false;
-//
-//		bool status = FE_DriveStatus();
-//
-//		if(status != prevStatus)
-//		{
-//			prevStatus=status;
-//			if(status==true)
-//			{
-//				if(FE_mountDrive()== kStatus_Success)
-//				{
-//					PRINTF("Card Inserted\n");
-//					MP3_Play("/",0);
-//				}
-//			}
-//
-//		}
+
+ 	Button SW2,SW3;
+
+	Button_Init(&SW2,ReadSW2, 0,0);
+	Button_Init(&SW3,ReadSW3, 0,1);
+
+	Button_Start(&SW2);
+	Button_Start(&SW3);
+
+
+    static bool prevStatus = false;
+    while(1)
+    {
+    	bool status = FE_DriveStatus(FE_SD);
+    	if(status != prevStatus)
+    	{
+    		prevStatus = status;
+    		if(status == true)
+    		{
+    			PRINTF("Card inserted\n");
+    			if(FE_mountDrive(FE_SD)== kStatus_Success)
+    			{
+    				PRINTF("Card mounted\n");
+
+    				uint8_t k = FE_CountFilesMatching("/","*.mp3");
+
+    				PRINTF("There are %d mp3 files in root folder\n",k);
+
+    				MP3_Play("/",0);
+    				LED_GREEN_ON();
+
+
+    			}
+    		}
+    		else
+    		{
+    			PRINTF("Card removed\n");
+    		}
+    	}
 
 //		ButtonEvent ev;
 //		ButtonID ID;
@@ -175,7 +117,7 @@ int main(void)
 //			break;
 //		}
 
-/*		ButtonEvent SW2Event,SW3Event;
+		ButtonEvent SW2Event,SW3Event;
 
 
      	MP3_Tick();
@@ -183,7 +125,7 @@ int main(void)
 
 		static uint32_t count;
 		count++;
-		if(count == 0xFFF)
+		if(count == 0x4FF)
 		{
 			count = 0;
 			Button_Tick();
@@ -215,6 +157,7 @@ int main(void)
 			{
 			case PRESS_DOWN:
 				LED_BLUE_ON();
+				break;
 			case PRESS_UP:
 				LED_BLUE_OFF();
 				break;
@@ -228,51 +171,30 @@ int main(void)
 		}
 
 
-    }*/
+    }
 
 
 /*    //ILI9341_Init();
-
     LedMatrix_Init();
-
     Input_Init();
-
     colors[0].R=10;
     colors[1].G=10;
     colors[2].B=10;
-
     i=0;
-
     Input_Attach(NEXT,PRESS_UP,nextColor);
     Input_Attach(PREV,PRESS_UP,prevColor);
-
     Input_AttachEncoderInc(increaseBrightness);
     Input_AttachEncoderDec(decreaseBrightness);
-
     Input_Attach(SELECT,DOUBLE_CLICK,clearScreen);
     Input_Attach(SELECT,LONG_PRESS_START,whiteScreen);
-
-
     while(1);
-
-
-
     Vumeter_Init();
-
-
     for(int i=0; i<(NSAMPLES*120/128); i++)
     	samples[i]=32768;
-
-
-
-
 	GPIO_PinWrite(BOARD_ADC0_SE12_GPIO, BOARD_ADC0_SE12_PIN,1);
     Vumeter_Generate(samples);
 	GPIO_PinWrite(BOARD_ADC0_SE12_GPIO, BOARD_ADC0_SE12_PIN,0);
-
 	Vumeter_Display();
 */
     return 0 ;
 }
-
-

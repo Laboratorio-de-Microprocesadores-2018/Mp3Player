@@ -2,6 +2,11 @@
 #define AUDIO_H_
 #include "fsl_common.h"
 
+#define DAC 1
+#define I2S 2
+
+#define AUDIO_OUTPUT I2S
+
 
 status_t Audio_Init();
 
