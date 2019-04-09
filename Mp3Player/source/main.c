@@ -21,6 +21,9 @@
 #include "FileExplorer.h"
 #include "MP3Player.h"
 
+
+#include "fsl_sd.h"
+
 /*
  * @brief   Application entry point.
  */
@@ -53,53 +56,106 @@ int main(void)
     FE_Init();
 
     MP3_Init();
+    bool prevStatus=false;
+
+    while(1)
+    {
+    	bool status = FE_DriveStatus(FE_SD);
+
+
+		if(status != prevStatus)
+		{
+			FE_mountDrive(FE_SD);
+			PRINTF("Card Inserted\n");
+			FILINFO dir[3];
+			uint16_t n=3;
+			char buff[256];
+			strcpy(buff, "/");
+			status_t a=FE_DirN(buff,&n,dir);
+			if(a==kStatus_Success)
+				PRINTF("1\n");
+			else
+				PRINTF("0\n");
+		}
+    }
+
+//    if(FE_check4Drive()== kStatus_Success)
+//  	{
+//    		if(FE_mountDrive()== kStatus_Success)
+//    		PRINTF("Card Inserted\n");
+//  	}
+//
+//    while(1)
+//	{
+//		static bool prevStatus=false;
+//
+//		bool status = FE_DriveStatus();
+//
+//		if(status != prevStatus)
+//		{
+//			prevStatus=status;
+//			if(status==true)
+//			{
+//				if(FE_mountDrive()== kStatus_Success)
+//				{
+//					PRINTF("Card Inserted\n");
+//				}
+//			}
+//			else
+//				PRINTF("Card Extracted\n");
+//
+//		}
+//	}
+
+
+
 
    // Input_Init();
 
 
-	if(FE_check4Drive()== kStatus_Success)
-	{
-		if(FE_mountDrive()== kStatus_Success)
-		{
-			uint8_t k = FE_CountFilesMatching("/","*.mp3");
-
-			PRINTF("There are %d mp3 files in root folder\n",k);
-		}
-	}
-
-	uint32_t duration = 0;
-	//MP3_ComputeSongDuration(files[2].fname,&duration);
-
-
- 	Button SW2,SW3;
-
-	Button_Init(&SW2,ReadSW2, 0,0);
-	Button_Init(&SW3,ReadSW3, 0,1);
-
-	Button_Start(&SW2);
-	Button_Start(&SW3);
-
-	LED_GREEN_ON();
-
-	while(1)
-	{
-		static bool prevStatus=false;
-
-		bool status = FE_DriveStatus();
-
-		if(status != prevStatus)
-		{
-			prevStatus=status;
-			if(status==true)
-			{
-				if(FE_mountDrive()== kStatus_Success)
-				{
-					PRINTF("Card Inserted\n");
-					MP3_Play("/",0);
-				}
-			}
-
-		}
+//	if(FE_check4Drive()== kStatus_Success)
+//	{
+//		if(FE_mountDrive()== kStatus_Success)
+//		{
+//			uint8_t k = FE_CountFilesMatching("/","*.mp3");
+//
+//			PRINTF("There are %d mp3 files in root folder\n",k);
+//		}
+//	}
+//
+//	uint32_t duration = 0;
+//	//MP3_ComputeSongDuration(files[2].fname,&duration);
+//
+//
+// 	Button SW2,SW3;
+//
+//	Button_Init(&SW2,ReadSW2, 0,0);
+//	Button_Init(&SW3,ReadSW3, 0,1);
+//
+//	Button_Start(&SW2);
+//	Button_Start(&SW3);
+//
+//	LED_GREEN_ON();
+//
+//	while(1)
+//	{
+//		static bool prevStatus=false;
+//
+//		bool status = FE_DriveStatus();
+//
+//		if(status != prevStatus)
+//		{
+//			prevStatus=status;
+//			if(status==true)
+//			{
+//				if(FE_mountDrive()== kStatus_Success)
+//				{
+//					PRINTF("Card Inserted\n");
+//					MP3_Play("/",0);
+//				}
+//			}
+//
+//		}
 
 //		ButtonEvent ev;
 //		ButtonID ID;
@@ -119,7 +175,7 @@ int main(void)
 //			break;
 //		}
 
-		ButtonEvent SW2Event,SW3Event;
+/*		ButtonEvent SW2Event,SW3Event;
 
 
      	MP3_Tick();
@@ -172,7 +228,7 @@ int main(void)
 		}
 
 
-    }
+    }*/
 
 
 /*    //ILI9341_Init();
