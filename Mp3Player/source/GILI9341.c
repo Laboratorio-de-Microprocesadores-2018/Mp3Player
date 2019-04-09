@@ -1,6 +1,6 @@
 #include "GILI9341.h"
 #include "ILI9341.h"
-#include "../lvgl/lv_conf.h"
+#include "../lv_conf.h"
 #include "fsl_common.h"
 
 static void GILI9341_SetWindow(int32_t x1, int32_t y1, int32_t x2, int32_t y2);

@@ -73,6 +73,7 @@ extern "C" {
  * @param userData User parameter passed to the callback function.
  * @param dmaHandle eDMA handle pointer, this handle shall be static allocated by users.
  */
+
 void SAI_TransferTxCreateHandleEDMA(
     I2S_Type *base, sai_edma_handle_t *handle, sai_edma_callback_t callback, void *userData, edma_handle_t *dmaHandle);
 
