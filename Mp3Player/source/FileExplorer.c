@@ -1,6 +1,6 @@
 #include "FileExplorer.h"
 #include "stdbool.h"
-
+#include <string.h>
 #include "ff.h"
 #include "fsl_sysmpu.h"
 #include "pin_mux.h"
@@ -250,4 +250,52 @@ uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
 	f_closedir(&dir);
 
 	return n;
+}
+
+FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, char * indexArray)
+{
+	DIR dj;
+	FRESULT fr = FR_OK;
+	char name[MAX_MP3_FILES][FF_LFN_BUF+1];
+	char temp[FF_LFN_BUF+1];
+
+	// Find first file
+	FILINFO fInfo;
+	indexArray[0] = SORTING_END_CHAR;
+	fr = f_findfirst(&dj, &fInfo, path, pattern);
+	if(!(fr == FR_OK  && fInfo.fname[0]))		// In case path couldnt be opened or no file found
+		return fr;
+
+	// Copy all file names to array for comparison
+	int n = 0;
+	while(fr == FR_OK && fInfo.fname[0])	// While valid file is found
+	{
+		strcpy(name[n], fInfo.fname);
+		n++;
+		fr = f_findnext(&dj, &fInfo);
+	}
+	indexArray[n] = SORTING_END_CHAR;	// Terminate array with end character
+
+	for(int p = 0 ; p < n ; p++)
+		indexArray[p]=p+1;	// Enumerate file names with respective indexes
+
+	// Sort both arrays in parallel
+	if(sort == ABC)
+	{
+		for (int i = 0; i < n - 1 ; i++)
+        {
+            for (int j = i + 1; j < n; j++)
+            {
+                if (strcmp(name[i], name[j]) > 0)
+                {
+                    strcpy(temp, name[i]);
+                    strcpy(name[i], name[j]);
+                    strcpy(name[j], temp);
+                    indexArray[i] = indexArray[j];
+                    indexArray[j] = indexArray[i];
+                }
+            }
+        }
+	}
+	return fr;
 }
