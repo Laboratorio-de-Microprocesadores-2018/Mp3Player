@@ -79,7 +79,8 @@ status_t FE_Init()
 	        return kStatus_Fail;
 	    }
 
-
+	    g_fileSystems[SDDISK].pdrv=SDDISK;
+	   //g_fileSystems[USBDISK].pdrv=USBDISK;//PONERLO CUANDO SE USE USB
 }
 
 status_t FE_check4Drive()
@@ -122,7 +123,7 @@ status_t FE_check4Drive()
 
 status_t FE_mountDrive(FE_drive drive)
 {
-	g_fileSystems[drive].pdrv=drive;
+
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
 	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 0U))
 	    {
@@ -225,10 +226,10 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
 }
 bool FE_DriveStatus(FE_drive drive)
 {
-	if(disk_status(g_fileSystems[drive].pdrv)==STA_NODISK)
-		return false;
-	else
+	if(disk_status(g_fileSystems[drive].pdrv)==STA_OK )
 		return true;
+	else
+		return false;
 }
 
 uint8_t FE_CountFilesMatching(const char * path, const char * pattern)

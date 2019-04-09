@@ -40,7 +40,7 @@ static int16_t audioBuf[MAX_SAMPLES_PER_FRAME];
 static uint32_t frameCounter;
 static float playbackTime;
 
-static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint16_t * nRead);
+static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint32_t * nRead);
 static status_t MP3_DecodeFrame();
 static void MP3_PlayCurrentSong();
 
@@ -201,7 +201,7 @@ void MP3_Tick()
 
 				Audio_FillBackBuffer(audioBuf,
 									 mp3FrameInfo.outputSamps,
-									 mp3FrameInfo.samprate * 2,
+									 mp3FrameInfo.samprate,
 									 frameCounter++);
 
 				playbackTime += mp3FrameInfo.outputSamps / ((float)mp3FrameInfo.samprate * 2);
@@ -248,7 +248,7 @@ void MP3_Tick()
 /**
  *    @brief
  */
-static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint16_t * nRead)
+static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint32_t * nRead)
 {
 	/* Move the left bytes from the end to the front */
 	memmove(readBuf,readPtr,bytesLeft);
@@ -256,21 +256,25 @@ static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr,
 	/* Read a maximum of bytesLeft bytes from current file */
     FRESULT res = FE_ReadFile(fp, (void *)(readBuf+bytesLeft), READ_BUFFER_SIZE-bytesLeft, nRead);
 
-    if(res != FR_OK)
-    	return kStatus_Fail;
+    if(res == FR_OK)
+    {
+    	/* Zero-pad to avoid finding false sync word after last frame (from old data in readBuf) */
+		if ( (*nRead) < (READ_BUFFER_SIZE - bytesLeft) )
+			memset(readBuf+bytesLeft+(*nRead), 0, READ_BUFFER_SIZE-bytesLeft-(*nRead));
 
-	/* Zero-pad to avoid finding false sync word after last frame (from old data in readBuf) */
-	if ( (*nRead) < (READ_BUFFER_SIZE - bytesLeft) )
-		memset(readBuf+bytesLeft+(*nRead), 0, READ_BUFFER_SIZE-bytesLeft-(*nRead));
+		return kStatus_Success;
+    }
 
-	return kStatus_Success;
+    return kStatus_Fail;
+
+
 }
 
 static status_t MP3_DecodeFrame()
 {
     uint8_t wordAlign = 0;
 	bool frameDecoded = 0;
-    uint16_t nRead = 0;
+    uint32_t nRead = 0;
     status_t s = kStatus_Success;
 
     while (frameDecoded==false && FE_EOF(&currentFile)==false )
@@ -315,7 +319,7 @@ static status_t MP3_DecodeFrame()
 		}
 		*/
 
-		switch (MP3Decode(mp3Decoder, &readPtr, &bytesLeft, audioBuf, 0))
+		switch (MP3Decode(mp3Decoder, &readPtr, (int*)&bytesLeft, audioBuf, 0))
 		{
 		case ERR_MP3_NONE:
 			MP3GetLastFrameInfo(mp3Decoder, &mp3FrameInfo);
@@ -405,6 +409,9 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 			switch (MP3GetNextFrameInfo(mp3Decoder, &mp3FrameInfo, readPtr))
 			{
 			case ERR_MP3_NONE:
+//				duration += (float)mp3FrameInfo.outputSamps / (float)mp3FrameInfo.samprate;
+//				readPtr += 300; // Fijarse que no se pase del arreglo
+//				break;
 				duration = FE_Size(&file)*8/(float)mp3FrameInfo.bitrate;
 				*(seconds) = (uint32_t)duration;
 
@@ -420,72 +427,7 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 			}
 
 		}
-	/*
-	if(result == FR_OK)
-	{
-		while (FE_EOF(&file)==false)
-		{
-			// Condition to refill read buffer - should always be enough for a full frame
-			if (bytesLeft < 2*MAINBUF_SIZE) //&& !eofReached)
-			{
-				// Align to 4 bytes
-				//wordAlign = (4-(bytesLeft&3)) & 3;
-
-				// Fill read buffer
-				uint32_t nRead = MP3_FillReadBuffer(&file,readBuf, readPtr, bytesLeft);
-
-				bytesLeft += nRead;
-				readPtr = readBuf;
-			}
-
-			// Find start of next MP3 frame - assume EOF if no sync found
-			uint32_t offset = MP3FindSyncWord(readPtr, bytesLeft);
-
-			if (offset < 0)
-			{
-				readPtr = readBuf;
-				bytesLeft = 0;
-				continue;
-			}
-			else
-			{
-				readPtr += offset;
-				bytesLeft -= offset;
-			}
-
-			switch (MP3GetNextFrameInfo(mp3Decoder, &mp3FrameInfo, readPtr))
-			{
-			case ERR_MP3_NONE:
-				duration += (float)mp3FrameInfo.outputSamps / (float)mp3FrameInfo.samprate;
-				readPtr += 4;
-				break;
-
-			case ERR_MP3_INVALID_FRAMEHEADER:
-				readPtr++;
-				bytesLeft--;
-				continue;
-			}
-
-
-			switch (MP3Decode(mp3Decoder, &readPtr, &bytesLeft, audioBuf, 0))
-			{
-			case ERR_MP3_NONE:
-				MP3GetLastFrameInfo(mp3Decoder, &mp3FrameInfo);
-				duration += (float)mp3FrameInfo.outputSamps / (float)mp3FrameInfo.samprate;
-				break;
-			case ERR_MP3_INVALID_FRAMEHEADER:
-				readPtr++;
-				bytesLeft--;
-				continue;
-			}
-		}
-
-		duration /= mp3FrameInfo.nChans;
-
-		*(seconds) = (uint32_t)duration;
-		return kStatus_Success;
-		*/
 	}
-	else
-		return kStatus_Fail;
+
+	return kStatus_Fail;
 }
