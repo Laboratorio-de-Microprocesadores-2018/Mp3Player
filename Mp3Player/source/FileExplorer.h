@@ -14,6 +14,8 @@
 #include "stdbool.h"
 
 #define MAX_FILES_PER_DIR 255
+#define MAX_MP3_FILES 256
+#define SORTING_END_CHAR 0
 
 #define FE_EOF(fp) 		 f_eof(fp)
 #define FE_Error(fp) 	 f_error(fp)
@@ -24,6 +26,11 @@
 #define FE_Unmount(path) f_unmount(path)
 
 typedef enum{FE_USB=1,FE_SD=2}FE_drive;
+typedef enum {
+	NONE,
+	ABC,
+	SIZE
+} FILE_SORT_TYPE;
 
 status_t FE_Init();
 status_t FE_check4Drive();
@@ -63,4 +70,6 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
  *
  */
 uint8_t FE_CountFilesMatching(const char * path, const char * pattern);
+
+FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, char * indexArray);
 #endif /* FILEEXPLORER_H_ */

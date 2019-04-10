@@ -176,47 +176,26 @@ int main(void)
 
 
 /*    //ILI9341_Init();
-
     LedMatrix_Init();
-
     Input_Init();
-
     colors[0].R=10;
     colors[1].G=10;
     colors[2].B=10;
-
     i=0;
-
     Input_Attach(NEXT,PRESS_UP,nextColor);
     Input_Attach(PREV,PRESS_UP,prevColor);
-
     Input_AttachEncoderInc(increaseBrightness);
     Input_AttachEncoderDec(decreaseBrightness);
-
     Input_Attach(SELECT,DOUBLE_CLICK,clearScreen);
     Input_Attach(SELECT,LONG_PRESS_START,whiteScreen);
-
-
     while(1);
-
-
-
     Vumeter_Init();
-
-
     for(int i=0; i<(NSAMPLES*120/128); i++)
     	samples[i]=32768;
-
-
-
-
 	GPIO_PinWrite(BOARD_ADC0_SE12_GPIO, BOARD_ADC0_SE12_PIN,1);
     Vumeter_Generate(samples);
 	GPIO_PinWrite(BOARD_ADC0_SE12_GPIO, BOARD_ADC0_SE12_PIN,0);
-
 	Vumeter_Display();
 */
     return 0 ;
 }
-
-
