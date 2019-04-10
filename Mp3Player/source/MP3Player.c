@@ -1,3 +1,10 @@
+/**
+ * @file MP3Player.c
+ * @brief
+ *
+ *
+ */
+
 #include "MP3Player.h"
 #include "Audio.h"
 #include "FileExplorer.h"

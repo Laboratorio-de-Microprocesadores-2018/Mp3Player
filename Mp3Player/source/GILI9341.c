@@ -1,3 +1,10 @@
+/**
+ * @file GILI9341.c
+ * @brief
+ *
+ *
+ */
+
 #include "GILI9341.h"
 #include "ILI9341.h"
 #include "../lv_conf.h"

@@ -1,3 +1,10 @@
+/**
+ * @file AudioI2S.c
+ * @brief
+ *
+ *
+ */
+
 #include "Audio.h"
 
 #if AUDIO_OUTPUT == I2S
@@ -8,16 +15,15 @@
 #include "assert.h"
 
 #define  AUDIO_BUFFER_SIZE 2304
-#undef 	SAI_XFER_QUEUE_SIZE
-#define  CIRC_BUFFER_LEN 2
-#define SAI_XFER_QUEUE_SIZE CIRC_BUFFER_LEN
 
+#undef 	SAI_XFER_QUEUE_SIZE
+#define CIRC_BUFFER_LEN 2
+#define SAI_XFER_QUEUE_SIZE CIRC_BUFFER_LEN
 
 #define AUDIO_SAI 			I2S0
 #define AUDIO_DMA 			DMA0
 #define AUDIO_DMA_CHANNEL	0
 #define SAI_TX_DMA_REQUEST  kDmaRequestMux0I2S0Tx
-
 #define AUDIO_DMA_IRQ_ID DMA0_IRQn
 
 typedef struct{
@@ -28,21 +34,19 @@ typedef struct{
 }PCM_AudioFrame;
 
 static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
+static edma_handle_t DMA_Handle;
+static sai_edma_handle_t SAI_Handle;
+static sai_transfer_format_t SAI_TransferFormat;
+
 
 
 static void EDMA_Configuration(void);
 
 static void DMAMUX_Configuration(void);
 
-
 static void SAI_Configuration(void);
 
-
 static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData);
-
-static edma_handle_t DMA_Handle;             /* Edma DMA_Handler */
-static sai_edma_handle_t SAI_Handle;
-static sai_transfer_format_t SAI_TransferFormat;
 
 
 
@@ -84,6 +88,13 @@ void Audio_Play()
 
 	/* Enable DMA */
 	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
+
+	void SAI_TxSetFormat(I2S_Type *base,
+	                     sai_transfer_format_t *format,
+	                     uint32_t mclkSourceClockHz,
+	                     uint32_t bclkSourceClockHz);
+
+
 }
 
 void Audio_Stop()

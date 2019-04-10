@@ -1,8 +1,6 @@
-/*
- * PowerManager.c
+/**
+ * @file PowerManager.c
+ * @brief
  *
- *  Created on: 24 feb. 2019
- *      Author: Tobias
+ *
  */
-
-

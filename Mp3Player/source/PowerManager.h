@@ -1,3 +1,11 @@
+/**
+ * @file PowerManager.h
+ * @brief
+ *
+ *
+ */
+
+
 #ifndef POWERMANAGER_H_
 #define POWERMANAGER_H_
 

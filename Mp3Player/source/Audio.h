@@ -1,3 +1,10 @@
+/**
+ * @file Audio.h
+ * @brief
+ *
+ *
+ */
+
 #ifndef AUDIO_H_
 #define AUDIO_H_
 #include "fsl_common.h"

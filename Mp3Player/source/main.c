@@ -50,6 +50,7 @@ int main(void)
     BOARD_InitBootPeripherals();
     BOARD_InitDebugConsole();
 
+
     FE_Init();
 
     MP3_Init();

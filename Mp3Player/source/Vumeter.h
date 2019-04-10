@@ -1,3 +1,10 @@
+/**
+ * @file Vumeter.h
+ * @brief
+ *
+ *
+ */
+
 #ifndef VUMETER_H_
 #define VUMETER_H_
 #include "fsl_common.h"

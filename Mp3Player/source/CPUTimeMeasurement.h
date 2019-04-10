@@ -1,3 +1,10 @@
+/**
+ * @file CPUTimeMeasurement.h
+ * @brief
+ *
+ *
+ */
+
 #ifndef CPUTIMEMEASUREMENT_H_
 #define CPUTIMEMEASUREMENT_H_
 

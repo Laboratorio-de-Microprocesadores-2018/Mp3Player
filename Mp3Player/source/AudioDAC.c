@@ -1,3 +1,10 @@
+/**
+ * @file AudioDAC.c
+ * @brief
+ *
+ *
+ */
+
 #include "Audio.h"
 
 #if AUDIO_OUTPUT == DAC
