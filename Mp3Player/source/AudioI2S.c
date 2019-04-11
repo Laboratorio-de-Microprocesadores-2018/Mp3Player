@@ -1,18 +1,29 @@
 /**
  * @file AudioI2S.c
- * @brief
  *
+ * @brief Implement audio output using I2S protocol (SAI peripheral)
+ *
+ * This file implements the Audio interface using I2S digital bus and DMA.
+ *
+ *
+ *
+ *
+ * Peripherals: I2S0, DMA0, DMAMUX
+ *
+ * Pins: C8, C1, B19, B18
+ *
+ * Interrupts: SAI_Callback
  *
  */
 
 #include "Audio.h"
 
-#if AUDIO_OUTPUT == I2S
+#if AUDIO_OUTPUT == I2S_OUTPUT
 
 #include "fsl_sai_edma.h"
 #include "fsl_dmamux.h"
 #include "fsl_port.h"
-#include "assert.h"
+
 
 #define  AUDIO_BUFFER_SIZE 2304
 
@@ -38,14 +49,9 @@ static edma_handle_t DMA_Handle;
 static sai_edma_handle_t SAI_Handle;
 static sai_transfer_format_t SAI_TransferFormat;
 
-
-
-static void EDMA_Configuration(void);
-
-static void DMAMUX_Configuration(void);
-
-static void SAI_Configuration(void);
-
+/**
+ *
+ */
 static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData);
 
 
@@ -53,32 +59,46 @@ static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t sta
 
 status_t Audio_Init()
 {
+	//////////////////////////////////////////////////////////
+	// Sets up necessary pins.
 	PORT_SetPinMux(PORTC, 8, kPORT_MuxAlt4);	/* PORTC8  is configured as I2S0_TX_MCLK */
 	PORT_SetPinMux(PORTC, 1, kPORT_MuxAlt6);    /* PORTC1  is configured as I2S0_TXD0  */
 	PORT_SetPinMux(PORTB, 19, kPORT_MuxAlt4);   /* PORTB19 is configured as I2S0_TX_FS */
 	PORT_SetPinMux(PORTB, 18, kPORT_MuxAlt4);   /* PORTB18 is configured as I2S0_TX_BCLK*/
 
-	/* Initialize DMAMUX. */
-	DMAMUX_Configuration();
+	//////////////////////////////////////////////////////////
+	// Sets up the DMA.
+	DMAMUX_Init(DMAMUX0);
+	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
+	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
 
-	/* Initialize EDMA. */
-	EDMA_Configuration();
+	//////////////////////////////////////////////////////////
+	// Initialize EDMA.
+	edma_config_t userConfig;
+	EDMA_GetDefaultConfig(&userConfig);
+	userConfig.enableRoundRobinArbitration = false;
+	userConfig.enableHaltOnError = true;
+	userConfig.enableContinuousLinkMode = false;
+	userConfig.enableDebugMode = true;
+	EDMA_Init(AUDIO_DMA, &userConfig);
+	EDMA_CreateHandle(&DMA_Handle, AUDIO_DMA, AUDIO_DMA_CHANNEL);
 
-	/* Initialize DAC. */
-	SAI_Configuration();
+
+	//////////////////////////////////////////////////////////
+	// Initialize SAI.
+	sai_config_t config;
+	SAI_TxGetDefaultConfig(&config);
+	SAI_TxInit(AUDIO_SAI, &config);
+	SAI_TxEnable(AUDIO_SAI, true);
+	SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL, &DMA_Handle);
 
 	return kStatus_Success;
 
 }
 
-void Audio_ResetBuffers()
+status_t Audio_Deinit()
 {
-	for(int i=0; i<CIRC_BUFFER_LEN; i++)
-	{
-		memset(audioFrame[i].samples,0,AUDIO_BUFFER_SIZE);
-		audioFrame[i].nSamples = AUDIO_BUFFER_SIZE;
-		audioFrame[i].sampleRate = 44100;
-	}
+
 }
 
 void Audio_Play()
@@ -97,11 +117,6 @@ void Audio_Play()
 
 }
 
-void Audio_Stop()
-{
-	SAI_TransferTerminateReceiveEDMA(AUDIO_SAI, &SAI_Handle);
-	Audio_ResetBuffers();
-}
 
 void Audio_Pause()
 {
@@ -118,9 +133,27 @@ void Audio_Resume()
 
 
 }
+
+void Audio_Stop()
+{
+	SAI_TransferTerminateReceiveEDMA(AUDIO_SAI, &SAI_Handle);
+	Audio_ResetQueue();
+}
+
+
 uint16_t * Audio_GetBackBuffer()
 {
 	return audioFrame[DMA_Handle.tail].samples;
+}
+
+void Audio_ResetQueue()
+{
+	for(int i=0; i<CIRC_BUFFER_LEN; i++)
+	{
+		memset(audioFrame[i].samples,0,AUDIO_BUFFER_SIZE);
+		audioFrame[i].nSamples = AUDIO_BUFFER_SIZE;
+		audioFrame[i].sampleRate = 44100;
+	}
 }
 
 
@@ -132,7 +165,7 @@ uint32_t Audio_GetCurrentFrameNumber()
 	return n;
 }
 
-void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
+void Audio_PushFrame(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
 {
 	// Average stereo channels
 	for(int i=0; i<nSamples; i++)
@@ -159,7 +192,7 @@ void Audio_SetSampleRate(uint32_t sr)
 
 }
 
-bool Audio_BackBufferIsFree()
+bool Audio_QueueIsFree()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 	bool b = (DMA_Handle.tail+1)%DMA_Handle.tcdSize != DMA_Handle.header;
@@ -167,7 +200,7 @@ bool Audio_BackBufferIsFree()
 	return b;
 }
 
-bool Audio_BackBufferIsEmpty()
+bool Audio_QueueIsEmpty()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 	bool b = (DMA_Handle.tcdUsed == 0);
@@ -181,46 +214,6 @@ static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t sta
 	Audio_SetSampleRate(audioFrame[DMA_Handle.header].sampleRate);
 }
 
-static void EDMA_Configuration(void)
-{
-
-    edma_config_t userConfig;
-    EDMA_GetDefaultConfig(&userConfig);
-
-    userConfig.enableRoundRobinArbitration = false;
-    userConfig.enableHaltOnError = true;
-    userConfig.enableContinuousLinkMode = false;
-    userConfig.enableDebugMode = true;
-
-    EDMA_Init(AUDIO_DMA, &userConfig);
-
-	/* Creates the DMA handle. */
-	EDMA_CreateHandle(&DMA_Handle, AUDIO_DMA, AUDIO_DMA_CHANNEL);
-}
-
-static void DMAMUX_Configuration(void)
-{
-	// Sets up the DMA.
-	DMAMUX_Init(DMAMUX0);
-
-	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
-
-	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
-}
-
-
-static void SAI_Configuration(void)
-{
-	sai_config_t config;
-
-	SAI_TxGetDefaultConfig(&config);
-
-	SAI_TxInit(AUDIO_SAI, &config);
-
-	SAI_TxEnable(AUDIO_SAI, true);
-
-	SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL, &DMA_Handle);
-}
 
 
 #endif

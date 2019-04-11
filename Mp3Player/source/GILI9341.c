@@ -61,7 +61,7 @@ void GILI9341_Fill(int32_t x1, int32_t y1, int32_t x2, int32_t y2, lv_color_t co
 	ILI9341_SendData((uint8_t*)colors,sizeof(lv_color_t)*size);
 
 
-	/* ESTO NO ANDA (todavia) Es para evitar hacer un arreglo y llenarlo todo del mismo color
+	/* ESTO NO ANDA (todavia) Es para evitar hacer un arreglo y llenarlo del mismo color
 	static lv_color_t c;
 	c = color;
 	ILI9341_SendRepeatedData((uint8_t)&color,sizeof(lv_color_t),size);
