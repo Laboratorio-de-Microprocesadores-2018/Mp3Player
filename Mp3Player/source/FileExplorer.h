@@ -8,7 +8,6 @@
 #include "stdbool.h"
 
 #define MAX_FILES_PER_DIR 255
-#define MAX_MP3_FILES 256
 #define SORTING_END_CHAR 0
 
 #define FE_EOF(fp) 		 f_eof(fp)
@@ -24,7 +23,7 @@ typedef enum {
 	NONE,
 	ABC,
 	SIZE
-} FILE_SORT_TYPE;
+} FE_FILE_SORT_TYPE;
 
 status_t FE_Init();
 status_t FE_check4Drive();
@@ -65,5 +64,9 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
  */
 uint8_t FE_CountFilesMatching(const char * path, const char * pattern);
 
-FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, char * indexArray);
+
+/**
+ * @brief Sorts the files with a given extension from path to indexArray following a sort criteria.
+ */
+uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern, uint8_t * indexArray);
 #endif /* FILEEXPLORER_H_ */

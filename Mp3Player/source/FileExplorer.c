@@ -252,11 +252,12 @@ uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
 	return n;
 }
 
-FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, char * indexArray)
+uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern, uint8_t * indexArray)
 {
 	DIR dj;
 	FRESULT fr = FR_OK;
-	char name[MAX_MP3_FILES][FF_LFN_BUF+1];
+	uint8_t filesRead = 0;
+	char name[MAX_FILES_PER_DIR][FF_LFN_BUF+1];
 	char temp[FF_LFN_BUF+1];
 
 	// Find first file
@@ -264,27 +265,26 @@ FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, ch
 	indexArray[0] = SORTING_END_CHAR;
 	fr = f_findfirst(&dj, &fInfo, path, pattern);
 	if(!(fr == FR_OK  && fInfo.fname[0]))		// In case path couldnt be opened or no file found
-		return fr;
+		return filesRead;
 
 	// Copy all file names to array for comparison
-	int n = 0;
 	while(fr == FR_OK && fInfo.fname[0])	// While valid file is found
 	{
-		strcpy(name[n], fInfo.fname);
-		n++;
+		strcpy(name[filesRead], fInfo.fname);
+		filesRead++;
 		fr = f_findnext(&dj, &fInfo);
 	}
-	indexArray[n] = SORTING_END_CHAR;	// Terminate array with end character
+//	indexArray[filesRead] = SORTING_END_CHAR;	// Terminate array with end character
 
-	for(int p = 0 ; p < n ; p++)
+	for(int p = 0 ; p < filesRead ; p++)
 		indexArray[p]=p+1;	// Enumerate file names with respective indexes
 
 	// Sort both arrays in parallel
 	if(sort == ABC)
 	{
-		for (int i = 0; i < n - 1 ; i++)
+		for (int i = 0; i < filesRead - 1 ; i++)
         {
-            for (int j = i + 1; j < n; j++)
+            for (int j = i + 1; j < filesRead; j++)
             {
                 if (strcmp(name[i], name[j]) > 0)
                 {
@@ -297,5 +297,5 @@ FRESULT FE_Sort(FILE_SORT_TYPE sort ,const char * path, const char * pattern, ch
             }
         }
 	}
-	return fr;
+	return filesRead;
 }

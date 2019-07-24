@@ -27,7 +27,9 @@ static FIL currentFile;
 static FILINFO currentFileInfo;
 //static DIR currentDir;
 static char curPath[256];
-static uint8_t filesIndexLut[MAX_FILES_PER_DIR];
+static FE_FILE_SORT_TYPE plSortCriteria = ABC;	// Playlist sort criteria
+static uint8_t fileIndexLut[MAX_FILES_PER_DIR];
+static uint8_t fileIndexLutSize;
 static uint8_t curSong;
 
 
@@ -75,18 +77,16 @@ void MP3_Play(char * dirPath, uint8_t index)
 	strcpy(curPath,dirPath);
 
 	// Sort files
-	/*
-
-	FE_GetSortedFiles(filesIndexLut,&numberOfSongs) Funcion de marcos
+	fileIndexLutSize = FE_Sort(plSortCriteria, dirPath, ".mp3", fileIndexLut);
 	uint8_t i = 0;
-	while(filesIndexLut[i]!=index && filesIndexLut[i]!=EOF) i++;
-	if(filesIndexLut[i]==index)
+	while(fileIndexLut[i]!=index && i<fileIndexLutSize) i++;
+	if(fileIndexLut[i]==index)
 		curSong = i;
-	*/
+
 
 	// TEMPORAL
-	curSong = index;
-	filesIndexLut[curSong] = index;
+//	curSong = index;
+//	fileIndexLut[curSong] = index;
 
 
 	MP3_PlayCurrentSong();
@@ -99,7 +99,7 @@ static void MP3_PlayCurrentSong()
 									&currentFile,
 									&currentFileInfo,
 									FA_READ,
-									filesIndexLut[curSong],
+									fileIndexLut[curSong],
 									"*.mp3");
 
 	if(result == FR_OK)
@@ -142,10 +142,10 @@ void MP3_Next()
 	curSong++;
 
 	// Wrap around if reached the end
-	if(filesIndexLut[curSong]==EOF)
+	if(fileIndexLut[curSong]==EOF)
 		curSong = 0;
 	*/
-	filesIndexLut[curSong]++;
+	fileIndexLut[curSong]++;
 
 	MP3_PlayCurrentSong();
 
@@ -156,8 +156,8 @@ void MP3_Prev()
 	if(status != IDLE)
 		MP3_Stop();
 
-	if(playbackTime <5 && filesIndexLut[curSong] > 0)
-		filesIndexLut[curSong]--;
+	if(playbackTime <5 && fileIndexLut[curSong] > 0)
+		fileIndexLut[curSong]--;
 
 	MP3_PlayCurrentSong();
 }
