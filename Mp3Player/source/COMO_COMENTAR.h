@@ -1,3 +1,9 @@
+/**
+ * @file COMO_COMENTAR.h
+ * @brief
+ *
+ *
+ */
 
 /////////////////////////////////////////////////////////////////////////////////
 //                              CONTROL DE ACCESO                              //
@@ -27,6 +33,10 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////
+//                         				API	  		                           //
+/////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////
 //                   Local variable definitions ('static')                     //
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -51,6 +61,23 @@
  * @return
  */
 
+/**************************************************************************/
+/*!
+    @brief  Gets the most recent sensor events.
+            This function reads from both the accelerometer and the
+            magnetometer in one call, and is a deviation from the standard
+            Adafruit_Sensor API, but is provided as a convenience since most
+            AHRS algorithms require sensor samples to be as close in time as
+            possible.
+    @param    accelEvent
+              A reference to the sensors_event_t instances where the
+              accelerometer data should be written.
+    @param    magEvent
+              A reference to the sensors_event_t instances where the
+              magnetometer data should be written.
+    @return True if the event read was successful, otherwise false.
+*/
+/**************************************************************************/
 
 /**
  * @file

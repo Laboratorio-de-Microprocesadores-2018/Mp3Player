@@ -1,3 +1,10 @@
+/**
+ * @file FileExplorer.c
+ * @brief
+ *
+ *
+ */
+
 #include "FileExplorer.h"
 #include "stdbool.h"
 #include <string.h>

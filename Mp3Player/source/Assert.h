@@ -1,9 +1,3 @@
-/////////////////////////////////////////////////////////////////////////////////
-//                              CONTROL DE ACCESO                              //
-//          Grupo 3 - Laboratorio de Microprocesadores - ITBA - 2018           //
-//	                                                                           //
-/////////////////////////////////////////////////////////////////////////////////
-
 /**
  * @file Assert.h
  * @brief Define assertion macro to halt the program execution.

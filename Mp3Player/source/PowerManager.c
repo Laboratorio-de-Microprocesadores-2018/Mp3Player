@@ -1,3 +1,10 @@
+/**
+ * @file PowerManager.c
+ * @brief
+ *
+ *
+ */
+
 #include "PowerManager.h"
 #include "fsl_smc.h"
 #include "fsl_llwu.h"
@@ -56,4 +63,3 @@ static void PM_DeinitAttachModules(void)
 	for(int i = 0 ; i<callbackCount ; i++)
 		PM_callbackArray[i]();
 }
-

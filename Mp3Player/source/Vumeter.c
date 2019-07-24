@@ -1,3 +1,10 @@
+/**
+ * @file Vumeter.c
+ * @brief
+ *
+ *
+ */
+
 #include "Vumeter.h"
 #include "LedMatrix.h"
 #define ARM_MATH_CM4

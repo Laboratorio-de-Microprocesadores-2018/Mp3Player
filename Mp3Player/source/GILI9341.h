@@ -1,3 +1,10 @@
+/**
+ * @file GILI9341.h
+ * @brief
+ *
+ *
+ */
+
 #ifndef GILI9341_H_
 #define GILI9341_H_
 #include "lvgl/lv_misc/lv_color.h"

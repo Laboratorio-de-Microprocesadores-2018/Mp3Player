@@ -1,6 +1,13 @@
+/**
+ * @file AudioDAC.c
+ * @brief
+ *
+ *
+ */
+
 #include "Audio.h"
 
-#if AUDIO_OUTPUT == DAC
+#if AUDIO_OUTPUT == DAC_OUTPUT
 
 #include "fsl_dac.h"
 #include "fsl_edma.h"
@@ -84,7 +91,7 @@ status_t Audio_Init()
 
 }
 
-void Audio_ResetBuffers()
+void Audio_ResetQueue()
 {
 	for(int i=0; i<CIRC_BUFFER_LEN; i++)
 	{
@@ -104,7 +111,7 @@ void Audio_Stop()
 {
 	EDMA_AbortTransfer(&DMA_Handle);
 	//PIT_StopTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
-	Audio_ResetBuffers();
+	Audio_ResetQueue();
 }
 
 void Audio_Pause()
@@ -132,7 +139,7 @@ uint32_t Audio_GetCurrentFrameNumber()
 	return n;
 }
 
-void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
+void Audio_PushFrame(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
 {
 	// Average stereo channels
 	for(int i=0; i<nSamples; i++)
@@ -165,7 +172,7 @@ void Audio_SetSampleRate(uint32_t sr)
 	PIT_SetTimerPeriod(AUDIO_PIT, AUDIO_PIT_CHNL, CLOCK_GetFreq(kCLOCK_BusClk)/sr+1);
 }
 
-bool Audio_BackBufferIsFree()
+bool Audio_QueueIsFree()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 	//bool b = DMA_Handle.tcdUsed < DMA_Handle.tcdSize;
@@ -174,7 +181,7 @@ bool Audio_BackBufferIsFree()
 	return b;
 }
 
-bool Audio_BackBufferIsEmpty()
+bool Audio_QueueIsEmpty()
 {
 	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 	bool b = (DMA_Handle.tcdUsed == 0);

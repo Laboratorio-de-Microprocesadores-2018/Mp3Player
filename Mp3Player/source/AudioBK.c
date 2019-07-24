@@ -93,7 +93,7 @@
 //}
 //
 //
-//void Audio_ResetBuffers()
+//void Audio_ResetQueue()
 //{
 //	for(int i=0; i<CIRC_BUFFER_LEN; i++)
 //	{
@@ -132,7 +132,7 @@
 //{
 //	EDMA_AbortTransfer(&DMA_Handle);
 //	//PIT_StopTimer(AUDIO_PIT,AUDIO_PIT_CHNL);
-//	Audio_ResetBuffers();
+//	Audio_ResetQueue();
 //}
 //
 //void Audio_Pause()
@@ -160,7 +160,7 @@
 //	return n;
 //}
 //
-//void Audio_FillBackBuffer(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
+//void Audio_PushFrame(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
 //{
 //	for(int i=0; i<nSamples; i++)
 //	{
@@ -186,7 +186,7 @@
 //
 //
 //
-//bool Audio_BackBufferIsFree()
+//bool Audio_QueueIsFree()
 //{
 //	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 //	bool b = !BUFFER_IS_FULL;
@@ -194,7 +194,7 @@
 //	return b;
 //}
 //
-//bool Audio_BackBufferIsEmpty()
+//bool Audio_QueueIsEmpty()
 //{
 //	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
 //	bool b = !BUFFER_IS_EMPTY;

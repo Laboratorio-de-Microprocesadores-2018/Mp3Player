@@ -1,3 +1,10 @@
+/**
+ * @file CPUTimeMEasurement.c
+ * @brief
+ *
+ *
+ */
+
 #include "CPUTimeMeasurement.h"
 
 

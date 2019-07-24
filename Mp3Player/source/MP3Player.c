@@ -1,3 +1,10 @@
+/**
+ * @file MP3Player.c
+ * @brief
+ *
+ *
+ */
+
 #include "MP3Player.h"
 #include "Audio.h"
 #include "FileExplorer.h"
@@ -108,9 +115,9 @@ static void MP3_PlayCurrentSong()
 
 		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME);
 
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
 
 		Audio_Play();
 
@@ -191,7 +198,7 @@ void MP3_Tick()
 	case PLAYING:
 
 		// Decode as many frames as possible
-		while(Audio_BackBufferIsFree())
+		while(Audio_QueueIsFree())
 		{
 			status_t s = MP3_DecodeFrame();
 			if(s==kStatus_Success)
@@ -199,7 +206,7 @@ void MP3_Tick()
 				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
 					Vumeter_Generate(audioBuf);
 
-				Audio_FillBackBuffer(audioBuf,
+				Audio_PushFrame(audioBuf,
 									 mp3FrameInfo.outputSamps,
 									 mp3FrameInfo.samprate,
 									 frameCounter++);
@@ -226,7 +233,7 @@ void MP3_Tick()
 
 	case PLAYING_LAST_FRAMES:
 		// Wait to audio buffer empties
-		if(Audio_BackBufferIsEmpty())
+		if(Audio_QueueIsEmpty())
 		{
 			// When empties stop playback and close file
 			Audio_Stop();
