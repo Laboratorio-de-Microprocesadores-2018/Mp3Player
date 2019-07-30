@@ -23,8 +23,7 @@
 #define AUDIO_SAI 			I2S0
 #define AUDIO_DMA 			DMA0
 #define AUDIO_DMA_CHANNEL	0
-#define SAI_TX_DMA_REQUEST  kDmaRequestMux0I2S0Tx
-#define AUDIO_DMA_IRQ_ID DMA0_IRQn
+#define AUDIO_DMA_IRQ_ID 	DMA0_IRQn
 
 typedef struct{
 	uint16_t samples[AUDIO_BUFFER_SIZE];
@@ -81,7 +80,7 @@ void Audio_ResetBuffers()
 	}
 }
 
-void Audio_Play()
+void Audio_Play(/*uint32_t sampleRate,*/)
 {
 	/* Enable Tx */
 	SAI_TxEnable(AUDIO_SAI, true);
@@ -89,10 +88,14 @@ void Audio_Play()
 	/* Enable DMA */
 	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
 
-	void SAI_TxSetFormat(I2S_Type *base,
-	                     sai_transfer_format_t *format,
-	                     uint32_t mclkSourceClockHz,
-	                     uint32_t bclkSourceClockHz);
+	SAI_TransferFormat.sampleRate_Hz =0000000000000000000000000000000000000000000000000;
+	SAI_TransferFormat.bitWidth = 16;
+	SAI_TransferFormat.stereo = kSAI_Stereo;
+	//SAI_TransferFormat.masterClockHz = SAI_MCLK;
+	SAI_TransferFormat.watermark = 3;
+
+
+	//SAI_TransferTxSetFormatEDMA(AUDIO_SAI,&SAI_Handle,&SAI_TransferFormat,SAI_MCLK,SAI_BCLK);
 
 
 }
@@ -203,7 +206,7 @@ static void DMAMUX_Configuration(void)
 	// Sets up the DMA.
 	DMAMUX_Init(DMAMUX0);
 
-	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
+	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, kDmaRequestMux0I2S0Tx);
 
 	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
 }
@@ -216,8 +219,6 @@ static void SAI_Configuration(void)
 	SAI_TxGetDefaultConfig(&config);
 
 	SAI_TxInit(AUDIO_SAI, &config);
-
-	SAI_TxEnable(AUDIO_SAI, true);
 
 	SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL, &DMA_Handle);
 }
