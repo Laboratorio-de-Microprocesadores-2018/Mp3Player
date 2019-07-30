@@ -11,6 +11,8 @@
 #include "MK64F12.h"
 #include "fsl_debug_console.h"
 
+#include "LM49450.h"
+
 
 #include "fsl_gpio.h"
 
@@ -49,6 +51,21 @@ int main(void)
 
     BOARD_InitBootPeripherals();
     BOARD_InitDebugConsole();
+
+    Audio_Init();
+
+    LM49450_Config config;
+    LM49450_GetDefaultConfig(&config);
+    config.lineInEnable = true;
+    LM49450_Init(&config);
+    LM49450_SetVolume(5);
+
+    LM49450_3Dconfig * config3d;
+	LM49450_GetDefault3DConfig(&config3d);
+    LM49450_Set3DConfig(&config3d);
+
+    LM49450_Enable(true);
+    while(1);
 
 
     FE_Init();
