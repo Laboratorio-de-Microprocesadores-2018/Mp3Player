@@ -34,7 +34,9 @@ static FIL currentFile;
 static FILINFO currentFileInfo;
 //static DIR currentDir;
 static char curPath[256];
-static uint8_t filesIndexLut[MAX_FILES_PER_DIR];
+static FE_FILE_SORT_TYPE plSortCriteria = ABC;	// Playlist sort criteria
+static uint8_t fileIndexLut[MAX_FILES_PER_DIR];
+static uint8_t fileIndexLutSize;
 static uint8_t curSong;
 
 
@@ -82,18 +84,16 @@ void MP3_Play(char * dirPath, uint8_t index)
 	strcpy(curPath,dirPath);
 
 	// Sort files
-	/*
-
-	FE_GetSortedFiles(filesIndexLut,&numberOfSongs) Funcion de marcos
+	fileIndexLutSize = FE_Sort(plSortCriteria, dirPath, ".mp3", fileIndexLut);
 	uint8_t i = 0;
-	while(filesIndexLut[i]!=index && filesIndexLut[i]!=EOF) i++;
-	if(filesIndexLut[i]==index)
+	while(fileIndexLut[i]!=index && i<fileIndexLutSize) i++;
+	if(fileIndexLut[i]==index)
 		curSong = i;
-	*/
+
 
 	// TEMPORAL
-	curSong = index;
-	filesIndexLut[curSong] = index;
+//	curSong = index;
+//	fileIndexLut[curSong] = index;
 
 
 	MP3_PlayCurrentSong();
@@ -106,7 +106,7 @@ static void MP3_PlayCurrentSong()
 									&currentFile,
 									&currentFileInfo,
 									FA_READ,
-									filesIndexLut[curSong],
+									fileIndexLut[curSong],
 									"*.mp3");
 
 	if(result == FR_OK)
@@ -115,9 +115,9 @@ static void MP3_PlayCurrentSong()
 
 		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME);
 
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
-		Audio_FillBackBuffer(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
+		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
 
 		Audio_Play();
 
@@ -149,10 +149,10 @@ void MP3_Next()
 	curSong++;
 
 	// Wrap around if reached the end
-	if(filesIndexLut[curSong]==EOF)
+	if(fileIndexLut[curSong]==EOF)
 		curSong = 0;
 	*/
-	filesIndexLut[curSong]++;
+	fileIndexLut[curSong]++;
 
 	MP3_PlayCurrentSong();
 
@@ -163,8 +163,8 @@ void MP3_Prev()
 	if(status != IDLE)
 		MP3_Stop();
 
-	if(playbackTime <5 && filesIndexLut[curSong] > 0)
-		filesIndexLut[curSong]--;
+	if(playbackTime <5 && fileIndexLut[curSong] > 0)
+		fileIndexLut[curSong]--;
 
 	MP3_PlayCurrentSong();
 }
@@ -198,7 +198,7 @@ void MP3_Tick()
 	case PLAYING:
 
 		// Decode as many frames as possible
-		while(Audio_BackBufferIsFree())
+		while(Audio_QueueIsFree())
 		{
 			status_t s = MP3_DecodeFrame();
 			if(s==kStatus_Success)
@@ -206,7 +206,7 @@ void MP3_Tick()
 				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
 					Vumeter_Generate(audioBuf);
 
-				Audio_FillBackBuffer(audioBuf,
+				Audio_PushFrame(audioBuf,
 									 mp3FrameInfo.outputSamps,
 									 mp3FrameInfo.samprate,
 									 frameCounter++);
@@ -233,7 +233,7 @@ void MP3_Tick()
 
 	case PLAYING_LAST_FRAMES:
 		// Wait to audio buffer empties
-		if(Audio_BackBufferIsEmpty())
+		if(Audio_QueueIsEmpty())
 		{
 			// When empties stop playback and close file
 			Audio_Stop();
