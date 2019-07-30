@@ -8,6 +8,7 @@
 
 #include "LM49450.h"
 #include "fsl_i2c.h"
+#include "fsl_port.h"
 
 #define CTRL_EXT_REF_MASK				(0x80U)
 #define CTRL_EXT_REF_SHIFT				(0x07U)
@@ -208,15 +209,43 @@ typedef struct
 #define I2C_MASTER_CLK_FREQ 			CLOCK_GetFreq(I2C0_CLK_SRC)
 #define LM49450_I2C 					I2C0
 
-#define LM49450_I2C_MASTER_SLAVE_ADDR 	b1111101
-#define LM49450_I2C_BAUDRATE 			100000U
+#define LM49450_I2C_MASTER_SLAVE_ADDR 	0b1111101
+#define LM49450_I2C_BAUDRATE 			10000U
 
-// Store the status of the registers
-static LM49450_Registers registers;
+// Store the status of the registers, init with default values
+static LM49450_Registers registers = {	.CTRL 		 = 0x00,
+										.CLK 		 = 0x00,
+										.CHRGPMP_FRQ = 0x49,
+										.I2S_MODE 	 = 0x00,
+										.I2S_CLK 	 = 0x00,
+										.HP_3D_CTRL  = 0x00,
+										.SPK_3D_CTRL = 0x00,
+										.HP_VOLUME 	 = 0x00,
+										.SPK_VOLUME  = 0x00,
+										.CMP_0_LSB 	 = 0x00,
+										.CMP_0_MSB 	 = 0x00,
+										.CMP_1_LSB 	 = 0x00,
+										.CMP_1_MSB 	 = 0x00,
+										.CMP_2_LSB 	 = 0x00,
+										.CMP_2_MSB 	 = 0x00};
 
 
+static void LM49450_WriteReg(uint8_t regAddress, uint8_t data)
+{
+	// I2C transfer configuration
+	static i2c_master_transfer_t transfer;
 
-
+	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR,
+	transfer.direction 	 	 = kI2C_Write,
+	transfer.subaddress	     = 0,
+	transfer.subaddressSize  = 1,
+	transfer.data 			 = NULL,
+	transfer.dataSize 		 = 1,
+	transfer.flags 		 	 = kI2C_TransferDefaultFlag;
+    transfer.subaddress 	 = regAddress;
+    transfer.data  			 = &data;
+    I2C_MasterTransferBlocking(LM49450_I2C , &transfer);
+}
 
 /**
  *
@@ -227,9 +256,9 @@ void LM49450_GetDefaultConfig(LM49450_Config * config)
 	config->oversampleRate = LM49450_DAC_OSR_125;
 	config->defaultDacFilter = true;
 	config->oscillatorMode = LM49450_FixedFrequency;
-	config->mute = false;
-	config->mode = LM49450_DAC_Mode;
-	config->enable = true;
+	//config->mute = false;
+	//config->lineInEnable = false;
+	//config->enable = true;
 	config->dither = LM49450_DitherDefault;
 	config->MclkDiv; /////////////////////////////////////////////////
 	config->chargePumpDiv; ////////////////////////////////////////////
@@ -244,13 +273,27 @@ void LM49450_GetDefaultConfig(LM49450_Config * config)
 	config->headphone3D.enable = false;
 	config->speaker3D.enable = false;
 
-}LM49450_Config;
+}
 
 /**
  *
  */
 void LM49450_Init(LM49450_Config * config)
 {
+	// Init I2C pins
+	port_pin_config_t pinConfig = {
+	kPORT_PullUp,                                            /* Internal pull-up resistor is enabled */
+	kPORT_FastSlewRate,                                      /* Fast slew rate is configured */
+	kPORT_PassiveFilterDisable,                              /* Passive filter is disabled */
+	kPORT_OpenDrainEnable,                                   /* Open drain is enabled */
+	kPORT_LowDriveStrength,                                  /* Low drive strength is configured */
+	kPORT_MuxAlt5,                                           /* Pin is configured as I2C0_SCL */
+	kPORT_UnlockRegister                                     /* Pin Control Register fields [15:0] are not locked */
+	};
+	PORT_SetPinConfig(PORTE, 24, &pinConfig); /* PORTE24 (pin 31) is configured as I2C0_SCL */
+	PORT_SetPinConfig(PORTE, 25, &pinConfig); /* PORTE25 (pin 32) is configured as I2C0_SDA */
+
+	// Init I2C module
 	/*
 	 * masterConfig->baudRate_Bps = 100000U;
 	 * masterConfig->enableStopHold = false;
@@ -260,8 +303,58 @@ void LM49450_Init(LM49450_Config * config)
 	i2c_master_config_t masterConfig;
 	I2C_MasterGetDefaultConfig(&masterConfig);
 	masterConfig.baudRate_Bps = LM49450_I2C_BAUDRATE;
-
 	I2C_MasterInit(LM49450_I2C, &masterConfig, I2C_MASTER_CLK_FREQ);
+
+	registers.CTRL = CTRL_EXT_REF(config->reference) 		| \
+					 CTRL_DAC_MODE(config->oversampleRate) 	| \
+					 CTRL_COMP(!config->defaultDacFilter)	| \
+					 CTRL_SS(config->oscillatorMode)		| \
+					 CTRL_MUTE(0) 							| \
+					 CTRL_LINE_IN(config->lineInEnable) 	| \
+					 CTRL_ENABLE(0);
+
+	registers.CLK = CLK_DAC_DITHER(config->dither) | CLK_RDIV(config->MclkDiv);
+
+	registers.CHRGPMP_FRQ = CHRGPMP_FRQ_CPDIV(config->chargePumpDiv);
+
+	registers.I2S_MODE = I2S_MODE_WRD(config->wordSize)				| \
+			 			 I2S_MODE_STEREO_REVERSE(config->stereoMode)| \
+		 				 I2S_MODE_WORD_ORDER(config->wordOrder)		| \
+						 I2S_MODE_MODE(config->I2sMode);
+
+	registers.I2S_CLK = I2S_CLK_CLK(config->I2sClkDiv)				|\
+						I2S_CLK_WS(config->bitsPerWord)				|\
+						I2S_CLK_WS_MS(config->wordSelectLineMaster)	|\
+						I2S_CLK_CLK_MS(config->clockLineMaster);
+
+	LM49450_WriteReg(0,  registers.CTRL);
+	LM49450_WriteReg(1,  registers.CLK);
+	LM49450_WriteReg(2,  registers.CHRGPMP_FRQ);
+	LM49450_WriteReg(3,  registers.I2S_MODE);
+	LM49450_WriteReg(4,  registers.I2S_CLK);
+	LM49450_WriteReg(5,  registers.HP_3D_CTRL);
+	LM49450_WriteReg(6,  registers.SPK_3D_CTRL);
+	LM49450_WriteReg(7,  registers.HP_VOLUME);
+	LM49450_WriteReg(8,  registers.SPK_VOLUME);
+	LM49450_WriteReg(10, registers.CMP_0_LSB);
+	LM49450_WriteReg(11, registers.CMP_0_MSB);
+	LM49450_WriteReg(12, registers.CMP_1_LSB);
+	LM49450_WriteReg(13, registers.CMP_1_MSB);
+	LM49450_WriteReg(14, registers.CMP_2_LSB);
+	LM49450_WriteReg(15, registers.CMP_2_MSB);
+}
+
+/**
+ *
+ */
+void LM49450_Enable(bool enable)
+{
+	if(enable == true)
+		registers.CTRL |= CTRL_ENABLE_MASK;
+	else
+		registers.CTRL &= ~CTRL_ENABLE_MASK;
+
+	LM49450_WriteReg(0,  registers.CTRL);
 }
 
 /**
@@ -273,19 +366,32 @@ void LM49450_Mute()
 }
 
 /**
+ *	@brief
  *
  */
-void LM49450_SetMode(LM49450_Mode mode)
+void LM49450_SetVolume(uint8_t vol)
 {
+	assert(0<=vol && vol<32);
 
+	registers.HP_VOLUME = vol;
+	LM49450_WriteReg(7,  registers.HP_VOLUME);
 }
 
 /**
  *
  */
-bool LM49450_VolumeUp()
+bool LM49450_VolumeUp() /// CAMBIAR PARA QUE CHEQUEE SI ESTAN LOS HP O NO
+					    /// COMO? HABRIA QUE AGREGAR UN GPIO QUE LO SENSE
 {
+	bool retval = false;
 
+	if(registers.HP_VOLUME < 31)
+	{
+		registers.HP_VOLUME++;
+		LM49450_WriteReg(7,  registers.HP_VOLUME);
+		retval = true;
+	}
+	return retval;
 }
 
 /**
@@ -293,17 +399,31 @@ bool LM49450_VolumeUp()
  */
 bool LM49450_VolumeDown()
 {
-
+	bool retval = false;
+	if(registers.HP_VOLUME > 0)
+	{
+		registers.HP_VOLUME--;
+		LM49450_WriteReg(7,  registers.HP_VOLUME);
+		retval = true;
+	}
+	return retval;
 }
 
+void LM49450_GetDefault3DConfig(LM49450_3Dconfig * config)
+{
+	config->attenuate6db = false;
+	config->hpFreq = highPassFreq_900Hz;
+	config->mixLevel = mixLevel_37_pc;
+	config->mode = modeWide;
+	config->enable = true;
+}
+void LM49450_Set3DConfig(LM49450_3Dconfig * config)
+{
+	registers.HP_3D_CTRL = 	HP_3D_CTRL_ATN(config->attenuate6db)	|\
+							HP_3D_CTRL_FREQ(config->hpFreq)			|\
+							HP_3D_CTRL_GAIN(config->mixLevel)		|\
+							HP_3D_CTRL_MODE(config->mode)			|\
+							HP_3D_CTRL_EN(config->enable);
 
-
-//	 I2C_MasterTransferBlocking(LM49450_I2C, &masterXfer);
-//	  masterXfer.slaveAddress = LM49450_I2C_MASTER_SLAVE_ADDR;
-//	    masterXfer.direction = kI2C_Read;
-//	    masterXfer.subaddress = (uint32_t)deviceAddress;
-//	    masterXfer.subaddressSize = 1;
-//	    masterXfer.data = g_master_rxBuff;
-//	    masterXfer.dataSize = LM49450_I2C_DATA_LENGTH - 1;
-//	    masterXfer.flags = kI2C_TransferDefaultFlag;;
-
+	LM49450_WriteReg(5,  registers.HP_3D_CTRL);
+}

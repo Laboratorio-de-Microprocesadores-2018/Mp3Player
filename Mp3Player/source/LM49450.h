@@ -50,15 +50,6 @@ typedef enum
  */
 typedef enum
 {
-	LM49450_DAC_Mode,
-	LM49450_LineIN_Mode
-}LM49450_Mode;
-
-/**
- * @brief
- */
-typedef enum
-{
 	LM49450_DitherDefault,
 	LM49450_DitherOn,
 	LM49450_DitherOff
@@ -84,10 +75,10 @@ typedef enum
  */
 typedef enum
 {
-	LM49450_I2sClkDiv_1 		= 0,
-	LM49450_I2sClkDiv_2 		= 1,
-	LM49450_I2sClkDiv_4 		= 2,
-	LM49450_I2sClkDiv_6 		= 7,
+	LM49450_I2sClkDiv_1 		= 0, // ESTO SALE DEL DATASHEET PERO ESTOY
+	LM49450_I2sClkDiv_2 		= 1, // SEGURO QUE TIENE QUE ESTAR MAL.
+	LM49450_I2sClkDiv_4 		= 2, // DEBERIAN SER NUMEROS CONSECUTIVOS
+	LM49450_I2sClkDiv_6 		= 7, // DEL 0 AL 12
 	LM49450_I2sClkDiv_8 		= 0,
 	LM49450_I2sClkDiv_10 		= 3,
 	LM49450_I2sClkDiv_16 		= 4,
@@ -191,7 +182,7 @@ typedef struct
 	bool defaultDacFilter;
 	LM49450_OscillatorMode oscillatorMode;
 	bool mute;
-	LM49450_Mode mode;
+	bool lineInEnable;
 	bool enable;
 	LM49450_Dither dither;
 	uint8_t MclkDiv; // Divided by 2
@@ -225,14 +216,19 @@ void LM49450_Init(LM49450_Config * config);
 /**
  *
  */
-void LM49450_Mute();
+void LM49450_Enable(bool enable);
 
 /**
- *	@brief Set the operation mode
  *
- *	@param mode Te operation mode
  */
-void LM49450_SetMode(LM49450_Mode mode);
+void LM49450_Mute();
+
+
+/**
+ *	@brief
+ *
+ */
+void LM49450_SetVolume(uint8_t vol);
 
 /**
  *	@brief Increase the volume of the output.
@@ -246,4 +242,6 @@ bool LM49450_VolumeUp();
  */
 bool LM49450_VolumeDown();
 
+
+void LM49450_Set3DConfig(LM49450_3Dconfig * config);
 
