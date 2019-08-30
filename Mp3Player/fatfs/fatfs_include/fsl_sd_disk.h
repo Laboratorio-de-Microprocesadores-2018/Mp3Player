@@ -96,6 +96,17 @@ DRESULT sd_disk_write(uint8_t physicalDrive, const uint8_t *buffer, uint32_t sec
  */
 DRESULT sd_disk_ioctl(uint8_t physicalDrive, uint8_t command, void *buffer);
 
+/*!
+ * @brief SD disk initial set up operation.
+ *
+ * @param physicalDrive Physical drive number.
+ * @retval RES_PARERR Failed.
+ * @retval RES_OK Success.
+ */
+status_t sd_disk_setUp(void);
+
+
+
 /* @} */
 #if defined(__cplusplus)
 }

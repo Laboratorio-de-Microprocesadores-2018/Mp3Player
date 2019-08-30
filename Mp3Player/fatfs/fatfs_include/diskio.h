@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "integer.h"
+#include "fsl_common.h"
 
 /* Definitions of physical drive number for each drive */
 #define RAMDISK         0       /* Example: ram disk to physical drive 0 */
@@ -41,6 +42,7 @@ DSTATUS disk_status (BYTE pdrv);
 DRESULT disk_read (BYTE pdrv, BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_write (BYTE pdrv, const BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
+status_t disk_setUp(BYTE pdrv);
 
 
 /* Disk Status Bits (DSTATUS) */

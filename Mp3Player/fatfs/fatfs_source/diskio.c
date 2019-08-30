@@ -295,4 +295,30 @@ DRESULT disk_ioctl (
     }
     return RES_PARERR;
 }
+/*-----------------------------------------------------------------------*/
+/* Initial SetUp Functions                                               */
+/*-----------------------------------------------------------------------*/
+
+status_t disk_setUp(BYTE pdrv)
+{
+	status_t  res;
+	switch (pdrv)
+	{
+#ifdef SD_DISK_ENABLE
+        case SDDISK:
+            res = sd_disk_setUp();
+            return res;
+#endif
+
+#ifdef USB_DISK_ENABLE
+        case USBDISK:
+            res = USB_disk_setUp(pdrv, cmd, buff);
+            return res;
+#endif
+
+	}
+}
+
+
+
 

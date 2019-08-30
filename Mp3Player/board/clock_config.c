@@ -215,7 +215,9 @@ void BOARD_BootClockRUN(void)
     /* Set SystemCoreClock variable. */
     SystemCoreClock = BOARD_BOOTCLOCKRUN_CORE_CLOCK;
     /* Enable USB FS clock. */
-    CLOCK_EnableUsbfs0Clock(kCLOCK_UsbSrcPll0, SIM_USB_CLK_120000000HZ);
+    //CLOCK_EnableUsbfs0Clock(kCLOCK_UsbSrcPll0, SIM_USB_CLK_120000000HZ);
+    CLOCK_EnableUsbfs0Clock(kCLOCK_UsbSrcPll0, CLOCK_GetFreq(kCLOCK_PllFllSelClk));
+
     /* Set enet timestamp clock source. */
     CLOCK_SetEnetTime0Clock(SIM_ENET_1588T_CLK_SEL_OSCERCLK_CLK);
     /* Set RMII clock source. */
