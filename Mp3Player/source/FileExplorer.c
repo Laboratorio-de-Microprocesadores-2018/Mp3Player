@@ -17,7 +17,8 @@
 //------
 //static FATFS g_fileSystem; /* File system object */
 static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
-
+/*! @brief 0 - execute normal fatfs test code; 1 - execute throughput test code */
+#define MSD_FATFS_THROUGHPUT_TEST_ENABLE (0U)
 
 ///*! @brief SDMMC host detect card configuration */
 //static const sdmmchost_detect_card_t s_sdCardDetect = {
@@ -36,14 +37,6 @@ static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
 status_t FE_Init()
 {
 
-	    /*-------------INIT DE USB---------*/
-//	    usb_status_t status = kStatus_USB_Success;
-//	    status = USB_HostInit(CONTROLLER_ID, &g_HostHandle, USB_HostEvent);//DRIVER FUNCTION()usb_hosthci, se le pasa un callback
-//	        if (status != kStatus_USB_Success)
-//	        {
-//	            usb_echo("host init error\r\n");
-//	            return;
-//	        }
 #ifdef SD_DISK_ENABLE
 		if(disk_setUp(SDDISK)!=kStatus_Success)
 		{
@@ -53,9 +46,14 @@ status_t FE_Init()
 	    g_fileSystems[SDDISK].pdrv=SDDISK;
 #endif
 #ifdef USB_DISK_ENABLE
-
+	    if(disk_setUp(USBDISK)!=kStatus_Success)
+			{
+				return kStatus_Fail;
+			}
 	    g_fileSystems[USBDISK].pdrv=USBDISK;
 #endif
+
+	    return kStatus_Success;
 }
 
 status_t FE_check4Drive()
@@ -273,4 +271,10 @@ uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern,
         }
 	}
 	return filesRead;
+}
+
+
+void FE_USBTaskFn(void)
+{
+	disk_USBTick();
 }

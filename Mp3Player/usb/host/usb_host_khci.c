@@ -147,7 +147,6 @@ void USB_HostKhciIsrFunction(void *hostHandle)
     {
         status = (uint8_t)((usbHostPointer->usbRegBase->ISTAT));
         status &= (uint8_t)(usbHostPointer->usbRegBase->INTEN);
-
         if (!status)
         {
             break;

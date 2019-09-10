@@ -85,5 +85,10 @@ extern DRESULT USB_HostMsdWriteDisk(BYTE pdrv, const BYTE *buff, DWORD sector, U
  */
 extern DRESULT USB_HostMsdIoctlDisk(BYTE pdrv, BYTE cmd, void *buff);
 
+
+status_t USB_DiskSetUp(void);
+
+void USB_HostTaskFn(void);
+
 #endif /* _MSD_DISKIO_H_ */
 

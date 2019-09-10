@@ -312,7 +312,7 @@ status_t disk_setUp(BYTE pdrv)
 
 #ifdef USB_DISK_ENABLE
         case USBDISK:
-            res = USB_disk_setUp(pdrv, cmd, buff);
+            res = USB_DiskSetUp();
             return res;
 #endif
 
@@ -320,5 +320,12 @@ status_t disk_setUp(BYTE pdrv)
 }
 
 
+/*-----------------------------------------------------------------------*/
+/* USB Task                                        					     */
+/*-----------------------------------------------------------------------*/
+void	disk_USBTick(void)
+{
+	USB_HostTaskFn();
+}
 
 

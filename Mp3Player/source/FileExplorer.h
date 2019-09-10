@@ -60,6 +60,11 @@ static inline FRESULT FE_OpenDir (DIR* dp, const char* path)
 bool FE_DriveStatus(FE_drive drive);
 
 /**
+ * @brief USB Task function should be called periodically in the main loop if USB is used
+ */
+
+void FE_USBTaskFn(void);
+/**
  * @brief Open the nth file in the dir which matches the pattern
  */
 

@@ -43,6 +43,7 @@ DRESULT disk_read (BYTE pdrv, BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_write (BYTE pdrv, const BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
 status_t disk_setUp(BYTE pdrv);
+void	disk_USBTick(void);
 
 
 /* Disk Status Bits (DSTATUS) */
