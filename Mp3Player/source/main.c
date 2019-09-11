@@ -20,6 +20,7 @@
 #include "LedMatrix.h"
 #include "Input.h"
 #include "ILI9341.h"
+#include "Audio.h"
 #include "FileExplorer.h"
 #include "MP3Player.h"
 
@@ -44,7 +45,7 @@ int main(void)
 {
   	/* Init board hardware. */
     BOARD_InitBootPins();
-    BOARD_InitBootClocks();
+    BOARD_BootClockRUN();
 
     BOARD_InitButtonsPins();
     BOARD_InitLEDsPins();
@@ -54,29 +55,27 @@ int main(void)
 
     Audio_Init();
 
-    LM49450_Config config;
-    LM49450_GetDefaultConfig(&config);
-    config.lineInEnable = true;
-    LM49450_Init(&config);
-    LM49450_SetVolume(5);
-
-    LM49450_3Dconfig * config3d;
-	LM49450_GetDefault3DConfig(&config3d);
-    LM49450_Set3DConfig(&config3d);
-
-    LM49450_Enable(true);
-    while(1);
-
+//    LM49450_Config config;
+//    LM49450_GetDefaultConfig(&config);
+//    config.lineInEnable = true;
+//    LM49450_Init(&config);
+//    LM49450_SetVolume(5);
+//
+//    LM49450_3Dconfig * config3d;
+//	LM49450_GetDefault3DConfig(&config3d);
+//    LM49450_Set3DConfig(&config3d);
+//
+//    LM49450_Enable(true);
+//    while(1);
 
     FE_Init();
 
     MP3_Init();
 
-   // Input_Init();
+    Input_Init();
 
 	//uint32_t duration = 0;
 	//MP3_ComputeSongDuration(files[2].fname,&duration);
-
 
  	Button SW2,SW3;
 
@@ -86,37 +85,78 @@ int main(void)
 	Button_Start(&SW2);
 	Button_Start(&SW3);
 
+	// Status of storage drives
+    static bool sdStatus = false;
+    static bool usbStatus = false;
 
-    static bool prevStatus = false;
     while(1)
     {
-    	bool status = FE_DriveStatus(FE_SD);
-    	if(status != prevStatus)
+    	//
+		FE_USBTaskFn();
+
+		//
+     	MP3_Tick();
+
+    	bool currStatus;
+
+    	// Check changes in USB drive
+    	currStatus = FE_DriveStatus(FE_USB);
+    	if(currStatus != usbStatus)
     	{
-    		prevStatus = status;
-    		if(status == true)
+    		usbStatus = currStatus;
+    		if(usbStatus == true)
     		{
-    			PRINTF("Card inserted\n");
-    			if(FE_mountDrive(FE_SD)== kStatus_Success)
+    			PRINTF("USB inserted\n");
+    			if(FE_mountDrive(FE_USB)== kStatus_Success)
     			{
-    				PRINTF("Card mounted\n");
 
     				uint8_t k = FE_CountFilesMatching("/","*.mp3");
 
-    				PRINTF("There are %d mp3 files in root folder\n",k);
+    				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
 
     				MP3_Play("/",0);
     				LED_GREEN_ON();
-
-
+    				LED_RED_OFF();
     			}
+    			else
+    				PRINTF("Error mounting USB\n");
     		}
     		else
     		{
-    			PRINTF("Card removed\n");
+    			PRINTF("USB removed\n");
+    			LED_GREEN_OFF();
+    			LED_RED_ON();
     		}
     	}
 
+    	// Check changes in SD drive
+    	currStatus = FE_DriveStatus(FE_SD);
+		if(currStatus != sdStatus)
+		{
+			sdStatus = currStatus;
+			if(sdStatus == true)
+			{
+				PRINTF("SD inserted\n");
+				if(FE_mountDrive(FE_SD)== kStatus_Success)
+				{
+					uint8_t k = FE_CountFilesMatching("/","*.mp3");
+
+					PRINTF("There are %d mp3 files in root folder of the SD\n",k);
+
+					MP3_Play("/",0);
+					LED_GREEN_ON();
+					LED_RED_OFF();
+				}
+				else
+					PRINTF("Error mounting SD\n");
+			}
+			else
+			{
+				PRINTF("SD removed\n");
+				LED_GREEN_OFF();
+				LED_RED_ON();
+			}
+		}
 //		ButtonEvent ev;
 //		ButtonID ID;
 //
@@ -138,8 +178,6 @@ int main(void)
 		ButtonEvent SW2Event,SW3Event;
 
 
-     	MP3_Tick();
-
 
 		static uint32_t count;
 		count++;
@@ -155,16 +193,17 @@ int main(void)
 			SW2Event = Button_GetEvent(&SW2);
 			switch(SW2Event)
 			{
-			case PRESS_DOWN:
+			case SINGLE_CLICK:
 				MP3_PlayPause();
 				LED_RED_TOGGLE();
 				LED_GREEN_TOGGLE();
 				break;
-			case PRESS_UP:
-				break;
 			case LONG_PRESS_HOLD:
-				LED_BLUE_TOGGLE();
-			break;
+				MP3_Next();
+				break;
+			case DOUBLE_CLICK:
+				MP3_Prev();
+				break;
 			}
 		}
 
@@ -173,12 +212,6 @@ int main(void)
 			SW3Event = Button_GetEvent(&SW3);
 			switch(SW3Event)
 			{
-			case PRESS_DOWN:
-				LED_BLUE_ON();
-				break;
-			case PRESS_UP:
-				LED_BLUE_OFF();
-				break;
 			case SINGLE_CLICK:
 				MP3_Next();
 				break;
