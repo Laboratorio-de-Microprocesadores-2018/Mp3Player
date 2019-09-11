@@ -68,7 +68,7 @@ status_t Audio_Init()
 	//////////////////////////////////////////////////////////
 	// Sets up the DMA.
 	DMAMUX_Init(DMAMUX0);
-	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
+//	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
 	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
 
 	//////////////////////////////////////////////////////////

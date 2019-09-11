@@ -12,7 +12,7 @@
 #include "string.h"
 
 
-#define BUTTON_TICK_INTERVAL_MS  10 //ms
+#define BUTTON_TICK_INTERVAL_MS  50 //ms
 #define DEBOUNCE_TICKS    3	//MAX 8
 #define SHORT_TICKS       (300 /BUTTON_TICK_INTERVAL_MS)
 #define LONG_TICKS        (1000 /BUTTON_TICK_INTERVAL_MS)

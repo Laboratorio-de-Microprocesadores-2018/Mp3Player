@@ -200,27 +200,28 @@ void Input_Init()
                         &phaseConfig,            /* Phase B. */
                         kFTM_QuadPhaseEncode);
 
-    // PIT initialization
-    pit_config_t pitConfig;
-    /*
-	 * pitConfig.enableRunInDebug = false;
-	 */
-	PIT_GetDefaultConfig(&pitConfig);
-
-	/* Init pit module */
-	PIT_Init(PIT, &pitConfig);
-
-	/* Set timer period for channel 0 */
-	PIT_SetTimerPeriod(PIT, INPUT_PIT_CHNL, MSEC_TO_COUNT(BUTTON_TICK_INTERVAL_MS, INPUT_PIT_SOURCE_CLOCK));
-
-	/* Enable timer interrupts for channel 0 */
-	PIT_EnableInterrupts(PIT, INPUT_PIT_CHNL, kPIT_TimerInterruptEnable);
-
-	/* Enable at the NVIC */
-	EnableIRQ(INPUT_PIT_IRQ_ID);
-
-	/* Start channel 0 */
-	PIT_StartTimer(PIT, INPUT_PIT_CHNL);
+    // OJO, lo comento para probar el input polleando y no con interrupciones
+//    // PIT initialization
+//    pit_config_t pitConfig;
+//    /*
+//	 * pitConfig.enableRunInDebug = false;
+//	 */
+//	PIT_GetDefaultConfig(&pitConfig);
+//
+//	/* Init pit module */
+//	PIT_Init(PIT, &pitConfig);
+//
+//	/* Set timer period for channel 0 */
+//	PIT_SetTimerPeriod(PIT, INPUT_PIT_CHNL, MSEC_TO_COUNT(BUTTON_TICK_INTERVAL_MS, INPUT_PIT_SOURCE_CLOCK));
+//
+//	/* Enable timer interrupts for channel 0 */
+//	PIT_EnableInterrupts(PIT, INPUT_PIT_CHNL, kPIT_TimerInterruptEnable);
+//
+//	/* Enable at the NVIC */
+//	EnableIRQ(INPUT_PIT_IRQ_ID);
+//
+//	/* Start channel 0 */
+//	PIT_StartTimer(PIT, INPUT_PIT_CHNL);
 
 }
 

@@ -21,7 +21,7 @@
 #define DAC_OUTPUT 0
 #define I2S_OUTPUT 1
 
-#define AUDIO_OUTPUT I2S_OUTPUT
+#define AUDIO_OUTPUT DAC_OUTPUT
 
 /////////////////////////////////////////////////////////////////////////////////
 //                         				API	  		                           //
