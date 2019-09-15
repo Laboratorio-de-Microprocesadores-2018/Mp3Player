@@ -24,7 +24,6 @@
  /**********************
  *      TYPEDEFS
  **********************/
-typedef enum {HOME_ID = 0, SEARCH_ID, LIBRARY_ID} tab_id_t;
 
  /**********************
  *  STATIC PROTOTYPES
@@ -35,54 +34,43 @@ static void GUI_CreateGUI(void);
 static void GUI_CreateHeader(void);
 
 static void GUI_CreateTabView(void);
-static void set_tab_view_style(lv_obj_t * tab_view);
+static void GUI_SetTabViewStyle(lv_obj_t * tabView);
 
-static void create_library_tab(void);
-static void set_list_style(lv_obj_t * list);
+static void GUI_CreateLibraryTab(void);
+static void GUI_SetListStyle(lv_obj_t * list);
 
-static void style_mod_cb(lv_style_t *focus_style);
+static void GUI_StyleModCallBack(lv_style_t * focusStyle);
 
-static void library_focus_cb(lv_group_t * my_group);
-static void indev_feedback(lv_indev_t * indev, lv_signal_t signal);
+static void GUI_LibraryFocusCallBack(lv_group_t * libraryGroup);
+static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal);
 
-static lv_res_t list_btn_action(lv_obj_t * obj);
+static lv_res_t GUI_SongListBtnAction(lv_obj_t * obj);
 
-//static lv_res_t gui_btn_click_action(lv_obj_t * btn);
-//static lv_res_t gui_go_to_menu_action(lv_obj_t * btn);
+static char * GUI_GetTimeString(void);
 
 /**********************
  *  STATIC VARIABLES
  **********************/
-static lv_obj_t * guiScreen, * gui_cont, * tab_view;
-static lv_obj_t * home_tab, * search_tab, * library_tab;
-
-static lv_group_t * tab_group;
-static tab_id_t curr_tab_id = 0;
-static uint16_t id_count = 0;
-
-static lv_group_t * library_group;
-lv_obj_t * headerTimeTxt;
-
-lv_indev_t * gui_indev = NULL;
-
-lv_theme_t * th;
+GUI gui;
 
 /**********************
 *      MACROS
 **********************/
-
+#define GUI_TIME_NUM_BASE	10
+#define GUI_TIME_STRING_BUFFER_LENGTH	9
 /**********************
 *   GLOBAL FUNCTIONS
 **********************/
 /**
 * Initialize the GUI
 */
-void GUI_Init(void(*hal_init)(lv_indev_t ** indev)) {
+void GUI_Init(void(*HalInit)(lv_indev_t ** indev)) {
 
 	/*Initialize LittlevGL*/
 	lv_init();
 
-	(*hal_init)(&gui_indev);
+	gui.indev = NULL;
+	(*HalInit)(&gui.indev);
 
 	//lv_tutorial_objects();
 	GUI_CreateGUI();
@@ -97,10 +85,10 @@ void GUI_Init(void(*hal_init)(lv_indev_t ** indev)) {
 static void GUI_CreateGUI(void)
 {
 	/*Create theme for the GUI*/
-	th = lv_theme_night_init(250, NULL);
+	gui.theme= lv_theme_night_init(250, NULL);
 
 	/*Create the screen to be used*/
-	guiScreen = lv_scr_act();
+	gui.screen = lv_scr_act();
 
 	/*Create header*/
 	GUI_CreateHeader();
@@ -109,251 +97,171 @@ static void GUI_CreateGUI(void)
 	GUI_CreateTabView();
 }
 
-static void GUI_CreateHeader(void) {
+static void GUI_CreateHeader(void)
+{
 
-	lv_obj_t * guiHeader = lv_cont_create(guiScreen, NULL);
-	lv_obj_set_size(guiHeader, GUI_TOP_HEADER_HOR_SIZE, GUI_TOP_HEADER_VER_SIZE);
+	gui.header = lv_cont_create(gui.screen, NULL);
+	lv_obj_set_size(gui.header, GUI_TOP_HEADER_HOR_SIZE, GUI_TOP_HEADER_VER_SIZE);
 
-	lv_obj_align(guiHeader, guiScreen, LV_ALIGN_IN_TOP_MID, 0, 0);      /*Align the container*/
+	lv_obj_align(gui.header, gui.screen, LV_ALIGN_IN_TOP_MID, 0, 0);      /*Align the container*/
 
-	th->cont->body.radius = 0;
-	lv_cont_set_style(guiHeader, th->cont);
+	gui.theme->cont->body.radius = 0;
+	lv_cont_set_style(gui.header, gui.theme->cont);
 
 	/*Add a time and battery to the container*/
-	headerTimeTxt = lv_label_create(guiHeader, NULL);
-	lv_label_set_style(headerTimeTxt, th->label.prim);
+	gui.headerTimeTxt = lv_label_create(gui.header, NULL);
+	lv_label_set_style(gui.headerTimeTxt, gui.theme->label.prim);
+	lv_label_set_text(gui.headerTimeTxt, GUI_GetTimeString());
 
-	TM_date a = TM_GetDate();
-	char buffer[20];
-	char time_string[50];
-	uitoa(a.hour, time_string, 10);
-	strcat(time_string, ":"); strcat(time_string, uitoa(a.minute, buffer, 10)); strcat(time_string, ":"); strcat(time_string, uitoa(a.second, buffer, 10));
+	gui.headerBatteryTxt = lv_label_create(gui.header, gui.headerTimeTxt);
+	lv_label_set_text(gui.headerBatteryTxt, SYMBOL_BATTERY_FULL);
 
-	lv_label_set_text(headerTimeTxt, time_string);
-
-	lv_obj_t * headerBatteryTxt = lv_label_create(guiHeader, headerTimeTxt);
-	lv_label_set_text(headerBatteryTxt, SYMBOL_BATTERY_FULL);
-
-	lv_obj_align(headerTimeTxt, guiHeader, LV_ALIGN_CENTER, 0, 0);      /*Align time text*/
-	lv_obj_align(headerBatteryTxt, guiHeader, LV_ALIGN_IN_RIGHT_MID, -12, 0);      /*Align battery text*/
+	lv_obj_align(gui.headerTimeTxt, gui.header, LV_ALIGN_CENTER, 0, 0);      /*Align time text*/
+	lv_obj_align(gui.headerBatteryTxt, gui.header, LV_ALIGN_IN_RIGHT_MID, -12, 0);      /*Align battery text*/
 }
 
-void update_header(void){
+void GUI_UpdateHeader(void)
+{
 
-	TM_date a = TM_GetDate();
-	char buffer[20];
-	char time_string[50];
-	uitoa(a.hour, time_string, 10);
-	strcat(time_string, ":"); strcat(time_string, uitoa(a.minute, buffer, 10)); strcat(time_string, ":"); strcat(time_string, uitoa(a.second, buffer, 10));
-
-	lv_label_set_text(headerTimeTxt, time_string);
+	lv_label_set_text(gui.headerTimeTxt, GUI_GetTimeString());
 }
 
-static void GUI_CreateTabView(void) {
+static void GUI_CreateTabView(void)
+{
 
 	/*Create the tab view for the different sections of the GUI*/
 
-	tab_view = lv_tabview_create(guiScreen, NULL);
+	gui.tabView = lv_tabview_create(gui.screen, NULL);
+	lv_obj_set_size(gui.tabView, GUI_TAB_VIEW_HOR_SIZE, GUI_TAB_VIEW_VER_SIZE);
 
-	lv_coord_t gui_screen_width = guiScreen->coords.x2 - guiScreen->coords.x1 + 1;
-	lv_coord_t gui_screen_height = guiScreen->coords.y2 - guiScreen->coords.y1 + 1;
-	lv_obj_set_size(tab_view, gui_screen_width, 9 * gui_screen_height / 10);
+	lv_obj_align(gui.tabView, gui.screen, LV_ALIGN_IN_BOTTOM_MID, 0, 0);	/*Align the tab view*/
 
-	lv_obj_align(tab_view, guiScreen, LV_ALIGN_IN_BOTTOM_MID, 0, 0);	/*Align the tab view*/
-
-	set_tab_view_style(tab_view);
-	lv_tabview_set_btns_pos(tab_view, LV_TABVIEW_BTNS_POS_BOTTOM);
+	GUI_SetTabViewStyle(gui.tabView);
+	lv_tabview_set_btns_pos(gui.tabView, LV_TABVIEW_BTNS_POS_BOTTOM);
 
 
-
-	home_tab = lv_tabview_add_tab(tab_view, "  " SYMBOL_HOME "\nHome"); id_count++;
-	search_tab = lv_tabview_add_tab(tab_view, "  " SYMBOL_LIST "\nSearch"); id_count++;
-	library_tab = lv_tabview_add_tab(tab_view, "  " SYMBOL_DIRECTORY "\nLibrary"); id_count++;
+	gui.currTabId = 0; gui.tabIdCount = 0;
+	gui.homeTab = lv_tabview_add_tab(gui.tabView, "  " SYMBOL_HOME "\nHome"); gui.tabIdCount++;
+	gui.searchTab = lv_tabview_add_tab(gui.tabView, "  " SYMBOL_LIST "\nSearch"); gui.tabIdCount++;
+	gui.libraryTab = lv_tabview_add_tab(gui.tabView, "  " SYMBOL_DIRECTORY "\nLibrary"); gui.tabIdCount++;
 
 	/*Create an object group*/
-	tab_group = lv_group_create();
-	lv_group_set_style_mod_cb(tab_group, style_mod_cb);
+	gui.tabGroup = lv_group_create();
+	lv_group_set_style_mod_cb(gui.tabGroup, GUI_StyleModCallBack);
 
 	/*Adding the input device(s) to the created group*/
-	if (gui_indev) lv_indev_set_group(gui_indev, tab_group);
-	lv_indev_set_feedback(gui_indev, indev_feedback);
+	if (gui.indev) lv_indev_set_group(gui.indev, gui.tabGroup);
+	lv_indev_set_feedback(gui.indev, GUI_indevFeedback);
 
-	lv_group_add_obj(tab_group, home_tab);
-	lv_group_add_obj(tab_group, search_tab);
-	lv_group_add_obj(tab_group, library_tab);
-
-	/*th->page.bg->body.main_color = LV_COLOR_MAKE(0x10, 0x10, 0x10);
-	th->page.bg->body.grad_color = LV_COLOR_MAKE(0x10, 0x10, 0x10);*/
+	lv_group_add_obj(gui.tabGroup, gui.homeTab);
+	lv_group_add_obj(gui.tabGroup, gui.searchTab);
+	lv_group_add_obj(gui.tabGroup, gui.libraryTab);
 
 	/*Configure different styles*/
-	lv_page_set_style(home_tab, LV_PAGE_STYLE_BG, th->page.bg);
-	lv_page_set_style(search_tab, LV_PAGE_STYLE_BG, th->page.bg);
-	lv_page_set_style(library_tab, LV_PAGE_STYLE_BG, th->page.bg);
+	lv_page_set_style(gui.homeTab, LV_PAGE_STYLE_BG, gui.theme->page.bg);
+	lv_page_set_style(gui.searchTab, LV_PAGE_STYLE_BG, gui.theme->page.bg);
+	lv_page_set_style(gui.libraryTab, LV_PAGE_STYLE_BG, gui.theme->page.bg);
 
-	create_library_tab();
+	GUI_CreateLibraryTab();
 
 }
-static void set_tab_view_style(lv_obj_t * tab_view) {
+static void GUI_SetTabViewStyle(lv_obj_t * tabView)
+{
 
-	/*tabview BG*/
-	/*th->tabview.bg->body.main_color = LV_COLOR_WHITE;
-	th->tabview.bg->body.grad_color = LV_COLOR_WHITE;
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BG, th->tabview.bg);*/
-
-	/*tabview INDIC*/
-
-	/*tabview BTN_BG*/
-	/*th->tabview.btn.bg->body.main_color = LV_COLOR_BLACK;
-	th->tabview.btn.bg->body.grad_color = LV_COLOR_BLACK;*/
-
-	/*tabview BTN_REL*/
-	//th->tabview.btn.rel->body.main_color = LV_COLOR_YELLOW;
-
-	/*tabview BTN_PR*/
-	/*th->tabview.btn.pr->body.main_color = LV_COLOR_ORANGE;
-	th->tabview.btn.pr->body.grad_color = LV_COLOR_ORANGE;
-	th->tabview.btn.pr->body.opa = 255;*/
-
-	/*tabview BTN_TGL_REL*/
-	//th->tabview.btn.tgl_rel->body.main_color = LV_COLOR_GREEN;
-
-	/*tabview BTN_TGL_PR*/
-	//th->tabview.btn.tgl_pr->body.main_color = LV_COLOR_ORANGE;
-
-
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BG, th->tabview.bg);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_INDIC, th->tabview.indic);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BTN_BG, th->tabview.btn.bg);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BTN_REL, th->tabview.btn.rel);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BTN_PR, th->tabview.btn.pr);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BTN_TGL_REL, th->tabview.btn.tgl_rel);
-	lv_tabview_set_style(tab_view, LV_TABVIEW_STYLE_BTN_TGL_PR, th->tabview.btn.tgl_pr);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BG, gui.theme->tabview.bg);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_INDIC, gui.theme->tabview.indic);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BTN_BG, gui.theme->tabview.btn.bg);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BTN_REL, gui.theme->tabview.btn.rel);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BTN_PR, gui.theme->tabview.btn.pr);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BTN_TGL_REL, gui.theme->tabview.btn.tgl_rel);
+	lv_tabview_set_style(tabView, LV_TABVIEW_STYLE_BTN_TGL_PR, gui.theme->tabview.btn.tgl_pr);
 }
 
-static void create_library_tab(void) {
+static void GUI_CreateLibraryTab(void)
+{
 	/*Create an object group*/
-	library_group = lv_group_create();
-	lv_group_set_focus_cb(library_group, library_focus_cb);
-	//lv_group_set_style_mod_cb(tab_group, style_mod_cb);
+	gui.libraryGroup = lv_group_create();
+	lv_group_set_focus_cb(gui.libraryGroup, GUI_LibraryFocusCallBack);
 
+	/*Add a song list* in the Library group*/
+	gui.libraryList = lv_list_create(gui.libraryTab, NULL);            /*Create a drop down list*/
+	lv_obj_set_size(gui.libraryList, lv_page_get_fit_width(gui.libraryTab), lv_page_get_fit_height(gui.libraryTab));
 
+	//lv_obj_align(gui.libraryList, gui.libraryTab, LV_ALIGN_CENTER, 0, 0);         /*Align next to the slider*/
+	lv_obj_align(gui.libraryList, NULL, LV_ALIGN_CENTER, 0, 0);
 
-	/***********************
-	 * ADD A SONG LIST
-	 ************************/
-	lv_obj_t * library_list = lv_list_create(library_tab, NULL);            /*Create a drop down list*/
-
-	lv_coord_t tab_width = library_tab->coords.x2 - library_tab->coords.x1 + 1;
-	lv_coord_t tab_height = library_tab->coords.y2 - library_tab->coords.y1 + 1;
-	lv_obj_set_size(library_list, lv_page_get_fit_width(library_tab), lv_page_get_fit_height(library_tab));
-	//lv_obj_set_size(library_list, tab_width, tab_height);
-	//lv_obj_set_height(library_list, tab_height);
-
-	//lv_obj_align(library_list, library_tab, LV_ALIGN_CENTER, 0, 0);         /*Align next to the slider*/
-	lv_obj_align(library_list, NULL, LV_ALIGN_CENTER, 0, 0);
-
-	set_list_style(library_list);
+	GUI_SetListStyle(gui.libraryList);
 
 	char songs[20][20];
-	uint8_t songs_count = sizeof(songs)/ sizeof(songs[0]);
+	uint8_t songsCount = sizeof(songs)/ sizeof(songs[0]);
 
-	for (int i = 0; i < songs_count; i++) {
+	for (int i = 0; i < songsCount; i++) {
 		sprintf(songs[i], "song %d", i);
 
 		lv_obj_t * song;
-		song = lv_list_add(library_list, NULL, songs[i], list_btn_action);
-		lv_group_add_obj(library_group, song);
+		song = lv_list_add(gui.libraryList, NULL, songs[i], GUI_SongListBtnAction);
+		lv_group_add_obj(gui.libraryGroup, song);
 
 	}
 
 	//lv_obj_set_free_ptr(ddlist, slider);                                   /*Save the pointer of the slider in the ddlist (used in 'ddlist_action()')*/
-	//lv_obj_set_top(library_list, true);                                        /*Enable to be on the top when clicked*/
+	//lv_obj_set_top(gui.libraryList, true);                                        /*Enable to be on the top when clicked*/
 }
-static void set_list_style(lv_obj_t * list) {
-	lv_list_set_style(list, LV_LIST_STYLE_BG, th->list.bg);
-	lv_list_set_style(list, LV_LIST_STYLE_SCRL, th->list.scrl);
-	lv_list_set_style(list, LV_LIST_STYLE_SB, th->list.sb);
-	lv_list_set_style(list, LV_LIST_STYLE_EDGE_FLASH, th->list.bg);
-	lv_list_set_style(list, LV_LIST_STYLE_BTN_REL, th->list.btn.rel);
-	lv_list_set_style(list, LV_LIST_STYLE_BTN_PR, th->list.btn.pr);
-	lv_list_set_style(list, LV_LIST_STYLE_BTN_TGL_REL, th->list.btn.tgl_rel);
-	lv_list_set_style(list, LV_LIST_STYLE_BTN_TGL_PR, th->list.btn.tgl_pr);
-	lv_list_set_style(list, LV_LIST_STYLE_BTN_INA, th->list.btn.ina);
+static void GUI_SetListStyle(lv_obj_t * list)
+{
+	lv_list_set_style(list, LV_LIST_STYLE_BG, gui.theme->list.bg);
+	lv_list_set_style(list, LV_LIST_STYLE_SCRL, gui.theme->list.scrl);
+	lv_list_set_style(list, LV_LIST_STYLE_SB, gui.theme->list.sb);
+	lv_list_set_style(list, LV_LIST_STYLE_EDGE_FLASH, gui.theme->list.bg);
+	lv_list_set_style(list, LV_LIST_STYLE_BTN_REL, gui.theme->list.btn.rel);
+	lv_list_set_style(list, LV_LIST_STYLE_BTN_PR, gui.theme->list.btn.pr);
+	lv_list_set_style(list, LV_LIST_STYLE_BTN_TGL_REL, gui.theme->list.btn.tgl_rel);
+	lv_list_set_style(list, LV_LIST_STYLE_BTN_TGL_PR, gui.theme->list.btn.tgl_pr);
+	lv_list_set_style(list, LV_LIST_STYLE_BTN_INA, gui.theme->list.btn.ina);
 }
+static void GUI_StyleModCallBack(lv_style_t * focusStyle)
+{
 
-static void style_mod_cb(lv_style_t *focus_style) {
+	focusStyle->body.border.color = LV_COLOR_SILVER;
+	focusStyle->body.border.opa = 100;
+	focusStyle->body.border.width = 5;
 
-	focus_style->body.border.color = LV_COLOR_SILVER;
-	focus_style->body.border.opa = 100;
-	focus_style->body.border.width = 5;
+	focusStyle->body.grad_color = LV_COLOR_WHITE;
+	focusStyle->body.main_color = LV_COLOR_WHITE;
+	focusStyle->body.opa = 20;
 
-	focus_style->body.grad_color = LV_COLOR_WHITE;
-	focus_style->body.main_color = LV_COLOR_WHITE;
-	focus_style->body.opa = 20;
-
-
-	/*focus_style->body.border.width = 5;
-	focus_style->body.border.color = LV_COLOR_SILVER;
-	focus_style->body.border.part = 0;
-
-	focus_style->body.main_color = LV_COLOR_MAKE(0x35, 0x35, 0x35);
-	focus_style->body.grad_color = LV_COLOR_MAKE(0x35, 0x35, 0x35);
-	focus_style->body.;
-	focus_style->body.padding.hor = 100;
-	focus_style->body.padding.ver = 100;
-	focus_style->body.padding.inner = 100;
-	focus_style->body.opa = 255;
-	focus_style->body.empty = 0;*/
-
-	/*LV_COLOR_WHITE   LV_COLOR_MAKE(0xFF, 0xFF, 0xFF)
-#define LV_COLOR_SILVER  LV_COLOR_MAKE(0xC0,0xC0,0xC0)
-#define LV_COLOR_GRAY    LV_COLOR_MAKE(0x80,0x80,0x80)
-#define LV_COLOR_BLACK   LV_COLOR_MAKE(0x00,0x00,0x00)
-#define LV_COLOR_RED     LV_COLOR_MAKE(0xFF,0x00,0x00)
-#define LV_COLOR_MAROON  LV_COLOR_MAKE(0x80,0x00,0x00)
-#define LV_COLOR_YELLOW  LV_COLOR_MAKE(0xFF,0xFF,0x00)
-#define LV_COLOR_OLIVE   LV_COLOR_MAKE(0x80,0x80,0x00)
-#define LV_COLOR_LIME    LV_COLOR_MAKE(0x00,0xFF,0x00)
-#define LV_COLOR_GREEN   LV_COLOR_MAKE(0x00,0x80,0x00)
-#define LV_COLOR_CYAN    LV_COLOR_MAKE(0x00,0xFF,0xFF)
-#define LV_COLOR_AQUA    LV_COLOR_CYAN
-#define LV_COLOR_TEAL    LV_COLOR_MAKE(0x00,0x80,0x80)
-#define LV_COLOR_BLUE    LV_COLOR_MAKE(0x00,0x00,0xFF)
-#define LV_COLOR_NAVY    LV_COLOR_MAKE(0x00,0x00,0x80)
-#define LV_COLOR_MAGENTA LV_COLOR_MAKE(0xFF,0x00,0xFF)
-#define LV_COLOR_PURPLE  LV_COLOR_MAKE(0x80,0x00,0x80)
-#define LV_COLOR_ORANGE*/
 }
 
-
-static void library_focus_cb(lv_group_t * my_group) {
-	lv_list_focus(*(my_group->obj_focus), true);
+static void GUI_LibraryFocusCallBack(lv_group_t * libraryGroup)
+{
+	lv_list_focus(*(libraryGroup->obj_focus), true);
 }
-static void indev_feedback(lv_indev_t * indev, lv_signal_t signal) {
+static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal)
+{
 
 	lv_indev_data_t * data = ((lv_indev_data_t *)(indev->driver.user_data));
 
 	switch (signal) {
 		case LV_SIGNAL_FOCUS:
-			if (indev->group == tab_group) {
+			if (indev->group == gui.tabGroup) {
 
 
-				tab_id_t aux_id = curr_tab_id + data->enc_diff;
+				tab_id_t auxId = gui.currTabId + data->enc_diff;
 
-				if (aux_id < 0)
-					curr_tab_id = 0;
-				else if (aux_id >= (id_count - 1))
-					curr_tab_id = id_count - 1;
+				if (auxId < 0)
+					gui.currTabId = 0;
+				else if (auxId >= (gui.tabIdCount - 1))
+					gui.currTabId = gui.tabIdCount - 1;
 				else
-					curr_tab_id = aux_id;
+					gui.currTabId = auxId;
 
-				lv_tabview_set_tab_act(tab_view, curr_tab_id, true);
+				lv_tabview_set_tab_act(gui.tabView, gui.currTabId, true);
 			}
 			return;
 
 		case LV_SIGNAL_CONTROLL:
 			if (data->key == LV_GROUP_KEY_ENTER) {
-				switch (curr_tab_id) {
+				switch (gui.currTabId) {
 				case HOME_ID:
 					return;
 
@@ -362,7 +270,7 @@ static void indev_feedback(lv_indev_t * indev, lv_signal_t signal) {
 
 				case LIBRARY_ID:
 					/*Adding the input device(s) to the created group*/
-					if (gui_indev) lv_indev_set_group(gui_indev, library_group);
+					if (gui.indev) lv_indev_set_group(gui.indev, gui.libraryGroup);
 					return;
 				}
 				return;
@@ -371,7 +279,7 @@ static void indev_feedback(lv_indev_t * indev, lv_signal_t signal) {
 
 		case LV_SIGNAL_LONG_PRESS:
 			/*Adding the input device(s) to the created group*/
-			if (gui_indev) lv_indev_set_group(gui_indev, tab_group);
+			if (gui.indev) lv_indev_set_group(gui.indev, gui.tabGroup);
 			return;
 
 		default:
@@ -379,7 +287,25 @@ static void indev_feedback(lv_indev_t * indev, lv_signal_t signal) {
 	}
 }
 
-static lv_res_t list_btn_action(lv_obj_t * obj) {
+static lv_res_t GUI_SongListBtnAction(lv_obj_t * obj)
+{
+	return 1;
 
+}
+
+static char * GUI_GetTimeString(void){
+
+	TM_date guiInitialTime = TM_GetDate();
+	static char guiTimeTxtBuffer[GUI_TIME_STRING_BUFFER_LENGTH];
+	static char guiTimeStrng[GUI_TIME_STRING_BUFFER_LENGTH];
+
+	guiTimeStrng[0] = '\n';
+	uitoa(guiInitialTime.hour, guiTimeStrng, GUI_TIME_NUM_BASE);
+	strcat(guiTimeStrng, ":");
+	strcat(guiTimeStrng, uitoa(guiInitialTime.minute, guiTimeTxtBuffer, GUI_TIME_NUM_BASE));
+	strcat(guiTimeStrng, ":");
+	strcat(guiTimeStrng, uitoa(guiInitialTime.second, guiTimeTxtBuffer, GUI_TIME_NUM_BASE));
+
+	return guiTimeStrng;
 }
 
