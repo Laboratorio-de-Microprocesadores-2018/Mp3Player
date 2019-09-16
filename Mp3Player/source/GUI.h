@@ -26,14 +26,14 @@
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
 /////////////////////////////////////////////////////////////////////////////////
-typedef enum {HOME_ID = 0, SEARCH_ID, LIBRARY_ID} tab_id_t;
-enum
+typedef enum {HOME_ID = 0, SEARCH_ID, LIBRARY_ID} GUI_tab_id_t;
+/*enum
 {
 	HOME_BTN,
 	SEARCH_BTN,
 	LIBRARY_BTN,
 	SETTINGS_BTN,
-};
+};*/
 typedef struct
 {
 	lv_indev_t * indev;
@@ -48,16 +48,16 @@ typedef struct
 	lv_obj_t * homeTab, * searchTab, * libraryTab;
 
 	lv_group_t * tabGroup;
-	tab_id_t currTabId;
+	GUI_tab_id_t currTabId;
 	uint16_t tabIdCount;
 
 	lv_group_t * libraryGroup;
 	lv_obj_t * libraryList;
 
 }GUI;
-typedef uint8_t btn_clicked;
+/*typedef uint8_t btn_clicked;
 typedef void (*gui_display_init) (void);
-typedef void(*gui_indev_read) (void);
+typedef void(*gui_indev_read) (void);*/
 
 
 
@@ -71,6 +71,17 @@ typedef void(*gui_indev_read) (void);
  */
 void GUI_Init(void(*HalInit)(lv_indev_t ** indev));
 void GUI_UpdateHeader(void);
+
+void GUI_EncoderIncCallBack(void * paramPointer);
+void GUI_EncoderDecCallBack(void * paramPointer);
+
+void GUI_PrevBtnCallBack(void * paramPointer);
+void GUI_NextBtnCallBack(void * paramPointer);
+void GUI_MenuBtnCallBack(void * paramPointer);
+void GUI_PlayBtnCallBack(void * paramPointer);
+void GUI_SelectBtnCallBack(void * paramPointer);
+
+
 
 /**********************
 *      MACROS

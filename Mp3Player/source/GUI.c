@@ -42,9 +42,9 @@ static void GUI_SetListStyle(lv_obj_t * list);
 static void GUI_StyleModCallBack(lv_style_t * focusStyle);
 
 static void GUI_LibraryFocusCallBack(lv_group_t * libraryGroup);
-static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal);
+static void GUI_IndevFeedback(lv_indev_t * indev, lv_signal_t signal);
 
-static lv_res_t GUI_SongListBtnAction(lv_obj_t * obj);
+static lv_res_t GUI_SongListSelectBtnAction(lv_obj_t * obj);
 
 static char * GUI_GetTimeString(void);
 
@@ -111,7 +111,7 @@ static void GUI_CreateHeader(void)
 	/*Add a time and battery to the container*/
 	gui.headerTimeTxt = lv_label_create(gui.header, NULL);
 	lv_label_set_style(gui.headerTimeTxt, gui.theme->label.prim);
-	lv_label_set_text(gui.headerTimeTxt, GUI_GetTimeString());
+	GUI_UpdateHeader();
 
 	gui.headerBatteryTxt = lv_label_create(gui.header, gui.headerTimeTxt);
 	lv_label_set_text(gui.headerBatteryTxt, SYMBOL_BATTERY_FULL);
@@ -119,7 +119,6 @@ static void GUI_CreateHeader(void)
 	lv_obj_align(gui.headerTimeTxt, gui.header, LV_ALIGN_CENTER, 0, 0);      /*Align time text*/
 	lv_obj_align(gui.headerBatteryTxt, gui.header, LV_ALIGN_IN_RIGHT_MID, -12, 0);      /*Align battery text*/
 }
-
 void GUI_UpdateHeader(void)
 {
 
@@ -151,7 +150,7 @@ static void GUI_CreateTabView(void)
 
 	/*Adding the input device(s) to the created group*/
 	if (gui.indev) lv_indev_set_group(gui.indev, gui.tabGroup);
-	lv_indev_set_feedback(gui.indev, GUI_indevFeedback);
+	lv_indev_set_feedback(gui.indev, GUI_IndevFeedback);
 
 	lv_group_add_obj(gui.tabGroup, gui.homeTab);
 	lv_group_add_obj(gui.tabGroup, gui.searchTab);
@@ -199,7 +198,7 @@ static void GUI_CreateLibraryTab(void)
 		sprintf(songs[i], "song %d", i);
 
 		lv_obj_t * song;
-		song = lv_list_add(gui.libraryList, NULL, songs[i], GUI_SongListBtnAction);
+		song = lv_list_add(gui.libraryList, NULL, songs[i], GUI_SongListSelectBtnAction);
 		lv_group_add_obj(gui.libraryGroup, song);
 
 	}
@@ -231,12 +230,11 @@ static void GUI_StyleModCallBack(lv_style_t * focusStyle)
 	focusStyle->body.opa = 20;
 
 }
-
 static void GUI_LibraryFocusCallBack(lv_group_t * libraryGroup)
 {
 	lv_list_focus(*(libraryGroup->obj_focus), true);
 }
-static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal)
+static void GUI_IndevFeedback(lv_indev_t * indev, lv_signal_t signal)
 {
 
 	lv_indev_data_t * data = ((lv_indev_data_t *)(indev->driver.user_data));
@@ -246,7 +244,7 @@ static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal)
 			if (indev->group == gui.tabGroup) {
 
 
-				tab_id_t auxId = gui.currTabId + data->enc_diff;
+				GUI_tab_id_t auxId = gui.currTabId + data->enc_diff;
 
 				if (auxId < 0)
 					gui.currTabId = 0;
@@ -262,16 +260,16 @@ static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal)
 		case LV_SIGNAL_CONTROLL:
 			if (data->key == LV_GROUP_KEY_ENTER) {
 				switch (gui.currTabId) {
-				case HOME_ID:
-					return;
+					case HOME_ID:
+						return;
 
-				case SEARCH_ID:
-					return;
+					case SEARCH_ID:
+						return;
 
-				case LIBRARY_ID:
-					/*Adding the input device(s) to the created group*/
-					if (gui.indev) lv_indev_set_group(gui.indev, gui.libraryGroup);
-					return;
+					case LIBRARY_ID:
+						/*Adding the input device(s) to the created group*/
+						if (gui.indev) lv_indev_set_group(gui.indev, gui.libraryGroup);
+						return;
 				}
 				return;
 			}
@@ -287,9 +285,17 @@ static void GUI_indevFeedback(lv_indev_t * indev, lv_signal_t signal)
 	}
 }
 
-static lv_res_t GUI_SongListBtnAction(lv_obj_t * obj)
+static lv_res_t GUI_SongListSelectBtnAction(lv_obj_t * obj)
 {
 	return 1;
+
+}
+void GUI_EncoderIncCallBack(void * paramPointer)
+{
+
+}
+void GUI_EncoderDecCallBack(void * paramPointer)
+{
 
 }
 
