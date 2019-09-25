@@ -68,37 +68,37 @@ void Input_Attach(ButtonID b, ButtonEvent ev, ButtonCallback c)
 	Button_Attach(buttons[b],ev,c);
 }
 
-uint8_t Input_ReadNextButton()
+uint8_t Input_ReadNextButton(void)
 {
 	return GPIO_PinRead(NEXT_GPIO,NEXT_PIN);
 }
 
-uint8_t Input_ReadPrevButton()
+uint8_t Input_ReadPrevButton(void)
 {
 	return GPIO_PinRead(PREV_GPIO,PREV_PIN);
 }
 
-uint8_t Input_ReadMenuButton()
+uint8_t Input_ReadMenuButton(void)
 {
 	return GPIO_PinRead(MENU_GPIO,MENU_PIN);
 }
 
-uint8_t Input_ReadPlayButton()
+uint8_t Input_ReadPlayButton(void)
 {
 	return GPIO_PinRead(NEXT_GPIO,PLAY_PIN);
 }
 
-uint8_t Input_ReadSelectButton()
+uint8_t Input_ReadSelectButton(void)
 {
 	return GPIO_PinRead(SELECT_GPIO,SELECT_PIN);
 }
 
-uint8_t Input_ReadEncoderCount()
+uint8_t Input_ReadEncoderCount(void)
 {
-	FTM_GetQuadDecoderCounterValue(INPUT_FTM);
+	return (uint8_t)FTM_GetQuadDecoderCounterValue(INPUT_FTM);
 }
 
-uint8_t Input_ReadEncoderDirection()
+uint8_t Input_ReadEncoderDirection(void)
 {
 	return (uint8_t)(FTM_GetQuadDecoderFlags(INPUT_FTM) & kFTM_QuadDecoderCountingIncreaseFlag);
 }
@@ -225,10 +225,12 @@ void Input_Init()
 
 }
 
-void INPUT_PIT_HANDLER(void)
+
+
+void Input_Tick(void)
 {
     /* Clear interrupt flag.*/
-    PIT_ClearStatusFlags(PIT, INPUT_PIT_CHNL, kPIT_TimerFlag);
+    //PIT_ClearStatusFlags(PIT, INPUT_PIT_CHNL, kPIT_TimerFlag);
     Button_Tick();
 
     static uint8_t lastCount;
@@ -243,5 +245,5 @@ void INPUT_PIT_HANDLER(void)
     		dec(0);
     }
 
-    __DSB();
+    //__DSB();
 }

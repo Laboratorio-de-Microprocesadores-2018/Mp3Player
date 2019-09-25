@@ -11,8 +11,10 @@
 /////////////////////////////////////////////////////////////////////////////////
 //                             Included header files                           //
 /////////////////////////////////////////////////////////////////////////////////
-#include "lvgl/lvgl.h"
-#include "lv_conf.h"
+
+#include "GILI9341.h"
+#include "Input.h"
+
 
 /////////////////////////////////////////////////////////////////////////////////
 //                       Constants and macro definitions                       //
@@ -26,17 +28,15 @@
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
 /////////////////////////////////////////////////////////////////////////////////
-typedef enum {HOME_ID = 0, SEARCH_ID, LIBRARY_ID} GUI_tab_id_t;
-/*enum
-{
-	HOME_BTN,
-	SEARCH_BTN,
-	LIBRARY_BTN,
-	SETTINGS_BTN,
-};*/
+typedef void(*GUI_hal_init_cb_t)(lv_indev_t ** indev);
+
+typedef enum {HOME_TAB_ID = 0, SEARCH_TAB_ID, LIBRARY_TAB_ID} GUI_tab_id_t;
 typedef struct
 {
-	lv_indev_t * indev;
+
+	lv_disp_drv_t dispDrv;
+	lv_disp_t * disp;
+	lv_indev_t * encIndev, * keyPadIndev;
 	lv_theme_t * theme;
 
 	lv_obj_t * screen;
@@ -55,11 +55,6 @@ typedef struct
 	lv_obj_t * libraryList;
 
 }GUI;
-/*typedef uint8_t btn_clicked;
-typedef void (*gui_display_init) (void);
-typedef void(*gui_indev_read) (void);*/
-
-
 
 /////////////////////////////////////////////////////////////////////////////////
 //                         Global function prototypes                          //
@@ -69,19 +64,9 @@ typedef void(*gui_indev_read) (void);*/
  *
  * @param Hardware abstraction layer function pointer, to be executed by the GUI Initialization. This is send a parameter, because the "lv_indev_t obj" (The input devices to be registered by the GUI are defined inside the scope of GUI.c)
  */
-void GUI_Init(void(*HalInit)(lv_indev_t ** indev));
+void GUI_Init(void);
 void GUI_UpdateHeader(void);
-
-void GUI_EncoderIncCallBack(void * paramPointer);
-void GUI_EncoderDecCallBack(void * paramPointer);
-
-void GUI_PrevBtnCallBack(void * paramPointer);
-void GUI_NextBtnCallBack(void * paramPointer);
-void GUI_MenuBtnCallBack(void * paramPointer);
-void GUI_PlayBtnCallBack(void * paramPointer);
-void GUI_SelectBtnCallBack(void * paramPointer);
-
-
+lv_disp_drv_t * GUI_GetDispDrv(void);
 
 /**********************
 *      MACROS
