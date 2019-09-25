@@ -13,18 +13,21 @@
 typedef void (*InputCallback)(void*);
 
 typedef enum {PREV,NEXT,MENU,PLAY,SELECT,NumberOfButtons} ButtonID;
+
 void Input_Init();
 
 /**
  *  Read input
  */
-uint8_t Input_ReadSelectButton();
-uint8_t Input_ReadNextButton();
-uint8_t Input_ReadPrevButton();
-uint8_t Input_ReadMenuButton();
-uint8_t Input_ReadPlayButton();
-uint8_t Input_ReadEncoderCount();
-uint8_t Input_ReadEncoderDirection();
+uint8_t Input_ReadSelectButton(void);
+uint8_t Input_ReadNextButton(void);
+uint8_t Input_ReadPrevButton(void);
+uint8_t Input_ReadMenuButton(void);
+uint8_t Input_ReadPlayButton(void);
+uint8_t Input_ReadEncoderCount(void);
+uint8_t Input_ReadEncoderDirection(void);
+
+
 
 /**
  *  Attach Callbacks
@@ -34,5 +37,7 @@ void Input_AttachEncoderInc(InputCallback c);
 void Input_AttachEncoderDec(InputCallback c);
 
 void Input_GetEvent(ButtonID * button, ButtonEvent * ev);
+
+void Input_Tick(void);
 
 #endif /* INPUT_H_ */

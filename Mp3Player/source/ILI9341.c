@@ -14,6 +14,7 @@
 #include "fsl_dmamux.h"
 #include "fsl_common.h"
 #include "fsl_debug_console.h"
+#include "GUI.h"
 
 #define ILI9341_SPI 				SPI0
 #define DSPI_MASTER_CLK_SRC 		DSPI0_CLK_SRC
@@ -60,7 +61,8 @@ void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, 
 	 DSPI_FlushFifo(ILI9341_SPI, true, true);
 	 DSPI_ClearStatusFlags(base, (uint32_t)(kDSPI_EndOfQueueFlag));
 	 ILI9341_SendCommand(ILI9341_NOP);
-	 lv_flush_ready();
+
+	 lv_disp_flush_ready(GUI_GetDispDrv());
 }
 
 
