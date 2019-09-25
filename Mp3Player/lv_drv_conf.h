@@ -82,6 +82,8 @@
 /*-------------------
  *  Monitor of PC
  *-------------------*/
+#define USE_MONITOR         1
+
 #ifndef USE_MONITOR
 #  define USE_MONITOR         0
 #endif
@@ -98,10 +100,13 @@
 #  define MONITOR_DOUBLE_BUFFERED 0
 
 /*Eclipse: <SDL2/SDL.h>    Visual Studio: <SDL.h>*/
-#  define MONITOR_SDL_INCLUDE_PATH    <SDL2/SDL.h>
+#  define MONITOR_SDL_INCLUDE_PATH    <SDL.h>
 
 /*Different rendering might be used if running in a Virtual machine*/
 #  define MONITOR_VIRTUAL_MACHINE 0
+
+/*Open two windows to test multi display support*/
+#  define MONITOR_DUAL            0
 #endif
 
 /*-----------------------------------
@@ -113,8 +118,8 @@
 
 #define USE_WINDOWS         0
 #if USE_WINDOWS
-#  define WINDOW_HOR_RES      LV_HOR_RES
-#  define WINDOW_VER_RES      LV_VER_RES
+#  define WINDOW_HOR_RES      480
+#  define WINDOW_VER_RES      320
 #endif
 
 /*----------------
@@ -235,6 +240,7 @@
 /*---------------------------------------
  * Mouse or touchpad on PC (using SDL)
  *-------------------------------------*/
+#define USE_MOUSE       1
 #ifndef USE_MOUSE
 #  define USE_MOUSE           0
 #endif
@@ -246,6 +252,7 @@
 /*-------------------------------------------
  * Mousewheel as encoder on PC (using SDL)
  *------------------------------------------*/
+#define USE_MOUSEWHEEL      1
 #ifndef USE_MOUSEWHEEL
 #  define USE_MOUSEWHEEL      0
 #endif
@@ -253,6 +260,17 @@
 #if USE_MOUSEWHEEL
 /*No settings*/
 #endif
+
+/*-------------------------------------------------
+ * Touchscreen as libinput interface (for Linux based systems)
+ *------------------------------------------------*/
+#ifndef USE_LIBINPUT
+#  define USE_LIBINPUT           0
+#endif
+
+#if USE_LIBINPUT
+#  define LIBINPUT_NAME   "/dev/input/event0"        /*You can use the "evtest" Linux tool to get the list of devices and test them*/
+#endif  /*USE_LIBINPUT*/
 
 /*-------------------------------------------------
  * Mouse or touchpad as evdev interface (for Linux based systems)
@@ -283,8 +301,14 @@
 /*-------------------------------
  *   Keyboard of a PC (using SDL)
  *------------------------------*/
+#define USE_KEYBOARD    1
 #ifndef USE_KEYBOARD
 #  define USE_KEYBOARD        0
+#endif
+
+#define USE_ENCODER    0
+#ifndef USE_ENCODER
+#  define USE_ENCODER        0
 #endif
 
 #if USE_KEYBOARD
