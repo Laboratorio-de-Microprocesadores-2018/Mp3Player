@@ -64,10 +64,10 @@ static UART_Type *const s_UartAdapterBase[] = UART_BASE_PTRS;
 
 #if (defined(UART_ADAPTER_NON_BLOCKING_MODE) && (UART_ADAPTER_NON_BLOCKING_MODE > 0U))
 
+#if !(defined(HAL_UART_TRANSFER_MODE) && (HAL_UART_TRANSFER_MODE > 0U))
 /* Array of UART IRQ number. */
 static const IRQn_Type s_UartIRQ[] = UART_RX_TX_IRQS;
 
-#if !(defined(HAL_UART_TRANSFER_MODE) && (HAL_UART_TRANSFER_MODE > 0U))
 static hal_uart_state_t *s_UartState[sizeof(s_UartAdapterBase) / sizeof(UART_Type *)];
 #endif
 
@@ -177,9 +177,9 @@ static void HAL_UartInterruptHandle(uint8_t instance)
             {
                 UART_DisableInterrupts(s_UartAdapterBase[instance],
                                        kUART_RxDataRegFullInterruptEnable | kUART_RxOverrunInterruptEnable);
+                uartHandle->rx.buffer = NULL;
                 if (uartHandle->callback)
                 {
-                    uartHandle->rx.buffer = NULL;
                     uartHandle->callback(uartHandle, kStatus_HAL_UartRxIdle, uartHandle->callbackParam);
                 }
             }
@@ -197,9 +197,9 @@ static void HAL_UartInterruptHandle(uint8_t instance)
             if (uartHandle->tx.bufferSofar >= uartHandle->tx.bufferLength)
             {
                 UART_DisableInterrupts(s_UartAdapterBase[uartHandle->instance], kUART_TxDataRegEmptyInterruptEnable);
+                uartHandle->tx.buffer = NULL;
                 if (uartHandle->callback)
                 {
-                    uartHandle->tx.buffer = NULL;
                     uartHandle->callback(uartHandle, kStatus_HAL_UartTxIdle, uartHandle->callbackParam);
                 }
             }
@@ -267,7 +267,7 @@ hal_uart_status_t HAL_UartInit(hal_uart_handle_t handle, hal_uart_config_t *conf
         return HAL_UartGetStatus(status);
     }
 
-    uartHandle = (hal_uart_state_t *)handle;
+    uartHandle           = (hal_uart_state_t *)handle;
     uartHandle->instance = config->instance;
 
 #if (defined(UART_ADAPTER_NON_BLOCKING_MODE) && (UART_ADAPTER_NON_BLOCKING_MODE > 0U))
@@ -278,6 +278,7 @@ hal_uart_status_t HAL_UartInit(hal_uart_handle_t handle, hal_uart_config_t *conf
 #else
     s_UartState[uartHandle->instance] = uartHandle;
     /* Enable interrupt in NVIC. */
+    NVIC_SetPriority((IRQn_Type)s_UartIRQ[config->instance], HAL_UART_ISR_PRIORITY);
     EnableIRQ(s_UartIRQ[config->instance]);
 #endif
 
@@ -350,6 +351,20 @@ hal_uart_status_t HAL_UartSendBlocking(hal_uart_handle_t handle, const uint8_t *
     return kStatus_HAL_UartSuccess;
 }
 
+hal_uart_status_t HAL_UartEnterLowpower(hal_uart_handle_t handle)
+{
+    assert(handle);
+
+    return kStatus_HAL_UartSuccess;
+}
+
+hal_uart_status_t HAL_UartExitLowpower(hal_uart_handle_t handle)
+{
+    assert(handle);
+
+    return kStatus_HAL_UartSuccess;
+}
+
 #if (defined(UART_ADAPTER_NON_BLOCKING_MODE) && (UART_ADAPTER_NON_BLOCKING_MODE > 0U))
 
 #if (defined(HAL_UART_TRANSFER_MODE) && (HAL_UART_TRANSFER_MODE > 0U))
@@ -366,7 +381,7 @@ hal_uart_status_t HAL_UartTransferInstallCallback(hal_uart_handle_t handle,
     uartHandle = (hal_uart_state_t *)handle;
 
     uartHandle->callbackParam = callbackParam;
-    uartHandle->callback = callback;
+    uartHandle->callback      = callback;
 
     return kStatus_HAL_UartSuccess;
 }
@@ -474,7 +489,7 @@ hal_uart_status_t HAL_UartInstallCallback(hal_uart_handle_t handle,
     uartHandle = (hal_uart_state_t *)handle;
 
     uartHandle->callbackParam = callbackParam;
-    uartHandle->callback = callback;
+    uartHandle->callback      = callback;
 
     return kStatus_HAL_UartSuccess;
 }
@@ -495,14 +510,14 @@ hal_uart_status_t HAL_UartReceiveNonBlocking(hal_uart_handle_t handle, uint8_t *
     }
 
     uartHandle->rx.bufferLength = length;
-    uartHandle->rx.bufferSofar = 0;
-    uartHandle->rx.buffer = data;
+    uartHandle->rx.bufferSofar  = 0;
+    uartHandle->rx.buffer       = data;
     UART_EnableInterrupts(s_UartAdapterBase[uartHandle->instance],
                           kUART_RxDataRegFullInterruptEnable | kUART_RxOverrunInterruptEnable);
     return kStatus_HAL_UartSuccess;
 }
 
-hal_uart_status_t HAL_UartSendNonBlocking(hal_uart_handle_t handle, const uint8_t *data, size_t length)
+hal_uart_status_t HAL_UartSendNonBlocking(hal_uart_handle_t handle, uint8_t *data, size_t length)
 {
     hal_uart_state_t *uartHandle;
     assert(handle);
@@ -517,41 +532,41 @@ hal_uart_status_t HAL_UartSendNonBlocking(hal_uart_handle_t handle, const uint8_
         return kStatus_HAL_UartTxBusy;
     }
     uartHandle->tx.bufferLength = length;
-    uartHandle->tx.bufferSofar = 0;
-    uartHandle->tx.buffer = (volatile uint8_t *)data;
+    uartHandle->tx.bufferSofar  = 0;
+    uartHandle->tx.buffer       = (volatile uint8_t *)data;
     UART_EnableInterrupts(s_UartAdapterBase[uartHandle->instance], kUART_TxDataRegEmptyInterruptEnable);
     return kStatus_HAL_UartSuccess;
 }
 
-hal_uart_status_t HAL_UartGetReceiveCount(hal_uart_handle_t handle, uint32_t *count)
+hal_uart_status_t HAL_UartGetReceiveCount(hal_uart_handle_t handle, uint32_t *reCount)
 {
     hal_uart_state_t *uartHandle;
     assert(handle);
-    assert(count);
+    assert(reCount);
     assert(!HAL_UART_TRANSFER_MODE);
 
     uartHandle = (hal_uart_state_t *)handle;
 
     if (uartHandle->rx.buffer)
     {
-        *count = uartHandle->rx.bufferSofar;
+        *reCount = uartHandle->rx.bufferSofar;
         return kStatus_HAL_UartSuccess;
     }
     return kStatus_HAL_UartError;
 }
 
-hal_uart_status_t HAL_UartGetSendCount(hal_uart_handle_t handle, uint32_t *count)
+hal_uart_status_t HAL_UartGetSendCount(hal_uart_handle_t handle, uint32_t *seCount)
 {
     hal_uart_state_t *uartHandle;
     assert(handle);
-    assert(count);
+    assert(seCount);
     assert(!HAL_UART_TRANSFER_MODE);
 
     uartHandle = (hal_uart_state_t *)handle;
 
     if (uartHandle->tx.buffer)
     {
-        *count = uartHandle->tx.bufferSofar;
+        *seCount = uartHandle->tx.bufferSofar;
         return kStatus_HAL_UartSuccess;
     }
     return kStatus_HAL_UartError;
@@ -609,6 +624,7 @@ void HAL_UartIsrFunction(hal_uart_handle_t handle)
 #endif
     UART_TransferHandleIRQ(s_UartAdapterBase[uartHandle->instance], &uartHandle->hardwareHandle);
 #if 0
+    NVIC_SetPriority((IRQn_Type)s_UartIRQ[uartHandle->instance], HAL_UART_ISR_PRIORITY);
     EnableIRQ(s_UartIRQ[uartHandle->instance]);
 #endif
 }
@@ -628,6 +644,7 @@ void HAL_UartIsrFunction(hal_uart_handle_t handle)
 #endif
     HAL_UartInterruptHandle(uartHandle->instance);
 #if 0
+    NVIC_SetPriority((IRQn_Type)s_UartIRQ[uartHandle->instance], HAL_UART_ISR_PRIORITY);
     EnableIRQ(s_UartIRQ[uartHandle->instance]);
 #endif
 }
@@ -638,7 +655,8 @@ void HAL_UartIsrFunction(hal_uart_handle_t handle)
 void UART0_IRQHandler(void)
 {
     HAL_UartInterruptHandle(0);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -648,7 +666,8 @@ void UART0_IRQHandler(void)
 void UART0_RX_TX_IRQHandler(void)
 {
     UART0_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -661,7 +680,8 @@ void UART0_RX_TX_IRQHandler(void)
 void UART1_IRQHandler(void)
 {
     HAL_UartInterruptHandle(1);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -671,7 +691,8 @@ void UART1_IRQHandler(void)
 void UART1_RX_TX_IRQHandler(void)
 {
     UART1_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -683,7 +704,8 @@ void UART1_RX_TX_IRQHandler(void)
 void UART2_IRQHandler(void)
 {
     HAL_UartInterruptHandle(2);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -693,7 +715,8 @@ void UART2_IRQHandler(void)
 void UART2_RX_TX_IRQHandler(void)
 {
     UART2_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -705,7 +728,8 @@ void UART2_RX_TX_IRQHandler(void)
 void UART3_IRQHandler(void)
 {
     HAL_UartInterruptHandle(3);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -715,7 +739,8 @@ void UART3_IRQHandler(void)
 void UART3_RX_TX_IRQHandler(void)
 {
     UART3_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -727,7 +752,8 @@ void UART3_RX_TX_IRQHandler(void)
 void UART4_IRQHandler(void)
 {
     HAL_UartInterruptHandle(4);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -737,7 +763,8 @@ void UART4_IRQHandler(void)
 void UART4_RX_TX_IRQHandler(void)
 {
     UART4_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -749,7 +776,8 @@ void UART4_RX_TX_IRQHandler(void)
 void UART5_IRQHandler(void)
 {
     HAL_UartInterruptHandle(5);
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
@@ -759,7 +787,8 @@ void UART5_IRQHandler(void)
 void UART5_RX_TX_IRQHandler(void)
 {
     UART5_IRQHandler();
-/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
+  overlapping
   exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();

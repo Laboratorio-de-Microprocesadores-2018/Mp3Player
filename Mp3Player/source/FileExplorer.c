@@ -6,17 +6,26 @@
  */
 
 #include "FileExplorer.h"
+#include "usb_host_config.h"
+#include "usb_host.h"
+#include "fsl_sd.h"
+
 #include "stdbool.h"
 #include <string.h>
 #include "diskio.h"
 #include "fsl_debug_console.h"
 //------
 
+usb_host_handle g_HostHandle;
 
+extern sd_card_t g_sd;
 
 //------
+
 //static FATFS g_fileSystem; /* File system object */
 static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
+
+
 /*! @brief 0 - execute normal fatfs test code; 1 - execute throughput test code */
 #define MSD_FATFS_THROUGHPUT_TEST_ENABLE (0U)
 
@@ -31,25 +40,27 @@ static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
 //};
 
 
-
+static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,0,NULL,NULL,NULL};
 
 
 status_t FE_Init()
 {
 
 #ifdef SD_DISK_ENABLE
-		if(disk_setUp(SDDISK)!=kStatus_Success)
-		{
-			return kStatus_Fail;
-		}
+	 	g_sd.usrParam.cd = &cardDetectConfig;
+
+		//if(disk_setUp(SDDISK)!=kStatus_Success)
+		//{
+		//	return kStatus_Fail;
+		//}
 
 	    g_fileSystems[SDDISK].pdrv=SDDISK;
 #endif
 #ifdef USB_DISK_ENABLE
-	    if(disk_setUp(USBDISK)!=kStatus_Success)
-			{
-				return kStatus_Fail;
-			}
+//	    if(disk_setUp(USBDISK)!=kStatus_Success)
+//			{
+//				return kStatus_Fail;
+//			}
 	    g_fileSystems[USBDISK].pdrv=USBDISK;
 #endif
 
@@ -199,7 +210,7 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
 }
 bool FE_DriveStatus(FE_drive drive)
 {
-	if(disk_status(g_fileSystems[drive].pdrv)==STA_OK )
+	if(disk_status(g_fileSystems[drive].pdrv)==0 )
 		return true;
 	else
 		return false;
@@ -276,5 +287,5 @@ uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern,
 
 void FE_USBTaskFn(void)
 {
-	disk_USBTick();
+    USB_HostKhciTaskFunction(g_HostHandle);
 }

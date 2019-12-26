@@ -1,11 +1,5 @@
-/**
- * @file    main.c
- * @brief   Application entry point.
- */
-
 #include <stdio.h>
 #include "board.h"
-#include "peripherals.h"
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "MK64F12.h"
@@ -28,30 +22,15 @@
  * @brief   Application entry point.
  */
 
-
-uint8_t ReadSW2()
-{
-	return SW2_READ();
-}
-
-uint8_t ReadSW3()
-{
-	return SW3_READ();
-}
-
 int i;
 
 int main(void)
 {
   	/* Init board hardware. */
     BOARD_InitBootPins();
-    BOARD_BootClockRUN();
-
-    BOARD_InitButtonsPins();
-    BOARD_InitLEDsPins();
-
-    BOARD_InitBootPeripherals();
+    BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
+
 
     Audio_Init();
 
@@ -76,14 +55,6 @@ int main(void)
 
 	//uint32_t duration = 0;
 	//MP3_ComputeSongDuration(files[2].fname,&duration);
-
- 	Button SW2,SW3;
-
-	Button_Init(&SW2,ReadSW2, 0,0);
-	Button_Init(&SW3,ReadSW3, 0,1);
-
-	Button_Start(&SW2);
-	Button_Start(&SW3);
 
 	// Status of storage drives
     static bool sdStatus = false;
@@ -115,8 +86,7 @@ int main(void)
     				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
 
     				MP3_Play("/",0);
-    				LED_GREEN_ON();
-    				LED_RED_OFF();
+
     			}
     			else
     				PRINTF("Error mounting USB\n");
@@ -124,8 +94,7 @@ int main(void)
     		else
     		{
     			PRINTF("USB removed\n");
-    			LED_GREEN_OFF();
-    			LED_RED_ON();
+
     		}
     	}
 
@@ -144,8 +113,7 @@ int main(void)
 					PRINTF("There are %d mp3 files in root folder of the SD\n",k);
 
 					MP3_Play("/",0);
-					LED_GREEN_ON();
-					LED_RED_OFF();
+
 				}
 				else
 					PRINTF("Error mounting SD\n");
@@ -153,71 +121,7 @@ int main(void)
 			else
 			{
 				PRINTF("SD removed\n");
-				LED_GREEN_OFF();
-				LED_RED_ON();
-			}
-		}
-//		ButtonEvent ev;
-//		ButtonID ID;
-//
-//		Input_GetEvent(&ID,&ev);
-//		switch(ID)
-//		{
-//		case NEXT:
-//			break;
-//		case PREV:
-//			break;
-//		case PLAY:
-//			break;
-//		case MENU:
-//			break;
-//		case SELECT:
-//			break;
-//		}
 
-		ButtonEvent SW2Event,SW3Event;
-
-
-
-		static uint32_t count;
-		count++;
-		if(count == 0x4FF)
-		{
-			count = 0;
-			Button_Tick();
-		}
-
-
-		if(SW2Event != Button_GetEvent(&SW2))
-		{
-			SW2Event = Button_GetEvent(&SW2);
-			switch(SW2Event)
-			{
-			case SINGLE_CLICK:
-				MP3_PlayPause();
-				LED_RED_TOGGLE();
-				LED_GREEN_TOGGLE();
-				break;
-			case LONG_PRESS_HOLD:
-				MP3_Next();
-				break;
-			case DOUBLE_CLICK:
-				MP3_Prev();
-				break;
-			}
-		}
-
-		if(SW3Event != Button_GetEvent(&SW3))
-		{
-			SW3Event = Button_GetEvent(&SW3);
-			switch(SW3Event)
-			{
-			case SINGLE_CLICK:
-				MP3_Next();
-				break;
-			case DOUBLE_CLICK:
-				MP3_Prev();
-			break;
 			}
 		}
 

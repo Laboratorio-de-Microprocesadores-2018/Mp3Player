@@ -24,4 +24,11 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>doc/sdmmc/ChangeLogKSDK.txt</name>
+			<type>1</type>
+			<locationURI>SDK_2_x_MK64FN1M0xxx12/middleware/sdmmc/ChangeLogKSDK.txt</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>
