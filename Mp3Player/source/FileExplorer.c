@@ -22,45 +22,32 @@ extern sd_card_t g_sd;
 
 //------
 
-//static FATFS g_fileSystem; /* File system object */
-static FATFS g_fileSystems[3]; /*File system objects for RAM, SD, USB,...*/
+/* File system objects */
+static FATFS g_fileSystems[3];
 
+/* SD card detect configuration */
+static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,0,NULL,NULL,NULL}; // ACA VAN CALLBACKS PARA CUANDO SE METE Y SACA LA TARJETA
 
-/*! @brief 0 - execute normal fatfs test code; 1 - execute throughput test code */
-#define MSD_FATFS_THROUGHPUT_TEST_ENABLE (0U)
-
-///*! @brief SDMMC host detect card configuration */
-//static const sdmmchost_detect_card_t s_sdCardDetect = {
-//#ifndef BOARD_SD_DETECT_TYPE
-//    .cdType = kSDMMCHOST_DetectCardByGpioCD,
-//#else
-//    .cdType = BOARD_SD_DETECT_TYPE,
-//#endif
-//    .cdTimeOut_ms = (0U),//Checks only one time
-//};
-
-
-static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,0,NULL,NULL,NULL};
+// Status of storage drives
+static bool sdStatus = false;
+static bool usbStatus = false;
 
 
 status_t FE_Init()
 {
-
 #ifdef SD_DISK_ENABLE
-	 	g_sd.usrParam.cd = &cardDetectConfig;
 
-		//if(disk_setUp(SDDISK)!=kStatus_Success)
-		//{
-		//	return kStatus_Fail;
-		//}
+	/* Save host information. */
+	g_sd.host.base = SD_HOST_BASEADDR;
+	g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
+	g_sd.usrParam.cd = &cardDetectConfig;
 
-	    g_fileSystems[SDDISK].pdrv=SDDISK;
+
+	g_fileSystems[SDDISK].pdrv=SDDISK;
 #endif
+
 #ifdef USB_DISK_ENABLE
-//	    if(disk_setUp(USBDISK)!=kStatus_Success)
-//			{
-//				return kStatus_Fail;
-//			}
+
 	    g_fileSystems[USBDISK].pdrv=USBDISK;
 #endif
 
@@ -110,23 +97,23 @@ status_t FE_mountDrive(FE_drive drive)
 
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
 	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U))
-	    {
-	    	if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
-	    	{
-	    		return kStatus_Success;
+	{
+		if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
+		{
+			return kStatus_Success;
 
-	    	}
-	    	else
-	    	{
-	    		PRINTF("Change drive failed.\r\n");
-	    		return kStatus_Fail;
-	    	}
-	    }
-	    else
-	    {
-	        PRINTF("Mount volume failed.\r\n");
-	        return kStatus_Fail;
-	    }
+		}
+		else
+		{
+			PRINTF("Change drive failed.\r\n");
+			return kStatus_Fail;
+		}
+	}
+	else
+	{
+		PRINTF("Mount volume failed.\r\n");
+		return kStatus_Fail;
+	}
 }
 
 status_t FE_SetCurrDrive(FE_drive drive)
