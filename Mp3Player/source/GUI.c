@@ -15,7 +15,7 @@
  *      INCLUDES
  *********************/
 #include "GUI.h"
-#include "TimeManager.h"
+#include "Calendar.h"
 
  /*********************
  *      DEFINES
@@ -383,7 +383,7 @@ static void GUI_LibraryEventHandlerCB(lv_obj_t * obj, lv_event_t event)
 static char * GUI_GetTimeString(void)
 {
 
-	TM_date guiInitialTime = TM_GetDate();
+	TM_date guiInitialTime = Calendar_GetDate();
 	static char guiTimeTxtBuffer[GUI_TIME_STRING_BUFFER_LENGTH];
 	static char guiTimeStrng[GUI_TIME_STRING_BUFFER_LENGTH];
 
