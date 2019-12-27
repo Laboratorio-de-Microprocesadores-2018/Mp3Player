@@ -56,14 +56,12 @@ int main(void)
 	//uint32_t duration = 0;
 	//MP3_ComputeSongDuration(files[2].fname,&duration);
 
-	// Status of storage drives
-    static bool sdStatus = false;
-    static bool usbStatus = false;
+
 
     while(1)
     {
     	//
-		FE_USBTaskFn();
+		FE_Tick();
 
 		//
      	MP3_Tick();
