@@ -14,6 +14,10 @@
 #include <string.h>
 #include "diskio.h"
 #include "fsl_debug_console.h"
+
+
+static void sdStatusChangeFn(bool isInserted, void *userData);
+
 //------
 
 usb_host_handle g_HostHandle;
@@ -26,11 +30,16 @@ extern sd_card_t g_sd;
 static FATFS g_fileSystems[3];
 
 /* SD card detect configuration */
-static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,0,NULL,NULL,NULL}; // ACA VAN CALLBACKS PARA CUANDO SE METE Y SACA LA TARJETA
+static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,
+													0,
+													sdStatusChangeFn,
+													sdStatusChangeFn,
+													NULL};
 
 // Status of storage drives
-static bool sdStatus = false;
-static bool usbStatus = false;
+static bool sdIsInserted  = false;
+static bool sdStatusChanged = false;
+static bool usbIsInserted = false;
 
 
 status_t FE_Init()
@@ -42,6 +51,7 @@ status_t FE_Init()
 	g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
 	g_sd.usrParam.cd = &cardDetectConfig;
 
+	status_t status = SD_HostInit(&g_sd);
 
 	g_fileSystems[SDDISK].pdrv=SDDISK;
 #endif
@@ -116,6 +126,23 @@ status_t FE_mountDrive(FE_drive drive)
 	}
 }
 
+
+
+status_t FE_unmountDrive(FE_drive drive)
+{
+	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
+
+	if (f_mount(NULL, driverNumberBuffer, 1U)==FR_OK) // TODO: Probar, aca creo que hay que pasarle un 0
+	{
+			return kStatus_Success;
+	}
+	else
+	{
+		return kStatus_Fail;
+	}
+}
+
+
 status_t FE_SetCurrDrive(FE_drive drive)
 {
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
@@ -131,7 +158,6 @@ status_t FE_SetCurrDrive(FE_drive drive)
 		return kStatus_Fail;
 	}
 }
-
 
 
 status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
@@ -272,7 +298,82 @@ uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern,
 }
 
 
-void FE_USBTaskFn(void)
+void FE_Tick(void)
 {
+	/* USB Task */
     USB_HostKhciTaskFunction(g_HostHandle);
+
+	bool currStatus;
+
+//	// Check changes in USB drive
+//	currStatus = FE_DriveStatus(FE_USB);
+//	if(currStatus != usbStatus)
+//	{
+//		usbStatus = currStatus;
+//		if(usbStatus == true)
+//		{
+//			PRINTF("USB inserted\n");
+//			if(FE_mountDrive(FE_USB)== kStatus_Success)
+//			{
+//
+//				uint8_t k = FE_CountFilesMatching("/","*.mp3");
+//
+//				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
+//
+//				MP3_Play("/",0);
+//
+//			}
+//			else
+//				PRINTF("Error mounting USB\n");
+//		}
+//		else
+//		{
+//			PRINTF("USB removed\n");
+//
+//		}
+//	}
+
+	// Check changes in SD drive
+	currStatus = FE_DriveStatus(FE_SD);
+
+	if(sdStatusChanged)
+	{
+		// ACA NOTIFICAR A LA PARTE GRAFICA!!!
+		// GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
+
+		if(sdIsInserted == true)
+		{
+			PRINTF("SD inserted\n");
+			if(FE_mountDrive(FE_SD) == kStatus_Success)
+			{
+				uint8_t k = FE_CountFilesMatching("/","*.mp3");
+
+				PRINTF("There are %d mp3 files in root folder of the SD\n",k);
+
+				MP3_Play("/",0);
+
+			}
+			else
+				PRINTF("Error mounting SD\n");
+		}
+
+		if(sdIsInserted == false)
+		{
+			PRINTF("SD removed\n");
+			FE_unmountDrive(FE_SD);
+		}
+
+		sdStatusChanged = false;
+	}
+}
+
+
+
+
+
+
+static void sdStatusChangeFn(bool isInserted, void *userData)
+{
+	sdStatusChanged = true;
+	sdIsInserted = isInserted;
 }

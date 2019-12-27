@@ -17,11 +17,13 @@
 #include "fsl_debug_console.h"
 
 #define  READ_BUFFER_SIZE  (1024*8)
+
 /* Every 3 frames the vumeter is updated */
 #define VUMETER_UPDATE_MODULO 3
 
 /* Player status */
 typedef enum{IDLE,PLAYING,PLAYING_LAST_FRAMES,PAUSE_PENDING,PAUSE}MP3_Status;
+
 static MP3_Status status;
 
 /* Decoder*/
@@ -29,29 +31,34 @@ static HMP3Decoder mp3Decoder;
 
 static MP3FrameInfo mp3FrameInfo;
 
-/* Current file */
-static FIL currentFile;
-static FILINFO currentFileInfo;
-//static DIR currentDir;
-static char curPath[256];
-static FE_FILE_SORT_TYPE plSortCriteria = ABC;	// Playlist sort criteria
-static uint8_t fileIndexLut[MAX_FILES_PER_DIR];
-static uint8_t fileIndexLutSize;
-static uint8_t curSong;
+
+static FIL 					currentFile;
+static FILINFO 				currentFileInfo;
+//static DIR 				currentDir;
+static char 				curPath[256];
+static FE_FILE_SORT_TYPE 	plSortCriteria = ABC;	// Playlist sort criteria
+static uint8_t 				fileIndexLut[MAX_FILES_PER_DIR];
+static uint8_t 				fileIndexLutSize;
+static uint8_t 				curSong;
 
 
-static uint8_t readBuf[READ_BUFFER_SIZE];
-static uint8_t * readPtr;
-static uint32_t bytesLeft;
+static uint8_t 				readBuf[READ_BUFFER_SIZE];
+static uint8_t * 			readPtr;
+static uint32_t 			bytesLeft;
 
-static int16_t audioBuf[MAX_SAMPLES_PER_FRAME];
+static int16_t 				audioBuf[MAX_SAMPLES_PER_FRAME];
 
-static uint32_t frameCounter;
-static float playbackTime;
+static uint32_t 			frameCounter;
+static float 				playbackTime;
 
-static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint32_t * nRead);
-static status_t MP3_DecodeFrame();
-static void MP3_PlayCurrentSong();
+
+
+static status_t 			MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint32_t * nRead);
+static status_t 			MP3_DecodeFrame();
+static void 				MP3_PlayCurrentSong();
+
+
+
 
 status_t MP3_Init()
 {
@@ -65,8 +72,10 @@ status_t MP3_Init()
 		return kStatus_Fail;
 	}
 
+	/* Initialize audio module. */
 	Audio_Init();
 
+	/* Initialize vumeter module. */
 	Vumeter_Init();
 
 	status = IDLE;
@@ -74,34 +83,32 @@ status_t MP3_Init()
 	return kStatus_Success;
 }
 
-
 void MP3_Play(char * dirPath, uint8_t index)
 {
 	if(status == PLAYING)
 		MP3_Stop();
 
-
 	strcpy(curPath,dirPath);
 
-	// Sort files
+	// Sort files and find song to play
 	fileIndexLutSize = FE_Sort(plSortCriteria, dirPath, ".mp3", fileIndexLut);
 	uint8_t i = 0;
 	while(fileIndexLut[i]!=index && i<fileIndexLutSize) i++;
 	if(fileIndexLut[i]==index)
+	{
 		curSong = i;
-
-
-	// TEMPORAL
-//	curSong = index;
-//	fileIndexLut[curSong] = index;
-
+	}
+	else
+	{
+		// Invalid index!
+	}
 
 	MP3_PlayCurrentSong();
 }
 
 static void MP3_PlayCurrentSong()
 {
-	// Open file
+	// Open current song
 	FRESULT result = FE_OpenFileN(  curPath,
 									&currentFile,
 									&currentFileInfo,
@@ -144,15 +151,13 @@ void MP3_Next()
 	if(status != IDLE)
 		MP3_Stop();
 
-	/* DESCOMENTAR CUANDO ESTE LO DE GENERAR LA PLAYLIST
 	// Move to next song in current folder
 	curSong++;
 
 	// Wrap around if reached the end
 	if(fileIndexLut[curSong]==EOF)
 		curSong = 0;
-	*/
-	fileIndexLut[curSong]++;
+
 
 	MP3_PlayCurrentSong();
 
