@@ -138,7 +138,7 @@ void BOARD_InitBootPins(void)
 /*
  * TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 BOARD_InitPins:
-- options: {callFromInitBoot: 'true', coreID: core0, enableClock: 'true'}
+- options: {callFromInitBoot: 'true', prefix: '', coreID: core0, enableClock: 'true'}
 - pin_list:
   - {pin_num: '39', peripheral: I2S0, signal: TX_BCLK, pin_signal: PTA5/USB_CLKIN/FTM0_CH2/RMII0_RXER/MII0_RXER/CMP2_OUT/I2S0_TX_BCLK/JTAG_TRST_b, direction: OUTPUT}
   - {pin_num: '42', peripheral: I2S0, signal: TXD0, pin_signal: CMP2_IN0/PTA12/CAN0_TX/FTM1_CH0/RMII0_RXD1/MII0_RXD1/I2C2_SCL/I2S0_TXD0/FTM1_QD_PHA}
@@ -224,213 +224,213 @@ void BOARD_InitPins(void)
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTA14 (pin 44)  */
-    GPIO_PinInit(BOARD_INITPINS_HPR_SENSE_GPIO, BOARD_INITPINS_HPR_SENSE_PIN, &HPR_SENSE_config);
+    GPIO_PinInit(HPR_SENSE_GPIO, HPR_SENSE_PIN, &HPR_SENSE_config);
 
     gpio_pin_config_t HPL_SENSE_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTA15 (pin 45)  */
-    GPIO_PinInit(BOARD_INITPINS_HPL_SENSE_GPIO, BOARD_INITPINS_HPL_SENSE_PIN, &HPL_SENSE_config);
+    GPIO_PinInit(HPL_SENSE_GPIO, HPL_SENSE_PIN, &HPL_SENSE_config);
 
     gpio_pin_config_t LCD_RESET_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTB18 (pin 64)  */
-    GPIO_PinInit(BOARD_INITPINS_LCD_RESET_GPIO, BOARD_INITPINS_LCD_RESET_PIN, &LCD_RESET_config);
+    GPIO_PinInit(LCD_RESET_GPIO, LCD_RESET_PIN, &LCD_RESET_config);
 
     gpio_pin_config_t LCD_DCRS_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTB19 (pin 65)  */
-    GPIO_PinInit(BOARD_INITPINS_LCD_DCRS_GPIO, BOARD_INITPINS_LCD_DCRS_PIN, &LCD_DCRS_config);
+    GPIO_PinInit(LCD_DCRS_GPIO, LCD_DCRS_PIN, &LCD_DCRS_config);
 
     gpio_pin_config_t LCD_LED_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTB20 (pin 66)  */
-    GPIO_PinInit(BOARD_INITPINS_LCD_LED_GPIO, BOARD_INITPINS_LCD_LED_PIN, &LCD_LED_config);
+    GPIO_PinInit(LCD_LED_GPIO, LCD_LED_PIN, &LCD_LED_config);
 
     gpio_pin_config_t BTN_MENU_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTB23 (pin 69)  */
-    GPIO_PinInit(BOARD_INITPINS_BTN_MENU_GPIO, BOARD_INITPINS_BTN_MENU_PIN, &BTN_MENU_config);
+    GPIO_PinInit(BTN_MENU_GPIO, BTN_MENU_PIN, &BTN_MENU_config);
 
     gpio_pin_config_t BTN_NEXT_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC0 (pin 70)  */
-    GPIO_PinInit(BOARD_INITPINS_BTN_NEXT_GPIO, BOARD_INITPINS_BTN_NEXT_PIN, &BTN_NEXT_config);
+    GPIO_PinInit(BTN_NEXT_GPIO, BTN_NEXT_PIN, &BTN_NEXT_config);
 
     gpio_pin_config_t BTN_PLAY_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC2 (pin 72)  */
-    GPIO_PinInit(BOARD_INITPINS_BTN_PLAY_GPIO, BOARD_INITPINS_BTN_PLAY_PIN, &BTN_PLAY_config);
+    GPIO_PinInit(BTN_PLAY_GPIO, BTN_PLAY_PIN, &BTN_PLAY_config);
 
     gpio_pin_config_t BTN_PREV_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC3 (pin 73)  */
-    GPIO_PinInit(BOARD_INITPINS_BTN_PREV_GPIO, BOARD_INITPINS_BTN_PREV_PIN, &BTN_PREV_config);
+    GPIO_PinInit(BTN_PREV_GPIO, BTN_PREV_PIN, &BTN_PREV_config);
 
     gpio_pin_config_t PWR_EN_5Vn_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 1U
     };
     /* Initialize GPIO functionality on pin PTC4 (pin 76)  */
-    GPIO_PinInit(BOARD_INITPINS_PWR_EN_5Vn_GPIO, BOARD_INITPINS_PWR_EN_5Vn_PIN, &PWR_EN_5Vn_config);
+    GPIO_PinInit(PWR_EN_5Vn_GPIO, PWR_EN_5Vn_PIN, &PWR_EN_5Vn_config);
 
     gpio_pin_config_t LED_SENSE_3_3V_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC5 (pin 77)  */
-    GPIO_PinInit(BOARD_INITPINS_LED_SENSE_3_3V_GPIO, BOARD_INITPINS_LED_SENSE_3_3V_PIN, &LED_SENSE_3_3V_config);
+    GPIO_PinInit(LED_SENSE_3_3V_GPIO, LED_SENSE_3_3V_PIN, &LED_SENSE_3_3V_config);
 
     gpio_pin_config_t LOW_BATn_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC13 (pin 85)  */
-    GPIO_PinInit(BOARD_INITPINS_LOW_BATn_GPIO, BOARD_INITPINS_LOW_BATn_PIN, &LOW_BATn_config);
+    GPIO_PinInit(LOW_BATn_GPIO, LOW_BATn_PIN, &LOW_BATn_config);
 
     gpio_pin_config_t PWR_EN_3V3_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC14 (pin 86)  */
-    GPIO_PinInit(BOARD_INITPINS_PWR_EN_3V3_GPIO, BOARD_INITPINS_PWR_EN_3V3_PIN, &PWR_EN_3V3_config);
+    GPIO_PinInit(PWR_EN_3V3_GPIO, PWR_EN_3V3_PIN, &PWR_EN_3V3_config);
 
     gpio_pin_config_t DONEn_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC16 (pin 90)  */
-    GPIO_PinInit(BOARD_INITPINS_DONEn_GPIO, BOARD_INITPINS_DONEn_PIN, &DONEn_config);
+    GPIO_PinInit(DONEn_GPIO, DONEn_PIN, &DONEn_config);
 
     gpio_pin_config_t DOK_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC17 (pin 91)  */
-    GPIO_PinInit(BOARD_INITPINS_DOK_GPIO, BOARD_INITPINS_DOK_PIN, &DOK_config);
+    GPIO_PinInit(DOK_GPIO, DOK_PIN, &DOK_config);
 
     gpio_pin_config_t CHG_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTC18 (pin 92)  */
-    GPIO_PinInit(BOARD_INITPINS_CHG_GPIO, BOARD_INITPINS_CHG_PIN, &CHG_config);
+    GPIO_PinInit(CHG_GPIO, CHG_PIN, &CHG_config);
 
     gpio_pin_config_t DBG1_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTD0 (pin 93)  */
-    GPIO_PinInit(BOARD_INITPINS_DBG1_GPIO, BOARD_INITPINS_DBG1_PIN, &DBG1_config);
+    GPIO_PinInit(DBG1_GPIO, DBG1_PIN, &DBG1_config);
 
     gpio_pin_config_t DBG2_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTD1 (pin 94)  */
-    GPIO_PinInit(BOARD_INITPINS_DBG2_GPIO, BOARD_INITPINS_DBG2_PIN, &DBG2_config);
+    GPIO_PinInit(DBG2_GPIO, DBG2_PIN, &DBG2_config);
 
     gpio_pin_config_t DBG3_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTD2 (pin 95)  */
-    GPIO_PinInit(BOARD_INITPINS_DBG3_GPIO, BOARD_INITPINS_DBG3_PIN, &DBG3_config);
+    GPIO_PinInit(DBG3_GPIO, DBG3_PIN, &DBG3_config);
 
     gpio_pin_config_t DBG4_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTD3 (pin 96)  */
-    GPIO_PinInit(BOARD_INITPINS_DBG4_GPIO, BOARD_INITPINS_DBG4_PIN, &DBG4_config);
+    GPIO_PinInit(DBG4_GPIO, DBG4_PIN, &DBG4_config);
 
     gpio_pin_config_t SD_DETECT_config = {
         .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTD7 (pin 100)  */
-    GPIO_PinInit(BOARD_INITPINS_SD_DETECT_GPIO, BOARD_INITPINS_SD_DETECT_PIN, &SD_DETECT_config);
+    GPIO_PinInit(SD_DETECT_GPIO, SD_DETECT_PIN, &SD_DETECT_config);
 
     /* PORTA12 (pin 42) is configured as I2S0_TXD0 */
-    PORT_SetPinMux(BOARD_INITPINS_I2S_SDI_PORT, BOARD_INITPINS_I2S_SDI_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(I2S_SDI_PORT, I2S_SDI_PIN, kPORT_MuxAlt6);
 
     /* PORTA13 (pin 43) is configured as I2S0_TX_FS */
-    PORT_SetPinMux(BOARD_INITPINS_I2S_WS_PORT, BOARD_INITPINS_I2S_WS_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(I2S_WS_PORT, I2S_WS_PIN, kPORT_MuxAlt6);
 
     /* PORTA14 (pin 44) is configured as PTA14 */
-    PORT_SetPinMux(BOARD_INITPINS_HPR_SENSE_PORT, BOARD_INITPINS_HPR_SENSE_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(HPR_SENSE_PORT, HPR_SENSE_PIN, kPORT_MuxAsGpio);
 
     /* Interrupt configuration on PORTA14 (pin 44): Interrupt/DMA request is disabled */
-    PORT_SetPinInterruptConfig(BOARD_INITPINS_HPR_SENSE_PORT, BOARD_INITPINS_HPR_SENSE_PIN, kPORT_InterruptOrDMADisabled);
+    PORT_SetPinInterruptConfig(HPR_SENSE_PORT, HPR_SENSE_PIN, kPORT_InterruptOrDMADisabled);
 
     /* PORTA15 (pin 45) is configured as PTA15 */
-    PORT_SetPinMux(BOARD_INITPINS_HPL_SENSE_PORT, BOARD_INITPINS_HPL_SENSE_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(HPL_SENSE_PORT, HPL_SENSE_PIN, kPORT_MuxAsGpio);
 
     /* PORTA17 (pin 47) is configured as I2S0_MCLK */
-    PORT_SetPinMux(BOARD_INITPINS_I2S_MCLK_PORT, BOARD_INITPINS_I2S_MCLK_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(I2S_MCLK_PORT, I2S_MCLK_PIN, kPORT_MuxAlt6);
 
     /* PORTA18 (pin 50) is configured as EXTAL0 */
-    PORT_SetPinMux(BOARD_INITPINS_XTALP_PORT, BOARD_INITPINS_XTALP_PIN, kPORT_PinDisabledOrAnalog);
+    PORT_SetPinMux(XTALP_PORT, XTALP_PIN, kPORT_PinDisabledOrAnalog);
 
     /* PORTA19 (pin 51) is configured as XTAL0 */
-    PORT_SetPinMux(BOARD_INITPINS_XTALN_PORT, BOARD_INITPINS_XTALN_PIN, kPORT_PinDisabledOrAnalog);
+    PORT_SetPinMux(XTALN_PORT, XTALN_PIN, kPORT_PinDisabledOrAnalog);
 
     /* PORTA4 (pin 38) is configured as NMI_b */
-    PORT_SetPinMux(BOARD_INITPINS_NMI_PORT, BOARD_INITPINS_NMI_PIN, kPORT_MuxAlt7);
+    PORT_SetPinMux(NMI_PORT, NMI_PIN, kPORT_MuxAlt7);
 
     /* PORTA5 (pin 39) is configured as I2S0_TX_BCLK */
-    PORT_SetPinMux(BOARD_INITPINS_I2S_CLK_PORT, BOARD_INITPINS_I2S_CLK_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(I2S_CLK_PORT, I2S_CLK_PIN, kPORT_MuxAlt6);
 
     /* PORTB0 (pin 53) is configured as FTM1_QD_PHA */
-    PORT_SetPinMux(BOARD_INITPINS_ENC_A_PORT, BOARD_INITPINS_ENC_A_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(ENC_A_PORT, ENC_A_PIN, kPORT_MuxAlt6);
 
     /* PORTB1 (pin 54) is configured as FTM1_QD_PHB */
-    PORT_SetPinMux(BOARD_INITPINS_ENC_B_PORT, BOARD_INITPINS_ENC_B_PIN, kPORT_MuxAlt6);
+    PORT_SetPinMux(ENC_B_PORT, ENC_B_PIN, kPORT_MuxAlt6);
 
     /* PORTB10 (pin 58) is configured as SPI1_PCS0 */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_CSn_PORT, BOARD_INITPINS_LCD_CSn_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(LCD_CSn_PORT, LCD_CSn_PIN, kPORT_MuxAlt2);
 
     /* PORTB11 (pin 59) is configured as SPI1_SCK */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_SCK_PORT, BOARD_INITPINS_LCD_SCK_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(LCD_SCK_PORT, LCD_SCK_PIN, kPORT_MuxAlt2);
 
     /* PORTB16 (pin 62) is configured as SPI1_SOUT */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_MOSI_PORT, BOARD_INITPINS_LCD_MOSI_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(LCD_MOSI_PORT, LCD_MOSI_PIN, kPORT_MuxAlt2);
 
     /* PORTB17 (pin 63) is configured as SPI1_SIN */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_MISO_PORT, BOARD_INITPINS_LCD_MISO_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(LCD_MISO_PORT, LCD_MISO_PIN, kPORT_MuxAlt2);
 
     /* PORTB18 (pin 64) is configured as PTB18 */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_RESET_PORT, BOARD_INITPINS_LCD_RESET_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(LCD_RESET_PORT, LCD_RESET_PIN, kPORT_MuxAsGpio);
 
     /* PORTB19 (pin 65) is configured as PTB19 */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_DCRS_PORT, BOARD_INITPINS_LCD_DCRS_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(LCD_DCRS_PORT, LCD_DCRS_PIN, kPORT_MuxAsGpio);
 
     /* PORTB2 (pin 55) is configured as I2C0_SCL */
-    PORT_SetPinMux(BOARD_INITPINS_AUD_I2C_SCL_PORT, BOARD_INITPINS_AUD_I2C_SCL_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(AUD_I2C_SCL_PORT, AUD_I2C_SCL_PIN, kPORT_MuxAlt2);
 
     /* PORTB20 (pin 66) is configured as PTB20 */
-    PORT_SetPinMux(BOARD_INITPINS_LCD_LED_PORT, BOARD_INITPINS_LCD_LED_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(LCD_LED_PORT, LCD_LED_PIN, kPORT_MuxAsGpio);
 
     /* PORTB22 (pin 68) is configured as SPI2_SOUT */
-    PORT_SetPinMux(BOARD_INITPINS_LED_DATA_PORT, BOARD_INITPINS_LED_DATA_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(LED_DATA_PORT, LED_DATA_PIN, kPORT_MuxAlt2);
 
     /* PORTB23 (pin 69) is configured as PTB23 */
-    PORT_SetPinMux(BOARD_INITPINS_BTN_MENU_PORT, BOARD_INITPINS_BTN_MENU_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(BTN_MENU_PORT, BTN_MENU_PIN, kPORT_MuxAsGpio);
 
     PORTB->PCR[23] = ((PORTB->PCR[23] &
                        /* Mask bits to zero which are setting */
@@ -446,10 +446,10 @@ void BOARD_InitPins(void)
                       | PORT_PCR_PFE(kPORT_PassiveFilterEnable));
 
     /* PORTB3 (pin 56) is configured as I2C0_SDA */
-    PORT_SetPinMux(BOARD_INITPINS_AUD_I2C_SDA_PORT, BOARD_INITPINS_AUD_I2C_SDA_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(AUD_I2C_SDA_PORT, AUD_I2C_SDA_PIN, kPORT_MuxAlt2);
 
     /* PORTC0 (pin 70) is configured as PTC0 */
-    PORT_SetPinMux(BOARD_INITPINS_BTN_NEXT_PORT, BOARD_INITPINS_BTN_NEXT_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(BTN_NEXT_PORT, BTN_NEXT_PIN, kPORT_MuxAsGpio);
 
     PORTC->PCR[0] = ((PORTC->PCR[0] &
                       /* Mask bits to zero which are setting */
@@ -465,7 +465,7 @@ void BOARD_InitPins(void)
                      | PORT_PCR_PFE(kPORT_PassiveFilterEnable));
 
     /* PORTC1 (pin 71) is configured as LLWU_P6 */
-    PORT_SetPinMux(BOARD_INITPINS_BTN_SELECT_PORT, BOARD_INITPINS_BTN_SELECT_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(BTN_SELECT_PORT, BTN_SELECT_PIN, kPORT_MuxAsGpio);
 
     PORTC->PCR[1] = ((PORTC->PCR[1] &
                       /* Mask bits to zero which are setting */
@@ -481,28 +481,28 @@ void BOARD_InitPins(void)
                      | PORT_PCR_PFE(kPORT_PassiveFilterEnable));
 
     /* PORTC10 (pin 82) is configured as I2C1_SCL */
-    PORT_SetPinMux(BOARD_INITPINS_BAT_I2C_SCL_PORT, BOARD_INITPINS_BAT_I2C_SCL_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(BAT_I2C_SCL_PORT, BAT_I2C_SCL_PIN, kPORT_MuxAlt2);
 
     /* PORTC11 (pin 83) is configured as I2C1_SDA */
-    PORT_SetPinMux(BOARD_INITPINS_BAT_I2C_SDA_PORT, BOARD_INITPINS_BAT_I2C_SDA_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(BAT_I2C_SDA_PORT, BAT_I2C_SDA_PIN, kPORT_MuxAlt2);
 
     /* PORTC13 (pin 85) is configured as PTC13 */
-    PORT_SetPinMux(BOARD_INITPINS_LOW_BATn_PORT, BOARD_INITPINS_LOW_BATn_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(LOW_BATn_PORT, LOW_BATn_PIN, kPORT_MuxAsGpio);
 
     /* PORTC14 (pin 86) is configured as PTC14 */
-    PORT_SetPinMux(BOARD_INITPINS_PWR_EN_3V3_PORT, BOARD_INITPINS_PWR_EN_3V3_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(PWR_EN_3V3_PORT, PWR_EN_3V3_PIN, kPORT_MuxAsGpio);
 
     /* PORTC16 (pin 90) is configured as PTC16 */
-    PORT_SetPinMux(BOARD_INITPINS_DONEn_PORT, BOARD_INITPINS_DONEn_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DONEn_PORT, DONEn_PIN, kPORT_MuxAsGpio);
 
     /* PORTC17 (pin 91) is configured as PTC17 */
-    PORT_SetPinMux(BOARD_INITPINS_DOK_PORT, BOARD_INITPINS_DOK_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DOK_PORT, DOK_PIN, kPORT_MuxAsGpio);
 
     /* PORTC18 (pin 92) is configured as PTC18 */
-    PORT_SetPinMux(BOARD_INITPINS_CHG_PORT, BOARD_INITPINS_CHG_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(CHG_PORT, CHG_PIN, kPORT_MuxAsGpio);
 
     /* PORTC2 (pin 72) is configured as PTC2 */
-    PORT_SetPinMux(BOARD_INITPINS_BTN_PLAY_PORT, BOARD_INITPINS_BTN_PLAY_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(BTN_PLAY_PORT, BTN_PLAY_PIN, kPORT_MuxAsGpio);
 
     PORTC->PCR[2] = ((PORTC->PCR[2] &
                       /* Mask bits to zero which are setting */
@@ -518,7 +518,7 @@ void BOARD_InitPins(void)
                      | PORT_PCR_PFE(kPORT_PassiveFilterEnable));
 
     /* PORTC3 (pin 73) is configured as PTC3 */
-    PORT_SetPinMux(BOARD_INITPINS_BTN_PREV_PORT, BOARD_INITPINS_BTN_PREV_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(BTN_PREV_PORT, BTN_PREV_PIN, kPORT_MuxAsGpio);
 
     PORTC->PCR[3] = ((PORTC->PCR[3] &
                       /* Mask bits to zero which are setting */
@@ -534,10 +534,10 @@ void BOARD_InitPins(void)
                      | PORT_PCR_PFE(kPORT_PassiveFilterEnable));
 
     /* PORTC4 (pin 76) is configured as PTC4 */
-    PORT_SetPinMux(BOARD_INITPINS_PWR_EN_5Vn_PORT, BOARD_INITPINS_PWR_EN_5Vn_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(PWR_EN_5Vn_PORT, PWR_EN_5Vn_PIN, kPORT_MuxAsGpio);
 
     /* PORTC5 (pin 77) is configured as PTC5 */
-    PORT_SetPinMux(BOARD_INITPINS_LED_SENSE_3_3V_PORT, BOARD_INITPINS_LED_SENSE_3_3V_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(LED_SENSE_3_3V_PORT, LED_SENSE_3_3V_PIN, kPORT_MuxAsGpio);
     /* Configure digital filter */
     PORT_EnablePinsDigitalFilter(
         /* Digital filter is configured on port D */
@@ -548,37 +548,37 @@ void BOARD_InitPins(void)
         false);
 
     /* PORTD0 (pin 93) is configured as PTD0 */
-    PORT_SetPinMux(BOARD_INITPINS_DBG1_PORT, BOARD_INITPINS_DBG1_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DBG1_PORT, DBG1_PIN, kPORT_MuxAsGpio);
 
     /* PORTD1 (pin 94) is configured as PTD1 */
-    PORT_SetPinMux(BOARD_INITPINS_DBG2_PORT, BOARD_INITPINS_DBG2_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DBG2_PORT, DBG2_PIN, kPORT_MuxAsGpio);
 
     /* PORTD2 (pin 95) is configured as PTD2 */
-    PORT_SetPinMux(BOARD_INITPINS_DBG3_PORT, BOARD_INITPINS_DBG3_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DBG3_PORT, DBG3_PIN, kPORT_MuxAsGpio);
 
     /* PORTD3 (pin 96) is configured as PTD3 */
-    PORT_SetPinMux(BOARD_INITPINS_DBG4_PORT, BOARD_INITPINS_DBG4_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(DBG4_PORT, DBG4_PIN, kPORT_MuxAsGpio);
 
     /* PORTD7 (pin 100) is configured as PTD7 */
-    PORT_SetPinMux(BOARD_INITPINS_SD_DETECT_PORT, BOARD_INITPINS_SD_DETECT_PIN, kPORT_MuxAsGpio);
+    PORT_SetPinMux(SD_DETECT_PORT, SD_DETECT_PIN, kPORT_MuxAsGpio);
 
     /* PORTE0 (pin 1) is configured as SDHC0_D1 */
-    PORT_SetPinMux(BOARD_INITPINS_SD_DAT1_PORT, BOARD_INITPINS_SD_DAT1_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_DAT1_PORT, SD_DAT1_PIN, kPORT_MuxAlt4);
 
     /* PORTE1 (pin 2) is configured as SDHC0_D0 */
-    PORT_SetPinMux(BOARD_INITPINS_SD_DAT0_PORT, BOARD_INITPINS_SD_DAT0_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_DAT0_PORT, SD_DAT0_PIN, kPORT_MuxAlt4);
 
     /* PORTE2 (pin 3) is configured as SDHC0_DCLK */
-    PORT_SetPinMux(BOARD_INITPINS_SD_CLK_PORT, BOARD_INITPINS_SD_CLK_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_CLK_PORT, SD_CLK_PIN, kPORT_MuxAlt4);
 
     /* PORTE3 (pin 4) is configured as SDHC0_CMD */
-    PORT_SetPinMux(BOARD_INITPINS_SD_CMD_PORT, BOARD_INITPINS_SD_CMD_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_CMD_PORT, SD_CMD_PIN, kPORT_MuxAlt4);
 
     /* PORTE4 (pin 5) is configured as SDHC0_D3 */
-    PORT_SetPinMux(BOARD_INITPINS_SD_DAT3_PORT, BOARD_INITPINS_SD_DAT3_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_DAT3_PORT, SD_DAT3_PIN, kPORT_MuxAlt4);
 
     /* PORTE5 (pin 6) is configured as SDHC0_D2 */
-    PORT_SetPinMux(BOARD_INITPINS_SD_DAT2_PORT, BOARD_INITPINS_SD_DAT2_PIN, kPORT_MuxAlt4);
+    PORT_SetPinMux(SD_DAT2_PORT, SD_DAT2_PIN, kPORT_MuxAlt4);
 }
 /***********************************************************************************************************************
  * EOF
