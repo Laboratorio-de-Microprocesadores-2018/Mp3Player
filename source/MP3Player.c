@@ -191,7 +191,7 @@ void MP3_PlayPause()
 	}
 }
 
-void MP3_Tick()
+void MP3_Task()
 {
 
 	switch(status)

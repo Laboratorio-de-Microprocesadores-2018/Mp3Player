@@ -62,7 +62,7 @@ void MP3_Prev();
 /**
  *
  */
-void MP3_Tick();
+void MP3_Task();
 
 status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds);
 
