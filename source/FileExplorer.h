@@ -52,7 +52,7 @@ void FE_DeInit();
  * @brief Task function should be called periodically in the main loop
  */
 
-void FE_Tick(void);
+void FE_Task(void);
 
 /*
  *

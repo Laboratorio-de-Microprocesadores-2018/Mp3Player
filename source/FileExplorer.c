@@ -298,7 +298,7 @@ uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern,
 }
 
 
-void FE_Tick(void)
+void FE_Task(void)
 {
 	/* USB Task */
     USB_HostKhciTaskFunction(g_HostHandle);
@@ -334,8 +334,6 @@ void FE_Tick(void)
 //	}
 
 	// Check changes in SD drive
-	currStatus = FE_DriveStatus(FE_SD);
-
 	if(sdStatusChanged)
 	{
 		// ACA NOTIFICAR A LA PARTE GRAFICA!!!
