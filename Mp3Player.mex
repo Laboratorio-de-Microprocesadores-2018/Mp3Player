@@ -131,6 +131,7 @@
                <description>Configures pin routing and optionally pin electrical features.</description>
                <options>
                   <callFromInitBoot>true</callFromInitBoot>
+                  <prefix></prefix>
                   <coreID>core0</coreID>
                   <enableClock>true</enableClock>
                </options>
@@ -612,7 +613,7 @@
             <component name="system" uuid="8dd3d428-d7df-4a85-a1f3-42d74f07fd59" type_id="system">
                <config_set_global name="global_system_definitions"/>
             </component>
-            <component name="msg" uuid="4bb9e10a-fe97-4e6d-a48f-d7528e28da08" type_id="msg_6e2baaf3b97dbeef01c0043275f9a0e7">
+            <component name="msg" uuid="d0af56a0-d112-48ca-af8b-9f8906292c39" type_id="msg_6e2baaf3b97dbeef01c0043275f9a0e7">
                <config_set_global name="global_messages"/>
             </component>
          </components>
