@@ -62,7 +62,7 @@ void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, 
 	 DSPI_ClearStatusFlags(base, (uint32_t)(kDSPI_EndOfQueueFlag));
 	 ILI9341_SendCommand(ILI9341_NOP);
 
-	 lv_disp_flush_ready(GUI_GetDispDrv());
+	 GUI_FlushReady();
 }
 
 
