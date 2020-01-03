@@ -11,7 +11,9 @@
 #include "GUI.h"
 #include "FileExplorer.h"
 #include "MP3Player.h"
+#include "PowerManager.h"
 
+#include "LM49450.h"
 
 /* Ejemplos de callbacks que llamaria la parte grafica
  * Para cosas que necesiten que interaccionen varios modulos
@@ -21,6 +23,7 @@
 //void APP_PauseSong();
 //void APP_PowerOff();
 //void APP_SortSongs();
+//void APP_RequestPowerOff();
 
 void LM49450_Test()
 {
@@ -30,7 +33,7 @@ void LM49450_Test()
     LM49450_Init(&config);
     LM49450_SetVolume(5);
 
-    LM49450_3Dconfig * config3d;
+    LM49450_3Dconfig config3d;
 	LM49450_GetDefault3DConfig(&config3d);
     LM49450_Set3DConfig(&config3d);
 
@@ -38,37 +41,71 @@ void LM49450_Test()
     while(1);
 }
 
+/* */
+bool powerOffReq;
+
+void APP_Init()
+{
+	// Power on from sleep
+	if(PM_Recover())
+	{
+
+	}
+	// First power on
+	else
+	{
+
+	}
+	FE_Init();
+
+	GUI_Init();
+
+	MP3_Init();
+
+	Input_Init();
+}
+/*
+void APP_LowPowerLoop()
+{
+    for(int i=0; i<NUM_TASKS; i++)
+   	{
+		__disable_irq();
+		if(task[i].HaveToRun())
+		{
+			__enable_irq();
+			task[i].RunPendingTasks();
+		}
+	}
+	//APP_PrepareForSleep();
+	__DSB();
+	__WFI();
+	//APP_RecoverFromSleep();
+	__enable_irq();
+	__ISB();
+}
+*/
 int main(void)
 {
-  	/* Init board hardware. */
+  	/* Board hardware initialization. */
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
 
+    /* Modules initialization */
+    APP_Init();
 
-    Audio_Init();
-
-    FE_Init();
-
-    GUI_Init();
-
-    MP3_Init();
-
-    Input_Init();
-
-	//uint32_t duration = 0;
-	//MP3_ComputeSongDuration(files[2].fname,&duration);
-
-    while(1)
+    /* Main loop */
+    powerOffReq = false;
+    while(powerOffReq == false)
     {
     	//
-		FE_Tick();
-
+		FE_Task();
 		//
-     	MP3_Tick();
-
+		GUI_Task();
+		//
+     	MP3_Task();
     }
-
+    PM_EnterLowPowerMode();
 
     return 0 ;
 }
