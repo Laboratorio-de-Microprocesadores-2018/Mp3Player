@@ -288,6 +288,7 @@ void BOARD_InitBootPins(void);
 
 /*! @name PORTC1 (number 71), /BTN_SELECT
   @{ */
+#define BTN_SELECT_GPIO GPIOC /*!<@brief GPIO device name: GPIOC */
 #define BTN_SELECT_PORT PORTC /*!<@brief PORT device name: PORTC */
 #define BTN_SELECT_PIN 1U     /*!<@brief PORTC pin index: 1 */
                               /* @} */
