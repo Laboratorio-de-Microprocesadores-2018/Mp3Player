@@ -22,7 +22,11 @@
 #define VUMETER_UPDATE_MODULO 3
 
 /* Player status */
-typedef enum{IDLE,PLAYING,PLAYING_LAST_FRAMES,PAUSE_PENDING,PAUSE}MP3_Status;
+typedef enum{	IDLE,
+				PLAYING,
+				PLAYING_LAST_FRAMES,
+				PAUSE_PENDING,
+				PAUSE}MP3_Status;
 
 static MP3_Status status;
 
@@ -191,6 +195,10 @@ void MP3_PlayPause()
 	}
 }
 
+int MP3_GetPlaybackTime(void)
+{
+	return playbackTime;
+}
 void MP3_Task()
 {
 
