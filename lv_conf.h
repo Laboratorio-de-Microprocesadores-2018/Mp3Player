@@ -21,8 +21,8 @@
  *====================*/
 
 /* Maximal horizontal and vertical resolution to support by the library.*/
-#define LV_HOR_RES_MAX          (320)
-#define LV_VER_RES_MAX          (240)
+#define LV_HOR_RES          (240)
+#define LV_VER_RES          (320)
 
 /* Color depth:
  * - 1:  1 byte per pixel
@@ -185,10 +185,15 @@ typedef void * lv_img_decoder_user_data_t;
 /* Define a custom attribute to `lv_task_handler` function */
 #define LV_ATTRIBUTE_TASK_HANDLER
 
+
 /* With size optimization (-Os) the compiler might not align data to
  * 4 or 8 byte boundary. This alignment will be explicitly applied where needed.
  * E.g. __attribute__((aligned(4))) */
-#define LV_ATTRIBUTE_MEM_ALIGN
+#if defined(_WIN64) || defined(_WIN32)
+#define LV_ATTRIBUTE_MEM_ALIGN 
+#else
+#define LV_ATTRIBUTE_MEM_ALIGN __attribute__((section(".bss.$SRAM_LOWER"), used));
+#endif
 
 /* Attribute to mark large constant arrays for example
  * font's bitmaps */
@@ -200,7 +205,14 @@ typedef void * lv_img_decoder_user_data_t;
 
 /* 1: use a custom tick source.
  * It removes the need to manually update the tick with `lv_tick_inc`) */
+
+#if defined(_WIN64) || defined(_WIN32)
+#define LV_TICK_CUSTOM     0
+#else
 #define LV_TICK_CUSTOM     1
+#endif
+
+
 #if LV_TICK_CUSTOM == 1
 #define LV_TICK_CUSTOM_INCLUDE  <stdint.h>     /*Header for the sys time function*/
 extern uint32_t g_eventTimeMilliseconds;
@@ -215,7 +227,12 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
  *===============*/
 
 /*1: Enable the log module*/
+#if defined(_WIN64) || defined(_WIN32)
+#define LV_USE_LOG      1
+#else
 #define LV_USE_LOG      0
+#endif
+
 #if LV_USE_LOG
 /* How important log should be added:
  * LV_LOG_LEVEL_TRACE       A lot of logs to give detailed information
@@ -228,7 +245,7 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
 
 /* 1: Print the log with 'printf';
  * 0: user need to register a callback with `lv_log_register_print`*/
-#  define LV_LOG_PRINTF   0
+#  define LV_LOG_PRINTF   1
 #endif  /*LV_USE_LOG*/
 
 /*================
@@ -237,8 +254,8 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
 #define LV_THEME_LIVE_UPDATE    0   /*1: Allow theme switching at run time. Uses 8..10 kB of RAM*/
 
 #define LV_USE_THEME_TEMPL      0   /*Just for test*/
-#define LV_USE_THEME_DEFAULT    0   /*Built mainly from the built-in styles. Consumes very few RAM*/
-#define LV_USE_THEME_ALIEN      0   /*Dark futuristic theme*/
+#define LV_USE_THEME_DEFAULT    1   /*Built mainly from the built-in styles. Consumes very few RAM*/
+#define LV_USE_THEME_ALIEN      1   /*Dark futuristic theme*/
 #define LV_USE_THEME_NIGHT      1   /*Dark elegant theme*/
 #define LV_USE_THEME_MONO       0   /*Mono color theme for monochrome displays*/
 #define LV_USE_THEME_MATERIAL   0   /*Flat theme with bold colors and light shadows*/
@@ -260,7 +277,7 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
 #define LV_FONT_ROBOTO_12    0
 #define LV_FONT_ROBOTO_16    1
 #define LV_FONT_ROBOTO_22    0
-#define LV_FONT_ROBOTO_28    0
+#define LV_FONT_ROBOTO_28    1
 
 /*Pixel perfect monospace font
  * http://pelulamu.net/unscii/ */
