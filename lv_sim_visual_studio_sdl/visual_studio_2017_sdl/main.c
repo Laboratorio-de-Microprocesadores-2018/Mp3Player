@@ -80,32 +80,36 @@ int elapsed = 0;
 int duration = 145;
 status_t status = IDLE;
 
-
-void MP3_Play(char* path)
-{
-	elapsed = 0;
-	status = PLAYING;
-}
-
-void MP3_Pause()
-{
-	status = PAUSE;
-}
-
-int MP3_GetTrackProgress()
-{
-	return elapsed*100/duration;
-}
-
-int MP3_GetPlaytime()
-{
-	return elapsed;
-}
-
-int MP3_GetDuration()
-{
-	return duration;
-}
+//
+//void MP3_Play(char* path)
+//{
+//	elapsed = 0;
+//	status = PLAYING;
+//}
+//
+//void MP3_Pause()
+//{
+//	status = PAUSE;
+//}
+//
+//void MP3_GetStatus()
+//{
+//	return status;
+//}
+//int MP3_GetTrackProgress()
+//{
+//	return elapsed*100/duration;
+//}
+//
+//int MP3_GetPlaytime()
+//{
+//	return elapsed;
+//}
+//
+//int MP3_GetDuration()
+//{
+//	return duration;
+//}
 
 void mp3Player_thread(void* data)
 {

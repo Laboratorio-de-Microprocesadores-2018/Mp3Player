@@ -91,9 +91,9 @@ typedef enum {
 
 /* */
 typedef enum {
-	FOLDER,
-	SONG,
-	FILE,
+	ENTRY_FOLDER,
+	ENTRY_SONG,
+	ENTRY_FILE,
 }EntryType_t;
 
 typedef struct
@@ -452,8 +452,8 @@ static void GUI_UpdateTrackInfo(lv_task_t* task)
 
 	//if(MP3_IsPlaing())
 	{
-		int elapsed = MP3_GetPlaytime();
-		int remaining = MP3_GetDuration() - elapsed;
+		int elapsed = MP3_GetPlaybackTime();
+		int remaining = MP3_GetTrackDuration() - elapsed;
 
 		// Set elapesed time to 0 and compute track duration
 		char text[7];
@@ -464,7 +464,7 @@ static void GUI_UpdateTrackInfo(lv_task_t* task)
 		sprintf(text, "%d:%02d", remaining / 60, remaining % 60);
 		lv_label_set_text(gui.musicScreen.remainingTime, text);
 
-		lv_bar_set_value(gui.musicScreen.progressBar, MP3_GetTrackProgress()*BAR_WIDTH/100, TRUE);
+		lv_bar_set_value(gui.musicScreen.progressBar, elapsed*BAR_WIDTH/(remaining+elapsed), TRUE);
 	}
 }
 
@@ -848,94 +848,173 @@ static bool GUI_ListFolderContents(char* path)
 	{
 		button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_SD_CARD, "SD");
 		button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-		*(EntryType_t*)button->user_data = FOLDER;
+		*(EntryType_t*)button->user_data = ENTRY_FOLDER;
 		lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
 		// TODO: Ask file explorer if drive is mounted
 		//lv_btn_set_state(button, LV_BTN_STATE_REL);
 
 		button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_USB, "USB");
 		button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-		*(EntryType_t*)button->user_data = FOLDER;
+		*(EntryType_t*)button->user_data = ENTRY_FOLDER;
 		lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
 		//lv_obj_set_click(button, false);
 		lv_btn_set_state(button, LV_BTN_STATE_INA);
 		return true;
 	}
 
-	/* Iterate through folder adding files and subfolders entries. */
-#if defined(_WIN32) || defined(_WIN64)
-
-	WIN32_FIND_DATA fdFile;
-	HANDLE hFind = NULL;
-
-	char wildcard[255];
-	sprintf(wildcard, "%s\\%s", path, "*.*");
-	if ((hFind = FindFirstFile(wildcard, &fdFile)) == INVALID_HANDLE_VALUE)
+	/* Try to open directory. */
+	DIR* dr;
+	FRESULT res = FE_OpenDir(&dr, path);
+	if (res != 0)  
 	{
 		printf("Path not found: [%s]\n", path);
 		return false;
 	}
 
-	/* Add button to go up one level in folder structure. */
+	/* If succeeded, add button to go up one level in folder structure. */
 	button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, "..");
 	button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-	*(EntryType_t*)button->user_data = FOLDER;
+	*(EntryType_t*)button->user_data = ENTRY_FOLDER;
 	//lv_group_add_obj(gui.browserScreen.group, button);
 	lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
 
-	do
-	{
+	/* Now iterate through folder adding files and subfolders entries. */
+	FILINFO* de;
 
-		//Find first file will always return "."
-		//    and ".." as the first two directories.
-		if (strcmp(fdFile.cFileName, ".") != 0
-			&& strcmp(fdFile.cFileName, "..") != 0)
+	while (FE_ReadDir(dr, &de) == 0)
+	{
+		if (strcmp(FE_ENTRY_NAME(de), ".") != 0
+			&& strcmp(FE_ENTRY_NAME(de), "..") != 0)
 		{
 			//Is the entity a File or Folder?
-			if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if (FE_IS_FOLDER(de))
 			{
-				printf("Directory: %s\\%s\n", path, fdFile.cFileName);
+				printf("Directory: %s\\%s\n", path, FE_ENTRY_NAME(de));
 
 				//ListDirectoryContents(.....); //Recursion, I love it!
-				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, fdFile.cFileName);
+				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, FE_ENTRY_NAME(de));
 				button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-				*(EntryType_t*)button->user_data = FOLDER;
+				*(EntryType_t*)button->user_data = ENTRY_FOLDER;
 			}
-			else if (fdFile.cFileName)
+			else if (FE_ENTRY_NAME(de) != NULL)
 			{
-				char name[250];
+				char name[150];
 				char ext[5];
-				_splitpath(fdFile.cFileName, NULL, NULL, name, ext);
 
-				if (strcmp(ext, "mp3"))
+				char* entryName = FE_ENTRY_NAME(de);
+				char* dot = strrchr(entryName, '.');
+				
+				*dot = '\0'; // OJO, ACA MODIFICO LA ESTRUCTURA FILINFO * de
+
+				strcpy(ext, dot + 1);
+				strcpy(name, entryName);
+
+				// Lowercase extension
+				char* p = ext;
+				for (; *p; ++p) *p = tolower(*p);
+
+				if (strcmp(ext, "mp3")==0)
 				{
 					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_AUDIO, name);
 					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-					*(EntryType_t*)button->user_data = SONG;
-					printf("Song: %s\\%s\n", path, fdFile.cFileName);
+					*(EntryType_t*)button->user_data = ENTRY_SONG;
+					printf("Song: %s\\%s\n", path, FE_ENTRY_NAME(de));
 				}
 				else
 				{
-					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_FILE, fdFile.cFileName);
+					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_FILE, FE_ENTRY_NAME(de));
 					lv_obj_set_click(button, false);
 					lv_btn_set_state(button, LV_BTN_STATE_INA);
 					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-					*(EntryType_t*)button->user_data = FILE;
-					printf("File: %s\\%s\n", path, fdFile.cFileName);
+					*(EntryType_t*)button->user_data = ENTRY_FILE;
+					printf("File: %s\\%s\n", path, FE_ENTRY_NAME(de));
 				}
 			}
 
 			//lv_group_add_obj(gui.browserScreen.group, button);
 			lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
 		}
-	} while (FindNextFile(hFind, &fdFile)); //Find the next file.
+	}
 
-	FindClose(hFind); //Always, Always, clean things up!
+
+	FE_CloseDir(dr);
 
 	return true;
-#else
 
-#endif
+//	/* Iterate through folder adding files and subfolders entries. */
+//#if defined(_WIN32) || defined(_WIN64)
+//
+//	WIN32_FIND_DATA fdFile;
+//	HANDLE hFind = NULL;
+//
+//	char wildcard[255];
+//	sprintf(wildcard, "%s\\%s", path, "*.*");
+//	if ((hFind = FindFirstFile(wildcard, &fdFile)) == INVALID_HANDLE_VALUE)
+//	{
+//		printf("Path not found: [%s]\n", path);
+//		return false;
+//	}
+//
+//	/* Add button to go up one level in folder structure. */
+//	button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, "..");
+//	button->user_data = lv_mem_alloc(sizeof(EntryType_t));
+//	*(EntryType_t*)button->user_data = ENTRY_FOLDER;
+//	//lv_group_add_obj(gui.browserScreen.group, button);
+//	lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+//
+//	do
+//	{
+//
+//		//Find first file will always return "."
+//		//    and ".." as the first two directories.
+//		if (strcmp(fdFile.cFileName, ".") != 0
+//			&& strcmp(fdFile.cFileName, "..") != 0)
+//		{
+//			//Is the entity a File or Folder?
+//			if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+//			{
+//				printf("Directory: %s\\%s\n", path, fdFile.cFileName);
+//
+//				//ListDirectoryContents(.....); //Recursion, I love it!
+//				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, fdFile.cFileName);
+//				button->user_data = lv_mem_alloc(sizeof(EntryType_t));
+//				*(EntryType_t*)button->user_data = ENTRY_FOLDER;
+//			}
+//			else if (fdFile.cFileName)
+//			{
+//				char name[250];
+//				char ext[5];
+//				_splitpath(fdFile.cFileName, NULL, NULL, name, ext);
+//
+//				if (strcmp(ext, "mp3"))
+//				{
+//					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_AUDIO, name);
+//					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
+//					*(EntryType_t*)button->user_data = ENTRY_SONG;
+//					printf("Song: %s\\%s\n", path, fdFile.cFileName);
+//				}
+//				else
+//				{
+//					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_FILE, fdFile.cFileName);
+//					lv_obj_set_click(button, false);
+//					lv_btn_set_state(button, LV_BTN_STATE_INA);
+//					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
+//					*(EntryType_t*)button->user_data = ENTRY_FILE;
+//					printf("File: %s\\%s\n", path, fdFile.cFileName);
+//				}
+//			}
+//
+//			//lv_group_add_obj(gui.browserScreen.group, button);
+//			lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+//		}
+//	} while (FindNextFile(hFind, &fdFile)); //Find the next file.
+//
+//	FindClose(hFind); //Always, Always, clean things up!
+//
+//	return true;
+//#else
+//
+//#endif
 }
 
 
@@ -1113,10 +1192,10 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		{
 			switch (*(EntryType_t*)(obj->user_data))
 			{
-			case FOLDER:
+			case ENTRY_FOLDER:
 				GUI_OpenFolder(lv_list_get_btn_text(obj));
 				break;
-			case SONG:
+			case ENTRY_SONG:
 
 #if defined(_WIN64) || defined(_WIN32)
 				printf("MP3_Play(%s\\%s)", gui.browserPath, lv_list_get_btn_text(obj));

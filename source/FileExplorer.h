@@ -5,11 +5,43 @@
  *
  */
 
-
 #ifndef FILEEXPLORER_H_
 #define FILEEXPLORER_H_
 
 
+#if defined(_WIN64) || defined(_WIN32)
+
+#include "dirent-1.23.2/include/dirent.h"
+#include <stdio.h>
+
+#define RESULT void
+
+#define FIL		FILE
+#define FILINFO dirent
+
+#define FRESULT int32_t
+
+#define FE_ENTRY_NAME(filinfo) filinfo->d_name
+#define FE_ENTRY_TYPE(filinfo) filinfo->d_type
+#define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_DIR)
+#define FE_IS_FILE(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_REG)
+
+#else
+
+#define FE_EOF(fp) 		 f_eof(fp)
+#define FE_Error(fp) 	 f_error(fp)
+#define FE_Size(fp) 	 f_size(fp)
+#define FE_Rewind(fp) 	 f_rewind(fp)
+#define FE_RewindDir(dp) f_rewinddir(dp)
+#define FE_RmDir(path) 	 f_rmdir(path)
+#define FE_Unmount(path) f_unmount(path)
+
+#define FE_ENTRY_NAME(filinfo) filinfo->fname
+#define FE_ENTRY_TYPE(filinfo) filinfo->fattrib
+#define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==AM_DIR)
+#define FE_IS_FILE(filinfo) (FE_ENTRY_TYPE(filinfo)==AM_ARC)
+
+#endif
 
 
 #if defined(_WIN64) || defined(_WIN32)
@@ -17,6 +49,7 @@
 #include <stdint.h>
 
 typedef int32_t status_t;
+#define kStatus_Success 0
 
 #else
 #include <stdbool.h>
@@ -28,15 +61,6 @@ typedef int32_t status_t;
 #define MAX_FILES_PER_DIR 255
 #define SORTING_END_CHAR 0
 
-#if !(defined(_WIN64) || defined(_WIN32))
-#define FE_EOF(fp) 		 f_eof(fp)
-#define FE_Error(fp) 	 f_error(fp)
-#define FE_Size(fp) 	 f_size(fp)
-#define FE_Rewind(fp) 	 f_rewind(fp)
-#define FE_RewindDir(dp) f_rewinddir(dp)
-#define FE_RmDir(path) 	 f_rmdir(path)
-#define FE_Unmount(path) f_unmount(path)
-#endif
 
 typedef enum
 {
@@ -86,14 +110,30 @@ status_t FE_SetCurrDrive(FE_drive drive);
 
 
 #if defined(_WIN64) || defined(_WIN32)
+	
+
 	/*
-	FE_DirN
-	FE_OpenFile
-	FE_ReadFile
-	FE_CloseFile
-	FE_OpenDir
-	FE_OpenFileN
+		*
+		*/
+status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content);
+
+
+
+FRESULT FE_OpenFile(FIL** fp, const TCHAR* path, BYTE mode);
+FRESULT FE_ReadFile(FIL* fp, void* buff, UINT btr, UINT* br);
+
+FRESULT FE_CloseFile(FIL* fp);
+
+FRESULT FE_OpenDir(DIR** dp, const char* path);
+FRESULT FE_ReadDir(DIR* dp, FILINFO** fno );
+FRESULT FE_CloseDir(DIR*dp);
+
+/**
+	* @brief Open the nth file in the dir which matches the pattern
 	*/
+FRESULT FE_OpenFileN(const char* path, FIL* fp, FILINFO* fileInfo, BYTE mode, uint8_t n, const char* pattern);
+
+	
 #else
 
 /*

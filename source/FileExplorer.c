@@ -6,6 +6,11 @@
  */
 
 #include "FileExplorer.h"
+
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
+
 #include "usb_host_config.h"
 #include "usb_host.h"
 #include "fsl_sd.h"
@@ -15,7 +20,12 @@
 #include "diskio.h"
 #include "fsl_debug_console.h"
 
+#endif
 
+
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 static void sdStatusChangeFn(bool isInserted, void *userData);
 
 //------
@@ -28,6 +38,13 @@ extern sd_card_t g_sd;
 
 /* File system objects */
 static FATFS g_fileSystems[3];
+#endif
+
+
+#if defined(_WIN64) || defined(_WIN32)
+
+
+#else
 
 /* SD card detect configuration */
 static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,
@@ -35,6 +52,8 @@ static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD
 													sdStatusChangeFn,
 													sdStatusChangeFn,
 													NULL};
+
+#endif
 
 // Status of storage drives
 static bool sdIsInserted  = false;
@@ -102,9 +121,72 @@ status_t FE_check4Drive()
 	    return kStatus_Success;
 }
 
+
+#if defined(_WIN64) || defined(_WIN32)
+
+/*
+	*
+	*/
+status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content);
+
+
+
+FRESULT FE_OpenFile(FIL** fp, const TCHAR* path, BYTE mode)
+{
+	*fp = fopen(path, mode);
+	if (*fp != NULL)
+		return 0;
+
+}
+
+FRESULT FE_ReadFile(FIL* fp, void* buff, UINT btr, UINT* br)
+{
+	size_t nElems = fread(buff, sizeof(unsigned int), btr / sizeof(unsigned int), fp);
+
+	*br = nElems * sizeof(unsigned int);
+
+	if (*br == btr)
+		return 0;
+	else
+		return -1;
+}
+
+FRESULT FE_CloseFile(FIL* fp)
+{
+	return fclose(fp);
+}
+
+FRESULT FE_OpenDir(DIR** dp, const char* path)
+{
+	*dp = opendir(path);
+
+	if (*dp != NULL)
+		return 0;
+	else
+		return -1;
+}
+
+FRESULT FE_ReadDir(DIR* dp, FILINFO** fno)
+{
+	*fno = readdir(dp);
+
+	if (*fno != NULL)
+		return 0;
+	else
+		return -1;
+}
+
+FRESULT FE_CloseDir(DIR* dp)
+{
+	return closedir(dp);
+}
+
+
+#endif
 status_t FE_mountDrive(FE_drive drive)
 {
-
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
 	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U))
 	{
@@ -124,12 +206,15 @@ status_t FE_mountDrive(FE_drive drive)
 		PRINTF("Mount volume failed.\r\n");
 		return kStatus_Fail;
 	}
+#endif
 }
 
 
 
 status_t FE_unmountDrive(FE_drive drive)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
 
 	if (f_mount(NULL, driverNumberBuffer, 1U)==FR_OK) // TODO: Probar, aca creo que hay que pasarle un 0
@@ -140,11 +225,14 @@ status_t FE_unmountDrive(FE_drive drive)
 	{
 		return kStatus_Fail;
 	}
+#endif
 }
 
 
 status_t FE_SetCurrDrive(FE_drive drive)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
 
 	if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
@@ -157,11 +245,14 @@ status_t FE_SetCurrDrive(FE_drive drive)
 		PRINTF("Change drive failed.\r\n");
 		return kStatus_Fail;
 	}
+#endif
 }
 
 
 status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
     DIR dir;
 	status_t retVal;
 	FILINFO fno;
@@ -188,6 +279,7 @@ status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 		retVal=kStatus_Fail;
 
 	return retVal;
+#endif
 }
 
 
@@ -198,6 +290,9 @@ status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 
 FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, uint8_t n, const char * pattern)
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
     DIR dir;
 
     FRESULT res = f_findfirst(&dir, fileInfo, path, pattern);
@@ -220,17 +315,24 @@ FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, ui
     f_closedir(&dir);
 
     return res;
+
+#endif
 }
 bool FE_DriveStatus(FE_drive drive)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	if(disk_status(g_fileSystems[drive].pdrv)==0 )
 		return true;
 	else
 		return false;
+#endif
 }
 
 uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	uint8_t n = 0;
 	DIR dir;
 	FILINFO fileInfo;
@@ -247,10 +349,13 @@ uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
 	f_closedir(&dir);
 
 	return n;
+#endif
 }
 
-uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern, uint8_t * indexArray)
+uint8_t FE_Sort(FE_SortCriteria_t sort ,const char * path, const char * pattern, uint8_t * indexArray)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	DIR dj;
 	FRESULT fr = FR_OK;
 	uint8_t filesRead = 0;
@@ -295,11 +400,15 @@ uint8_t FE_Sort(FE_FILE_SORT_TYPE sort ,const char * path, const char * pattern,
         }
 	}
 	return filesRead;
+#endif
 }
 
 
 void FE_Task(void)
 {
+#if defined(_WIN64) || defined(_WIN32)
+#else
+
 	/* USB Task */
     USB_HostKhciTaskFunction(g_HostHandle);
 
@@ -363,9 +472,8 @@ void FE_Task(void)
 
 		sdStatusChanged = false;
 	}
+#endif
 }
-
-
 
 
 

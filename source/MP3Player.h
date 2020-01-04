@@ -9,8 +9,9 @@
 #ifndef MP3PLAYER_H_
 #define MP3PLAYER_H_
 
-#if defined(_WIN64) || defined(_WIN32)
 
+#if defined(_WIN64) || defined(_WIN32)
+#include <stdint.h>
 enum
 {
 	kStatus_Success,
@@ -20,16 +21,22 @@ enum
 typedef int32_t status_t;
 
 #else
+#include <stdint.h>
 #include "fsl_common.h"
 #endif
 /**
  *
  */
-typedef enum
-{
-	MP3_OK
-}MP3Status;
 
+
+/* Player status */
+typedef enum {
+	IDLE,
+	PLAYING,
+	PLAYING_LAST_FRAMES,
+	PAUSE_PENDING,
+	PAUSE
+}MP3_Status;
 /**
  *
  */
@@ -86,5 +93,10 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds);
  * Sets audio volume level
  */
 void MP3_SetVolume(uint32_t level);
+
+void MP3_GetStatus();
+
+int MP3_GetPlaybackTime(void);
+int MP3_GetTrackDuration();
 
 #endif /* MP3PLAYER_H_ */

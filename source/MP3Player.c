@@ -4,10 +4,14 @@
  *
  *
  */
-
 #include "MP3Player.h"
-#include "Audio.h"
 #include "FileExplorer.h"
+
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
+
+#include "Audio.h"
 #include "mp3dec.h"
 #include "Vumeter.h"
 
@@ -15,20 +19,24 @@
 #include "assert.h"
 
 #include "fsl_debug_console.h"
+#endif
+
 
 #define  READ_BUFFER_SIZE  (1024*8)
 
 /* Every 3 frames the vumeter is updated */
 #define VUMETER_UPDATE_MODULO 3
 
-/* Player status */
-typedef enum{	IDLE,
-				PLAYING,
-				PLAYING_LAST_FRAMES,
-				PAUSE_PENDING,
-				PAUSE}MP3_Status;
+
+
 
 static MP3_Status status;
+
+
+#if defined(_WIN64) || defined(_WIN32)
+static float 				playbackTime;
+
+#else
 
 /* Decoder*/
 static HMP3Decoder mp3Decoder;
@@ -61,11 +69,15 @@ static status_t 			MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readP
 static status_t 			MP3_DecodeFrame();
 static void 				MP3_PlayCurrentSong();
 
+#endif
 
 
 
 status_t MP3_Init()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	mp3Decoder = MP3InitDecoder();
 
 	if(mp3Decoder == 0)
@@ -85,10 +97,14 @@ status_t MP3_Init()
 	status = IDLE;
 
 	return kStatus_Success;
+#endif
 }
 
 void MP3_Play(char * dirPath, uint8_t index)
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	if(status == PLAYING)
 		MP3_Stop();
 
@@ -108,10 +124,14 @@ void MP3_Play(char * dirPath, uint8_t index)
 	}
 
 	MP3_PlayCurrentSong();
+#endif
 }
 
 static void MP3_PlayCurrentSong()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	// Open current song
 	FRESULT result = FE_OpenFileN(  curPath,
 									&currentFile,
@@ -139,19 +159,27 @@ static void MP3_PlayCurrentSong()
 
 		status = PLAYING;
 	}
+#endif
 
 }
 
 void MP3_Stop()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	Audio_Stop();
 	Vumeter_Clear();
 	FE_CloseFile(&currentFile);
 	status = IDLE;
+#endif
 }
 
 void MP3_Next()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	if(status != IDLE)
 		MP3_Stop();
 
@@ -164,11 +192,14 @@ void MP3_Next()
 
 
 	MP3_PlayCurrentSong();
-
+#endif
 }
 
 void MP3_Prev()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	if(status != IDLE)
 		MP3_Stop();
 
@@ -176,10 +207,14 @@ void MP3_Prev()
 		fileIndexLut[curSong]--;
 
 	MP3_PlayCurrentSong();
+#endif
 }
 
 void MP3_PlayPause()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	if(status==PLAYING)
 	{
 		Audio_Pause();
@@ -193,15 +228,24 @@ void MP3_PlayPause()
 		PRINTF("Playing '%s' \n",currentFileInfo.fname);
 
 	}
+#endif
 }
 
 int MP3_GetPlaybackTime(void)
 {
 	return playbackTime;
 }
+
+int MP3_GetTrackDuration()
+{
+	return 334;
+}
+
 void MP3_Task()
 {
+#if defined(_WIN64) || defined(_WIN32)
 
+#else
 	switch(status)
 	{
 	case IDLE:
@@ -264,12 +308,16 @@ void MP3_Task()
 
 		break;
 	}
+#endif
 }
 /**
  *    @brief
  */
 static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr, uint16_t bytesLeft, uint32_t * nRead)
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	/* Move the left bytes from the end to the front */
 	memmove(readBuf,readPtr,bytesLeft);
 
@@ -287,11 +335,14 @@ static status_t MP3_FillReadBuffer(FIL * fp, uint8_t *readBuf, uint8_t *readPtr,
 
     return kStatus_Fail;
 
-
+#endif
 }
 
 static status_t MP3_DecodeFrame()
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
     uint8_t wordAlign = 0;
 	bool frameDecoded = 0;
     uint32_t nRead = 0;
@@ -370,12 +421,14 @@ static status_t MP3_DecodeFrame()
     	return kStatus_OutOfRange;
     else
     	return s;
-
-
+#endif
 }
 
 status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 {
+#if defined(_WIN64) || defined(_WIN32)
+
+#else
 	if(status!=IDLE)
 		return 0;
 
@@ -450,4 +503,5 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 	}
 
 	return kStatus_Fail;
+#endif
 }

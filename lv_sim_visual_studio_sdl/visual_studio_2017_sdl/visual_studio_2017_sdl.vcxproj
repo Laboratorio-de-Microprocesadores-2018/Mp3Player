@@ -132,7 +132,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\defaultAlbumArt.c" />
+    <ClCompile Include="..\..\source\FileExplorer.c" />
     <ClCompile Include="..\..\source\GUI.c" />
+    <ClCompile Include="..\..\source\MP3Player.c" />
     <ClCompile Include="lvgl\porting\lv_port_disp_template.c" />
     <ClCompile Include="lvgl\porting\lv_port_fs_template.c" />
     <ClCompile Include="lvgl\porting\lv_port_indev_template.c" />
