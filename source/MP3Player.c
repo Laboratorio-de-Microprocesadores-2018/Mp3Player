@@ -8,6 +8,8 @@
 #include "FileExplorer.h"
 
 #if defined(_WIN64) || defined(_WIN32)
+#include "SDL.h"
+#include "SDL_mixer.h"
 
 #else
 
@@ -34,8 +36,15 @@ static MP3_Status status;
 
 
 #if defined(_WIN64) || defined(_WIN32)
-static float 				playbackTime;
-
+static uint32_t 				playbackTime;
+static uint32_t					startPlayingTime;
+static Mix_Music* music;
+static FIL 					currentFile;
+static FILINFO 				currentFileInfo;
+static uint8_t 				fileIndexLut[MAX_FILES_PER_DIR];
+static uint8_t 				fileIndexLutSize;
+static uint8_t 				curSong;
+static char 				curPath[256];
 #else
 
 /* Decoder*/
@@ -77,6 +86,26 @@ status_t MP3_Init()
 {
 #if defined(_WIN64) || defined(_WIN32)
 
+	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+		printf("Failed to init SDL audio\n");
+		return -1;
+	}
+
+	int result = 0;
+	int flags = MIX_INIT_MP3;
+
+	if (flags != (result = Mix_Init(flags))) {
+		printf("Could not initialize mixer (result: %d).\n", result);
+		printf("Mix_Init: %s\n", Mix_GetError());
+		return -1;
+	}
+
+	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096) == -1)
+	{
+		printf("Mix_OpenAudio: %s\n", Mix_GetError());
+		return -1;
+	}
+
 #else
 	mp3Decoder = MP3InitDecoder();
 
@@ -100,16 +129,28 @@ status_t MP3_Init()
 #endif
 }
 
-void MP3_Play(char * dirPath, uint8_t index)
+void MP3_Play(char * dirPath)
 {
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
-	if(status == PLAYING)
+	if (status == PLAYING)
 		MP3_Stop();
 
-	strcpy(curPath,dirPath);
+	strcpy(curPath, dirPath);
 
+#if defined(_WIN64) || defined(_WIN32)
+	music = Mix_LoadMUS(dirPath);
+
+	if (music==NULL)
+	{
+		printf("Error loading %s: %s\n",dirPath, Mix_GetError());
+	}
+	else
+	{
+		Mix_PlayMusic(music, 1);
+		status = PLAYING;
+		startPlayingTime = SDL_GetTicks();
+	}
+
+#else
 	// Sort files and find song to play
 	fileIndexLutSize = FE_Sort(plSortCriteria, dirPath, ".mp3", fileIndexLut);
 	uint8_t i = 0;
@@ -163,24 +204,31 @@ static void MP3_PlayCurrentSong()
 
 }
 
-void MP3_Stop()
+void MP3_SetTrackFinishCallback(void (*musicFinished)(void))
 {
 #if defined(_WIN64) || defined(_WIN32)
 
+Mix_HookMusicFinished(musicFinished);
+#else
+#endif
+}
+
+void MP3_Stop()
+{
+#if defined(_WIN64) || defined(_WIN32)
+	Mix_PauseMusic();
+	Mix_FreeMusic(music);
 #else
 	Audio_Stop();
 	Vumeter_Clear();
 	FE_CloseFile(&currentFile);
-	status = IDLE;
 #endif
+	status = IDLE;
 }
 
 void MP3_Next()
 {
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
-	if(status != IDLE)
+	if (status != IDLE)
 		MP3_Stop();
 
 	// Move to next song in current folder
@@ -190,16 +238,11 @@ void MP3_Next()
 	if(fileIndexLut[curSong]==EOF)
 		curSong = 0;
 
-
 	MP3_PlayCurrentSong();
-#endif
 }
 
 void MP3_Prev()
 {
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
 	if(status != IDLE)
 		MP3_Stop();
 
@@ -207,28 +250,32 @@ void MP3_Prev()
 		fileIndexLut[curSong]--;
 
 	MP3_PlayCurrentSong();
-#endif
 }
 
 void MP3_PlayPause()
 {
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
 	if(status==PLAYING)
 	{
+#if defined(_WIN64) || defined(_WIN32)
+		Mix_PauseMusic();
+#else
 		Audio_Pause();
+#endif
 		status = PAUSE;
-		PRINTF("Paused\n");
+		printf("Paused\n");
 	}
 	else if(status == PAUSE)
 	{
+#if defined(_WIN64) || defined(_WIN32)
+		Mix_ResumeMusic();
+#else
 		Audio_Resume();
+#endif
 		status = PLAYING;
-		PRINTF("Playing '%s' \n",currentFileInfo.fname);
+		printf("Playing '%s' \n",FE_ENTRY_NAME(&currentFileInfo));
 
 	}
-#endif
+
 }
 
 int MP3_GetPlaybackTime(void)
@@ -241,10 +288,43 @@ int MP3_GetTrackDuration()
 	return 334;
 }
 
+MP3_Status MP3_GetStatus()
+{
+	return status;
+}
+
+void MP3_SetVolume(uint32_t level)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	Mix_VolumeMusic(level);
+#else
+	//TODO!! 
+#endif
+}
+
+int MP3_GetMaxVolume()
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return MIX_MAX_VOLUME/4;
+#else
+	return 32; //TODO!! 
+#endif
+}
+
+int MP3_GetVolume(void)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return Mix_VolumeMusic(-1);
+#else
+	return 0; //TODO!! 
+#endif
+}
+
 void MP3_Task()
 {
 #if defined(_WIN64) || defined(_WIN32)
-
+	if (status == PLAYING)
+		playbackTime = (SDL_GetTicks() - startPlayingTime)/1000;
 #else
 	switch(status)
 	{

@@ -11,8 +11,9 @@
 #include <SDL.h>
 #include <SDL_mutex.h>
 
-#include "../../Mp3Player/source/GUI.h"
-#include "lv_examples/lv_apps/demo/demo.h"
+#include "GUI.h"
+#include "MP3Player.h"
+
 
 /*********************
 *      DEFINES
@@ -47,6 +48,8 @@ int main(int argc, char** argv)
 	GUI_Init();
 	GUI_Create();
 	
+	MP3_Init();
+
 	//demo_create();
 	/* Tick init.
 	* You have to call 'lv_tick_inc()' in every milliseconds
@@ -61,6 +64,7 @@ int main(int argc, char** argv)
         /* Periodically call the lv_task handler.
         * It could be done in a timer interrupt or an OS task too.*/
 		GUI_Task();
+		MP3_Task();
         Sleep(10);       /*Just to let the system breathe */
     }
 
@@ -70,11 +74,7 @@ int main(int argc, char** argv)
 /**********************
 *   STATIC FUNCTIONS
 **********************/
-typedef enum {
-	IDLE,
-	PLAYING,
-	PAUSE
-}status_t;
+
 
 int elapsed = 0;
 int duration = 145;

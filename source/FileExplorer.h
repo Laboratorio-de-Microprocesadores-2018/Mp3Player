@@ -21,8 +21,8 @@
 
 #define FRESULT int32_t
 
-#define FE_ENTRY_NAME(filinfo) filinfo->d_name
-#define FE_ENTRY_TYPE(filinfo) filinfo->d_type
+#define FE_ENTRY_NAME(filinfo) (filinfo)->d_name
+#define FE_ENTRY_TYPE(filinfo) (filinfo)->d_type
 #define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_DIR)
 #define FE_IS_FILE(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_REG)
 

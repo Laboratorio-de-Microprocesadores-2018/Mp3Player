@@ -349,8 +349,9 @@ static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event)
 		lv_task_reset(gui.volumeBarTask);
 
 		/* Set device volume. */
-#if defined(_WIN32) || defined(_WIN64)
 		printf("Volume: %u\n", lv_slider_get_value(slider));
+#if defined(_WIN32) || defined(_WIN64)
+		MP3_SetVolume(lv_slider_get_value(slider)*4);
 #else
 		MP3_SetVolume(lv_slider_get_value(slider));
 #endif
@@ -370,7 +371,8 @@ static void GUI_ShowVolumeBar()
 	lv_obj_set_size(bar, BAR_WIDTH, BAR_HEIGHT);
 	lv_obj_align(bar, NULL, LV_ALIGN_CENTER, 0, 0);
 	lv_obj_set_event_cb(bar, GUI_VolumeBarEventHandler);
-	lv_slider_set_range(bar, 0, 32);
+	lv_slider_set_range(bar, 0, MP3_GetMaxVolume());
+	lv_slider_set_value(bar, MP3_GetVolume(), false);
 	lv_group_add_obj(gui.musicScreen.group, bar);
 	gui.musicScreen.volumeBar = bar;
 
@@ -450,7 +452,7 @@ static void GUI_UpdateTrackInfo(lv_task_t* task)
 
 	//lv_label_set_text(gui., GUI_GetTimeString());
 
-	//if(MP3_IsPlaing())
+	if(MP3_GetStatus()==PLAYING)
 	{
 		int elapsed = MP3_GetPlaybackTime();
 		int remaining = MP3_GetTrackDuration() - elapsed;
@@ -539,7 +541,6 @@ static void GUI_CreateHeader(void)
 	lv_obj_set_size(gui.header.parent, GUI_TOP_HEADER_WIDTH, GUI_TOP_HEADER_HEIGHT);
 	lv_obj_align(gui.header.parent, lv_scr_act(), LV_ALIGN_IN_TOP_MID, 0, 0);     
 
-	
 	/*Add battery information to header. */
 	gui.header.battery = lv_label_create(gui.header.parent, gui.header.time);
 	lv_label_set_text(gui.header.battery, LV_SYMBOL_BATTERY_FULL);
@@ -551,7 +552,7 @@ static void GUI_CreateHeader(void)
 	
 	/* Create task to update header information every one second. */
 	lv_task_t * headerUpdateTask = lv_task_create(GUI_UpdateHeader,1000,LV_TASK_PRIO_LOW,NULL);
-	lv_task_create(GUI_UpdateTrackInfo, 1000, LV_TASK_PRIO_LOW, NULL);
+	lv_task_create(GUI_UpdateTrackInfo, 250, LV_TASK_PRIO_LOW, NULL);
 	lv_task_ready(headerUpdateTask);
 }
 
@@ -1118,11 +1119,7 @@ static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
-#if defined(_WIN64) || defined(_WIN32)
-			printf("MP3_PlayPause()\n");
-#else
-
-#endif
+			MP3_PlayPause();
 			break;
 
 			//case LV_KEY_NEXT:
@@ -1135,44 +1132,12 @@ static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		}
 			break;
 		case LV_KEY_RIGHT:
-			if (gui.musicScreen.volumeBar != NULL)
-			{
-#if defined(_WIN64) || defined(_WIN32)
-				printf("Volume UP\n");
-#else
 				MP3_Next();
-#endif
-				lv_task_reset(gui.volumeBarTask);
-			}
-			else
-			{
-#if defined(_WIN64) || defined(_WIN32)
-				printf("MP3_Next()\n");
-#else
-				MP3_Next();
-#endif
-			}
 			break;
 
 			//case LV_KEY_PREV:
 		case LV_KEY_LEFT:
-			if (gui.musicScreen.volumeBar != NULL)
-			{
-#if defined(_WIN64) || defined(_WIN32)
-				printf("Volume Down\n");
-#else
-				MP3_Next();
-#endif
-				lv_task_reset(gui.volumeBarTask);
-			}
-			else
-			{
-#if defined(_WIN64) || defined(_WIN32)
-				printf("MP3_Prev()\n");
-#else
 				MP3_Prev();
-#endif
-			}
 			break;
 
 		}
@@ -1196,10 +1161,11 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 				GUI_OpenFolder(lv_list_get_btn_text(obj));
 				break;
 			case ENTRY_SONG:
-
+			{
 #if defined(_WIN64) || defined(_WIN32)
-				printf("MP3_Play(%s\\%s)", gui.browserPath, lv_list_get_btn_text(obj));
-				MP3_Play(gui.browserPath);
+				char filePath[255];
+				sprintf(filePath, "%s\\%s.mp3", gui.browserPath, lv_list_get_btn_text(obj));
+				MP3_Play(filePath);
 #else
 				MP3_Play(gui.browserPath, 0/*INDICE??*/);
 #endif
@@ -1207,7 +1173,7 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 				GUI_SetTrackInfo(lv_list_get_btn_text(obj));
 
 				GUI_ShowScreen(MUSIC_TAB);
-
+			}
 				break;
 			}
 		}

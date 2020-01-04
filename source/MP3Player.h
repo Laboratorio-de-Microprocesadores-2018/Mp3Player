@@ -93,8 +93,10 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds);
  * Sets audio volume level
  */
 void MP3_SetVolume(uint32_t level);
+int MP3_GetMaxVolume(void);
+int MP3_GetVolume();
 
-void MP3_GetStatus();
+MP3_Status MP3_GetStatus();
 
 int MP3_GetPlaybackTime(void);
 int MP3_GetTrackDuration();
