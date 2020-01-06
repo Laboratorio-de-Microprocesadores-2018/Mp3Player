@@ -240,9 +240,6 @@
     <ClCompile Include="lv_examples\lv_tutorial\9_responsive\lv_tutorial_responsive.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="lv_drivers\display\SHARP_MIP.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -535,6 +532,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\FileExplorer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

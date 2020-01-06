@@ -87,7 +87,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\GIT\Mp3Player\lvgl;D:\GIT\Mp3Player\source;$(ProjectDir)\SDL2\include;D:\GIT\Mp3Player\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\GIT\Mp3Player\lv_sim_visual_studio_sdl\visual_studio_2017_sdl\dirent-1.23.2\include;D:\GIT\Mp3Player\lvgl;D:\GIT\Mp3Player\source;$(ProjectDir)\SDL2\include;D:\GIT\Mp3Player\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;LV_CONF_INCLUDE_SIMPLE</PreprocessorDefinitions>
     </ClCompile>
