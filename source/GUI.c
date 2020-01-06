@@ -972,10 +972,10 @@ static void GUI_OpenFolder(char* folder)
 
 		/* Redirect SD path. */
 		if (strcmp(folder, "SD") == 0)
-			strcat(newPath, "D:\\Music");
+			strcat(newPath, "Music");
 		/* Redirect USB path. */
 		else if (strcmp(folder, "USB") == 0)
-			strcat(newPath, "D:\\Music");
+			strcat(newPath, "Music");
 		/* Folow folder path. */
 		else
 		{
