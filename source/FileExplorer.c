@@ -5,63 +5,71 @@
  *
  */
 
+
+///////////////////////////////////////////////////////////////////////////////
+//                             Included header files                         //
+///////////////////////////////////////////////////////////////////////////////
+
 #include "FileExplorer.h"
+#include <string.h>
 
 #if defined(_WIN64) || defined(_WIN32)
 
 #else
 
+#include "fsl_debug_console.h"
+#include "fsl_sd.h"
 #include "usb_host_config.h"
 #include "usb_host.h"
-#include "fsl_sd.h"
-
-#include "stdbool.h"
-#include <string.h>
-#include "diskio.h"
-#include "fsl_debug_console.h"
+#include "diskio.h" // TODO: Al final pienso que no deberiamos incluir ni llamar funciones de acá
 
 #endif
 
 
+///////////////////////////////////////////////////////////////////////////////
+//                   Local variable definitions ('static')                   //
+///////////////////////////////////////////////////////////////////////////////
+
+// Status of storage drives
+static bool sdIsInserted = false;
+static bool sdStatusChanged = false;
+
+static bool usbIsInserted = false;
+static bool usbStatusChanged = false;
+
 #if defined(_WIN64) || defined(_WIN32)
 
 #else
-static void sdStatusChangeFn(bool isInserted, void *userData);
-
-//------
 
 usb_host_handle g_HostHandle;
-
 extern sd_card_t g_sd;
-
-//------
-
-/* File system objects */
-static FATFS g_fileSystems[3];
-#endif
-
-
-#if defined(_WIN64) || defined(_WIN32)
-
-
-#else
-
 /* SD card detect configuration */
-static sdmmchost_detect_card_t cardDetectConfig = {kSDMMCHOST_DetectCardByGpioCD,
+static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
 													0,
 													sdStatusChangeFn,
 													sdStatusChangeFn,
-													NULL};
+													NULL };
+/* File system objects */
+static FATFS g_fileSystems[3];
 
 #endif
 
-// Status of storage drives
-static bool sdIsInserted  = false;
-static bool sdStatusChanged = false;
-static bool usbIsInserted = false;
 
 
-status_t FE_Init()
+///////////////////////////////////////////////////////////////////////////////
+//                   Local function prototypes ('static')                    //
+///////////////////////////////////////////////////////////////////////////////
+
+static int SortAlphaCompare(void* a, void* b);
+static void sdStatusChangeFn(bool isInserted, void* userData);
+static void usbStatusChangeFn(bool isInserted, void* userData);
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                  API                                      //
+///////////////////////////////////////////////////////////////////////////////
+
+status_t FE_Init(void)
 {
 #ifdef SD_DISK_ENABLE
 
@@ -83,9 +91,165 @@ status_t FE_Init()
 	    return kStatus_Success;
 }
 
-status_t FE_check4Drive()
+
+void FE_DeInit(void)
 {
-//
+	// TODO ??
+}
+
+
+void FE_Task(void)
+{
+#if defined(_WIN64) || defined(_WIN32)
+#else
+
+	/* USB Task */
+	USB_HostKhciTaskFunction(g_HostHandle);
+
+	bool currStatus;
+
+	//	// Check changes in USB drive
+	//	currStatus = FE_DriveStatus(FE_USB);
+	//	if(currStatus != usbStatus)
+	//	{
+	//		usbStatus = currStatus;
+	//		if(usbStatus == true)
+	//		{
+	//			PRINTF("USB inserted\n");
+	//			if(FE_mountDrive(FE_USB)== kStatus_Success)
+	//			{
+	//
+	//				uint8_t k = FE_CountFilesMatching("/","*.mp3");
+	//
+	//				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
+	//
+	//				MP3_Play("/",0);
+	//
+	//			}
+	//			else
+	//				PRINTF("Error mounting USB\n");
+	//		}
+	//		else
+	//		{
+	//			PRINTF("USB removed\n");
+	//
+	//		}
+	//	}
+
+		// Check changes in SD drive
+	if (sdStatusChanged)
+	{
+		// ACA NOTIFICAR A LA PARTE GRAFICA!!!
+		// GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
+
+		if (sdIsInserted == true)
+		{
+			PRINTF("SD inserted\n");
+			if (FE_mountDrive(FE_SD) == kStatus_Success)
+			{
+				uint8_t k = FE_CountFilesMatching("/", "*.mp3");
+
+				PRINTF("There are %d mp3 files in root folder of the SD\n", k);
+
+				MP3_Play("/", 0);
+
+			}
+			else
+				PRINTF("Error mounting SD\n");
+		}
+
+		if (sdIsInserted == false)
+		{
+			PRINTF("SD removed\n");
+			FE_unmountDrive(FE_SD);
+		}
+
+		sdStatusChanged = false;
+	}
+#endif
+}
+
+
+status_t FE_MountDrive(FE_drive drive)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return kStatus_Success;
+#else
+	const TCHAR driverNumberBuffer[3U] = { drive + '0', ':', '/' };
+	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U))
+	{
+		if (!f_chdrive((char const*)& driverNumberBuffer[0U]))
+		{
+			return kStatus_Success;
+
+		}
+		else
+		{
+			PRINTF("Change drive failed.\r\n");
+			return kStatus_Fail;
+		}
+	}
+	else
+	{
+		PRINTF("Mount volume failed.\r\n");
+		return kStatus_Fail;
+	}
+#endif
+}
+
+
+status_t FE_UnmountDrive(FE_drive drive)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return kStatus_Success;
+#else
+	const TCHAR driverNumberBuffer[3U] = { drive + '0', ':', '/' };
+
+	if (f_mount(NULL, driverNumberBuffer, 1U) == FR_OK) // TODO: Probar, aca creo que hay que pasarle un 0
+	{
+		return kStatus_Success;
+	}
+	else
+	{
+		return kStatus_Fail;
+	}
+#endif
+}
+
+
+status_t FE_SetCurrDrive(FE_drive drive)
+{
+#if defined(_WIN64) || defined(_WIN32)
+#else
+	const TCHAR driverNumberBuffer[3U] = { drive + '0', ':', '/' };
+
+	if (!f_chdrive((char const*)& driverNumberBuffer[0U]))
+	{
+		return kStatus_Success;
+
+	}
+	else
+	{
+		PRINTF("Change drive failed.\r\n");
+		return kStatus_Fail;
+	}
+#endif
+}
+
+
+bool FE_DriveStatus(FE_drive drive)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	if (drive == FE_SD)
+		return true;
+	else
+		return false;
+#else
+	if (disk_status(g_fileSystems[drive].pdrv) == 0)
+		return true;
+	else
+		return false;
+	//
 //	 /* Save host information. */
 //	    g_sd.host.base = SD_HOST_BASEADDR;
 //	    g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
@@ -118,29 +282,133 @@ status_t FE_check4Drive()
 //	        return kStatus_Fail;
 //	    }
 
-	    return kStatus_Success;
+#endif
 }
 
 
+FRESULT FE_OpenDir(DIR** dp, const char* path)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	*dp = opendir(path);
+
+	if (*dp != NULL)
+		return 0;
+	else
+		return -1;
+#else
+	return f_opendir(*dp, path);
+#endif
+}
+
+
+FRESULT FE_ReadDir(DIR* dp, FILINFO** fno)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	*fno = readdir(dp);
+
+	if (*fno != NULL)
+		return 0;
+	else
+		return -1;
+#else
+#endif
+}
+
+
+FRESULT FE_CloseDir(DIR* dp)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return closedir(dp);
+#else
+#endif
+}
+
+
+FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
+{
 #if defined(_WIN64) || defined(_WIN32)
 
-/*
-	*
-	*/
-status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content);
+	if (n > MAX_FILES_PER_DIR)
+		return -1;
 
+	/* Try to open directory. */
+	DIR* dr;
+	FRESULT res = FE_OpenDir(&dr, path);
+	if (res != 0)
+	{
+		printf("Path not found: [%s]\n", path);
+		return res;
+	}
+
+	uint8_t entriesCount = 0;
+
+	/* Now iterate through folder storing files info in an array. */
+	FILINFO* de;
+	while (FE_ReadDir(dr, &de) == 0 && entriesCount < n)
+	{
+		//if (strcmp(FE_ENTRY_NAME(de), ".") != 0
+		//	&& strcmp(FE_ENTRY_NAME(de), "..") != 0)
+		{
+			entriesCount++;
+		}
+	}
+	memcpy(fileInfo, de, sizeof(FILINFO));
+
+	FE_CloseDir(dr);
+
+#else
+#endif
+}
 
 
 FRESULT FE_OpenFile(FIL** fp, const TCHAR* path, BYTE mode)
 {
+#if defined(_WIN64) || defined(_WIN32)
 	*fp = fopen(path, mode);
 	if (*fp != NULL)
 		return 0;
-
+#else
+	return f_open(*fp, path, mode);
+#endif
 }
+
+
+FRESULT FE_OpenFileN(const char* path, uint8_t n, FILINFO* fileInfo, FIL* fp, BYTE mode)
+{
+#if defined(_WIN64) || defined(_WIN32)
+
+
+#else
+	DIR dir;
+
+	FRESULT res = f_findfirst(&dir, fileInfo, path, pattern);
+
+	if (res == FR_OK)
+	{
+		while ((n--) > 0 && res == FR_OK && fileInfo->fname[0])
+			res = f_findnext(&dir, fileInfo);
+
+		char filePath[255];
+		sprintf(filePath, "%s/%s", path, fileInfo->fname);
+		res = f_open(fp, filePath, mode);
+
+	}
+	else
+	{
+
+	}
+
+	f_closedir(&dir);
+
+	return res;
+
+#endif
+}
+
 
 FRESULT FE_ReadFile(FIL* fp, void* buff, UINT btr, UINT* br)
 {
+#if defined(_WIN64) || defined(_WIN32)
 	size_t nElems = fread(buff, sizeof(unsigned int), btr / sizeof(unsigned int), fp);
 
 	*br = nElems * sizeof(unsigned int);
@@ -149,102 +417,18 @@ FRESULT FE_ReadFile(FIL* fp, void* buff, UINT btr, UINT* br)
 		return 0;
 	else
 		return -1;
+#else
+	return f_read(*fp, buff, btr, br);
+#endif
 }
+
 
 FRESULT FE_CloseFile(FIL* fp)
 {
+#if defined(_WIN64) || defined(_WIN32)
 	return fclose(fp);
-}
-
-FRESULT FE_OpenDir(DIR** dp, const char* path)
-{
-	*dp = opendir(path);
-
-	if (*dp != NULL)
-		return 0;
-	else
-		return -1;
-}
-
-FRESULT FE_ReadDir(DIR* dp, FILINFO** fno)
-{
-	*fno = readdir(dp);
-
-	if (*fno != NULL)
-		return 0;
-	else
-		return -1;
-}
-
-FRESULT FE_CloseDir(DIR* dp)
-{
-	return closedir(dp);
-}
-
-
-#endif
-status_t FE_mountDrive(FE_drive drive)
-{
-#if defined(_WIN64) || defined(_WIN32)
 #else
-	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
-	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U))
-	{
-		if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
-		{
-			return kStatus_Success;
-
-		}
-		else
-		{
-			PRINTF("Change drive failed.\r\n");
-			return kStatus_Fail;
-		}
-	}
-	else
-	{
-		PRINTF("Mount volume failed.\r\n");
-		return kStatus_Fail;
-	}
-#endif
-}
-
-
-
-status_t FE_unmountDrive(FE_drive drive)
-{
-#if defined(_WIN64) || defined(_WIN32)
-#else
-	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
-
-	if (f_mount(NULL, driverNumberBuffer, 1U)==FR_OK) // TODO: Probar, aca creo que hay que pasarle un 0
-	{
-			return kStatus_Success;
-	}
-	else
-	{
-		return kStatus_Fail;
-	}
-#endif
-}
-
-
-status_t FE_SetCurrDrive(FE_drive drive)
-{
-#if defined(_WIN64) || defined(_WIN32)
-#else
-	const TCHAR driverNumberBuffer[3U] = {drive + '0', ':', '/'};
-
-	if(!f_chdrive((char const *)&driverNumberBuffer[0U]))
-	{
-		return kStatus_Success;
-
-	}
-	else
-	{
-		PRINTF("Change drive failed.\r\n");
-		return kStatus_Fail;
-	}
+	return f_close(fp);
 #endif
 }
 
@@ -283,53 +467,55 @@ status_t FE_DirN(const char* path, uint16_t* n, FILINFO* content)
 }
 
 
-
-/**
- * @brief Open the nth file in the given dir which matches the pattern
- */
-
-FRESULT FE_OpenFileN(const char * path, FIL* fp,FILINFO *fileInfo, BYTE mode, uint8_t n, const char * pattern)
+int32_t FE_Sort(FE_SortCriteria_t sort, const char* path, uint32_t* indexArray)
 {
-#if defined(_WIN64) || defined(_WIN32)
 
-#else
-    DIR dir;
+	/* Try to open directory. */
+	DIR * dr;
+	FRESULT res = FE_OpenDir(&dr, path);
+	if (res != 0)
+	{
+		printf("Path not found: [%s]\n", path);
+		return -1;
+	}
 
-    FRESULT res = f_findfirst(&dir, fileInfo, path, pattern);
+	uint8_t entriesCount = 0;
 
-    if(res == FR_OK)
-    {
-    	while( (n--)>0 && res==FR_OK && fileInfo->fname[0] )
-    		 res = f_findnext(&dir, fileInfo);
+	/* Now iterate through folder storing files info in an array. */
+	FILINFO* de;
+	FILINFO dirEntries[MAX_FILES_PER_DIR];
+	while (FE_ReadDir(dr, &de) == 0 && entriesCount < MAX_FILES_PER_DIR)
+	{
+		memcpy(&dirEntries[entriesCount], de, sizeof(FILINFO));
+		entriesCount++;
+	}
+	FE_CloseDir(dr);
 
-    	char filePath[255];
-    	sprintf(filePath,"%s/%s",path,fileInfo->fname);
-    	res = f_open(fp,filePath,mode);
+	/* Build array of pointers. */
+	FILINFO* dirEntriesP[MAX_FILES_PER_DIR];
+	for (int i = 0; i < entriesCount; i++)
+		dirEntriesP[i] = &dirEntries[i];
 
-    }
-    else
-    {
+	for (int i = 0; i < entriesCount; i++)
+	{
+		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+	}
+	printf("\n");
 
-    }
+	/* Sort them. */
+	qsort(dirEntriesP, entriesCount, sizeof(FILINFO*), SortAlphaCompare);
 
-    f_closedir(&dir);
+	for (int i = 0; i < entriesCount; i++)
+	{
+		indexArray[i] = (dirEntriesP[i] - &dirEntries[0]);
+		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+	}
 
-    return res;
-
-#endif
+	return entriesCount;
 }
-bool FE_DriveStatus(FE_drive drive)
-{
-#if defined(_WIN64) || defined(_WIN32)
-#else
-	if(disk_status(g_fileSystems[drive].pdrv)==0 )
-		return true;
-	else
-		return false;
-#endif
-}
 
-uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
+
+uint8_t FE_CountFiles(const char * path, const char * pattern)
 {
 #if defined(_WIN64) || defined(_WIN32)
 #else
@@ -352,134 +538,32 @@ uint8_t FE_CountFilesMatching(const char * path, const char * pattern)
 #endif
 }
 
-uint8_t FE_Sort(FE_SortCriteria_t sort ,const char * path, const char * pattern, uint8_t * indexArray)
+///////////////////////////////////////////////////////////////////////////////
+//                   Local function definition ('static')                    //
+///////////////////////////////////////////////////////////////////////////////
+
+static int SortAlphaCompare(void* a, void* b)
 {
-#if defined(_WIN64) || defined(_WIN32)
-#else
-	DIR dj;
-	FRESULT fr = FR_OK;
-	uint8_t filesRead = 0;
-	char name[MAX_FILES_PER_DIR][FF_LFN_BUF+1];
-	char temp[FF_LFN_BUF+1];
-
-	// Find first file
-	FILINFO fInfo;
-	indexArray[0] = SORTING_END_CHAR;
-	fr = f_findfirst(&dj, &fInfo, path, pattern);
-	if(!(fr == FR_OK  && fInfo.fname[0]))		// In case path couldnt be opened or no file found
-		return filesRead;
-
-	// Copy all file names to array for comparison
-	while(fr == FR_OK && fInfo.fname[0])	// While valid file is found
-	{
-		strcpy(name[filesRead], fInfo.fname);
-		filesRead++;
-		fr = f_findnext(&dj, &fInfo);
-	}
-//	indexArray[filesRead] = SORTING_END_CHAR;	// Terminate array with end character
-
-	for(int p = 0 ; p < filesRead ; p++)
-		indexArray[p]=p+1;	// Enumerate file names with respective indexes
-
-	// Sort both arrays in parallel
-	if(sort == ABC)
-	{
-		for (int i = 0; i < filesRead - 1 ; i++)
-        {
-            for (int j = i + 1; j < filesRead; j++)
-            {
-                if (strcmp(name[i], name[j]) > 0)
-                {
-                    strcpy(temp, name[i]);
-                    strcpy(name[i], name[j]);
-                    strcpy(name[j], temp);
-                    indexArray[i] = indexArray[j];
-                    indexArray[j] = indexArray[i];
-                }
-            }
-        }
-	}
-	return filesRead;
-#endif
+	FILINFO* entryA = *(FILINFO**)(a);
+	FILINFO* entryB = *(FILINFO**)(b);
+	
+	if (FE_IS_FOLDER(entryA) && FE_IS_FILE(entryB))
+		return -1;
+	else if (FE_IS_FILE(entryA) && FE_IS_FOLDER(entryB))
+		return 1;
+	else
+		return _stricmp(FE_ENTRY_NAME(entryA), FE_ENTRY_NAME(entryB));
 }
-
-
-void FE_Task(void)
-{
-#if defined(_WIN64) || defined(_WIN32)
-#else
-
-	/* USB Task */
-    USB_HostKhciTaskFunction(g_HostHandle);
-
-	bool currStatus;
-
-//	// Check changes in USB drive
-//	currStatus = FE_DriveStatus(FE_USB);
-//	if(currStatus != usbStatus)
-//	{
-//		usbStatus = currStatus;
-//		if(usbStatus == true)
-//		{
-//			PRINTF("USB inserted\n");
-//			if(FE_mountDrive(FE_USB)== kStatus_Success)
-//			{
-//
-//				uint8_t k = FE_CountFilesMatching("/","*.mp3");
-//
-//				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
-//
-//				MP3_Play("/",0);
-//
-//			}
-//			else
-//				PRINTF("Error mounting USB\n");
-//		}
-//		else
-//		{
-//			PRINTF("USB removed\n");
-//
-//		}
-//	}
-
-	// Check changes in SD drive
-	if(sdStatusChanged)
-	{
-		// ACA NOTIFICAR A LA PARTE GRAFICA!!!
-		// GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
-
-		if(sdIsInserted == true)
-		{
-			PRINTF("SD inserted\n");
-			if(FE_mountDrive(FE_SD) == kStatus_Success)
-			{
-				uint8_t k = FE_CountFilesMatching("/","*.mp3");
-
-				PRINTF("There are %d mp3 files in root folder of the SD\n",k);
-
-				MP3_Play("/",0);
-
-			}
-			else
-				PRINTF("Error mounting SD\n");
-		}
-
-		if(sdIsInserted == false)
-		{
-			PRINTF("SD removed\n");
-			FE_unmountDrive(FE_SD);
-		}
-
-		sdStatusChanged = false;
-	}
-#endif
-}
-
-
 
 
 static void sdStatusChangeFn(bool isInserted, void *userData)
 {
 	sdStatusChanged = true;
 	sdIsInserted = isInserted;
+}
+
+static void usbStatusChangeFn(bool isInserted, void* userData)
+{
+	usbStatusChanged = true;
+	usbIsInserted = isInserted;
 }

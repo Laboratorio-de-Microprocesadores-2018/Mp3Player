@@ -33,7 +33,12 @@
 
 
 static MP3_Status status;
+MP3PlaybackMode playbackMode;
 
+/**
+ * Callback called every time a new track starts playing
+ */
+void(*trackChangedCB)(char* filename);
 
 #if defined(_WIN64) || defined(_WIN32)
 static uint32_t 				playbackTime;
@@ -41,10 +46,14 @@ static uint32_t					startPlayingTime;
 static Mix_Music* music;
 static FIL 					currentFile;
 static FILINFO 				currentFileInfo;
-static uint8_t 				fileIndexLut[MAX_FILES_PER_DIR];
-static uint8_t 				fileIndexLutSize;
-static uint8_t 				curSong;
+static uint32_t 			songsQueue[MAX_FILES_PER_DIR];
+static uint32_t 			queueLength;
+static uint32_t 			curSong;
 static char 				curPath[256];
+
+static void 				MP3_PlayCurrentSong();
+
+
 #else
 
 /* Decoder*/
@@ -58,8 +67,8 @@ static FILINFO 				currentFileInfo;
 //static DIR 				currentDir;
 static char 				curPath[256];
 static FE_FILE_SORT_TYPE 	plSortCriteria = ABC;	// Playlist sort criteria
-static uint8_t 				fileIndexLut[MAX_FILES_PER_DIR];
-static uint8_t 				fileIndexLutSize;
+static uint8_t 				songsQueue[MAX_FILES_PER_DIR];
+static uint8_t 				queueLength;
 static uint8_t 				curSong;
 
 
@@ -81,6 +90,13 @@ static void 				MP3_PlayCurrentSong();
 #endif
 
 
+
+#if defined(_WIN64) || defined(_WIN32)
+void SDL_musicFinished(void)
+{
+	MP3_Next();
+}
+#endif
 
 status_t MP3_Init()
 {
@@ -106,6 +122,9 @@ status_t MP3_Init()
 		return -1;
 	}
 
+	Mix_HookMusicFinished(SDL_musicFinished);
+
+	MP3_SetVolume(MP3_GetMaxVolume() / 2);
 #else
 	mp3Decoder = MP3InitDecoder();
 
@@ -129,19 +148,46 @@ status_t MP3_Init()
 #endif
 }
 
-void MP3_Play(char * dirPath)
+void MP3_SetSongsQueue(uint32_t* songIndexs, uint32_t nSongs)
 {
+	memcpy(songsQueue, songIndexs, nSongs * sizeof(songsQueue[0]));
+	queueLength = nSongs;
+}
+
+
+void MP3_Play(char* dirPath, uint32_t index)
+{
+
 	if (status == PLAYING)
 		MP3_Stop();
 
-	strcpy(curPath, dirPath);
-
-#if defined(_WIN64) || defined(_WIN32)
-	music = Mix_LoadMUS(dirPath);
-
-	if (music==NULL)
+	if (strcmp(curPath, dirPath) != 0)
 	{
-		printf("Error loading %s: %s\n",dirPath, Mix_GetError());
+		/* Store new path. */
+		strcpy(curPath, dirPath);
+	}
+
+	curSong = index;
+
+	MP3_PlayCurrentSong();
+
+}
+
+static void MP3_PlayCurrentSong()
+{
+#if defined(_WIN64) || defined(_WIN32)
+
+	FILINFO de;
+	FE_GetFileN(curPath, songsQueue[curSong], &de);
+
+	char filePath[255];
+	sprintf(filePath, "%s\\%s", curPath, FE_ENTRY_NAME(&de));
+
+	music = Mix_LoadMUS(filePath);
+
+	if (music == NULL)
+	{
+		printf("Error loading %s! Error %s\n", filePath, Mix_GetError());
 	}
 	else
 	{
@@ -151,34 +197,12 @@ void MP3_Play(char * dirPath)
 	}
 
 #else
-	// Sort files and find song to play
-	fileIndexLutSize = FE_Sort(plSortCriteria, dirPath, ".mp3", fileIndexLut);
-	uint8_t i = 0;
-	while(fileIndexLut[i]!=index && i<fileIndexLutSize) i++;
-	if(fileIndexLut[i]==index)
-	{
-		curSong = i;
-	}
-	else
-	{
-		// Invalid index!
-	}
-
-	MP3_PlayCurrentSong();
-#endif
-}
-
-static void MP3_PlayCurrentSong()
-{
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
 	// Open current song
 	FRESULT result = FE_OpenFileN(  curPath,
 									&currentFile,
 									&currentFileInfo,
 									FA_READ,
-									fileIndexLut[curSong],
+									songsQueue[curSong],
 									"*.mp3");
 
 	if(result == FR_OK)
@@ -201,22 +225,15 @@ static void MP3_PlayCurrentSong()
 		status = PLAYING;
 	}
 #endif
-
+	/** Notify new track started playing. */
+	trackChangedCB(FE_ENTRY_NAME(&de));
 }
 
-void MP3_SetTrackFinishCallback(void (*musicFinished)(void))
-{
-#if defined(_WIN64) || defined(_WIN32)
-
-Mix_HookMusicFinished(musicFinished);
-#else
-#endif
-}
 
 void MP3_Stop()
 {
 #if defined(_WIN64) || defined(_WIN32)
-	Mix_PauseMusic();
+	//Mix_PauseMusic();
 	Mix_FreeMusic(music);
 #else
 	Audio_Stop();
@@ -232,11 +249,7 @@ void MP3_Next()
 		MP3_Stop();
 
 	// Move to next song in current folder
-	curSong++;
-
-	// Wrap around if reached the end
-	if(fileIndexLut[curSong]==EOF)
-		curSong = 0;
+	curSong = (curSong + 1) % queueLength;
 
 	MP3_PlayCurrentSong();
 }
@@ -246,13 +259,13 @@ void MP3_Prev()
 	if(status != IDLE)
 		MP3_Stop();
 
-	if(playbackTime <5 && fileIndexLut[curSong] > 0)
-		fileIndexLut[curSong]--;
+	if (playbackTime < 5)
+		curSong = (curSong + queueLength - 1) % queueLength;
 
 	MP3_PlayCurrentSong();
 }
 
-void MP3_PlayPause()
+void MP3_PauseResume()
 {
 	if(status==PLAYING)
 	{
@@ -283,7 +296,7 @@ int MP3_GetPlaybackTime(void)
 	return playbackTime;
 }
 
-int MP3_GetTrackDuration()
+uint32_t MP3_GetTrackDuration()
 {
 	return 334;
 }
@@ -323,8 +336,33 @@ int MP3_GetVolume(void)
 void MP3_Task()
 {
 #if defined(_WIN64) || defined(_WIN32)
-	if (status == PLAYING)
-		playbackTime = (SDL_GetTicks() - startPlayingTime)/1000;
+
+
+	switch (status)
+	{
+	case IDLE:
+
+		break;
+
+	case PLAYING:
+		playbackTime = (SDL_GetTicks() - startPlayingTime) / 1000;
+
+		break;
+
+	case PLAYING_LAST_FRAMES:
+		// When empties stop playback and close file
+		FE_CloseFile(&currentFile);
+		MP3_Next();
+		break;
+
+	case PAUSE_PENDING:
+
+		break;
+
+	case PAUSE:
+
+		break;
+}
 #else
 	switch(status)
 	{
@@ -584,4 +622,38 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds)
 
 	return kStatus_Fail;
 #endif
+}
+
+/**
+ *
+ */
+void MP3_SetTrackChangedCB(void(*callback)(char* filename))
+{
+	trackChangedCB = callback;
+}
+
+/**
+ *
+ */
+uint32_t MP3_GetSongNumber()
+{
+	return curSong+1;
+}
+
+/**
+ *
+ */
+uint32_t MP3_GetQueueLength()
+{
+	return queueLength;
+}
+
+void MP3_SetPlaybackMode(MP3PlaybackMode mode)
+{
+	playbackMode = mode;
+}
+
+void MP3_GetPlaybackMode(void)
+{
+	return playbackMode;
 }

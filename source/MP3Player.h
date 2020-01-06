@@ -9,24 +9,22 @@
 #ifndef MP3PLAYER_H_
 #define MP3PLAYER_H_
 
+#include <stdint.h>
 
 #if defined(_WIN64) || defined(_WIN32)
-#include <stdint.h>
-enum
-{
-	kStatus_Success,
-	kStatus_Fail,
-};
+#ifndef kStatus_Success
+#define kStatus_Success 0
+#endif
+#ifndef kStatus_Fail
+#define kStatus_Fail -1
+#endif
 
-typedef int32_t status_t;
 
+#define status_t int32_t
 #else
-#include <stdint.h>
 #include "fsl_common.h"
 #endif
-/**
- *
- */
+
 
 
 /* Player status */
@@ -47,6 +45,7 @@ typedef enum
 	MP3_Shuffle
 }MP3PlaybackMode;
 
+
 /**
  *
  */
@@ -55,18 +54,17 @@ status_t MP3_Init();
 /**
  *
  */
-void MP3_Play(char * filePath);
+void MP3_Task();
 
 /**
  *
  */
-void MP3_PlayPause();
+void MP3_SetSongsQueue(uint32_t* songIndexs, uint32_t nSongs);
 
 /**
  *
  */
-void MP3_Stop();
-
+void MP3_Play(char* dirPath, uint32_t index);
 
 /**
  *
@@ -81,24 +79,52 @@ void MP3_Prev();
 /**
  *
  */
-int MP3_GetPlaybackTime(void);
+void MP3_PauseResume();
+
 /**
  *
  */
-void MP3_Task();
+void MP3_Stop();
+
+
+/**
+ *
+ */
+int MP3_GetPlaybackTime(void);
+
+
 
 status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds);
+
+/**
+ * @brief Get current song duration
+ */
+uint32_t MP3_GetTrackDuration();
+
+
+MP3_Status MP3_GetStatus();
 
 /**
  * Sets audio volume level
  */
 void MP3_SetVolume(uint32_t level);
-int MP3_GetMaxVolume(void);
 int MP3_GetVolume();
+int MP3_GetMaxVolume(void);
 
-MP3_Status MP3_GetStatus();
+/**
+ *
+ */
+void MP3_SetTrackChangedCB(void(*callback)(char* filename));
 
-int MP3_GetPlaybackTime(void);
-int MP3_GetTrackDuration();
+/**
+ *
+ */
+uint32_t MP3_GetSongNumber();
+
+/**
+ *
+ */
+uint32_t MP3_GetQueueLength();
+
 
 #endif /* MP3PLAYER_H_ */

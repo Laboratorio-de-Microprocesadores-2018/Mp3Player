@@ -11,12 +11,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 //                             Included header files                           //
 /////////////////////////////////////////////////////////////////////////////////
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
-#include "GILI9341.h"
-#include "Input.h"
-#endif
+#include <stdbool.h>
 
 /////////////////////////////////////////////////////////////////////////////////
 //                       Constants and macro definitions                       //
@@ -28,7 +23,9 @@
 //                    Enumerations, structures and typedefs                    //
 /////////////////////////////////////////////////////////////////////////////////
 
-
+/**
+ *
+ */
 typedef enum {
 	MUSIC_SCREEN,
 	BROWSER_SCREEN,
@@ -39,30 +36,38 @@ typedef enum {
 }ScreenID_t;
 
 
-/////////////////////////////////////////////////////////////////////////////////
-//                         Global function prototypes                          //
-/////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                                  API                                      //
+///////////////////////////////////////////////////////////////////////////////
+
 /**
- * @brief Initialize the GUI, create the front end structure and upload it to the screen
+ * @brief Initialize the GUI.
  *
- * @param Hardware abstraction layer function pointer, to be executed by the GUI Initialization. This is send a parameter, because the "lv_indev_t obj" (The input devices to be registered by the GUI are defined inside the scope of GUI.c)
  */
 void GUI_Init(void);
 
 /**
- *
+ * @brief Create the front end structure and upload it to the screen
  */
 void GUI_Create(void);
 
-/*
- *
+/** 
+ * @brief Task function, must be called periodically in main loop.
  */
 void GUI_Task(void);
 
-/*
- *
+/**
+ * @brief Notify GUI module that display has been flushed.
+ * TODO: To resolve circular dependencies, add an api to GILI9341
+ * to register a callback in DMA finish interrupt, and register 
+ * this function on init.
  */
 void GUI_FlushReady(void);
+
+/**
+ * @brief Returns if the user wants to power off the player or not.
+ */
+bool GUI_PowerOffRequest();
 
 /**********************
 *      MACROS
