@@ -1377,7 +1377,7 @@ static void GUI_ShowVolumeBar()
  * @brief Display current track information in music tab.
  * TODO: Read Id3 tags from track!
  */
-static void GUI_SetTrackInfo(char * fileName)
+static void GUI_SetTrackInfo(char * _fileName)
 {
 	// Set elapesed time to 0
 	lv_label_set_text(gui.musicScreen.elapsedTime, "0:00");
@@ -1398,11 +1398,16 @@ static void GUI_SetTrackInfo(char * fileName)
 	//}
 	//else
 	{
+		char fileName[255];
+		strcpy(fileName, _fileName);
+
+		/* Delete extension. */
+		char* dot = strrchr(fileName, '.');
+		*dot = '\0';
+
 		/** Try to identify artist from filename looking for
-			a '-' separation token */
-		char artist[255];
-		strcpy(artist, fileName);
-		char* tok = strchr(artist, '-');
+		a '-' separation token */
+		char* tok = strchr(fileName, '-');
 		if (tok != NULL)
 		{
 			// Separate artist and song title
@@ -1415,7 +1420,7 @@ static void GUI_SetTrackInfo(char * fileName)
 			while (*tok == ' ') *tok-- = '\0';
 
 			lv_label_set_text(gui.musicScreen.Title, title);
-			lv_label_set_text(gui.musicScreen.Artist, artist);
+			lv_label_set_text(gui.musicScreen.Artist, fileName);
 		}
 		else
 		{
