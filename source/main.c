@@ -95,8 +95,7 @@ int main(void)
     APP_Init();
 
     /* Main loop */
-    powerOffReq = false;
-    while(powerOffReq == false)
+    while(GUI_PowerOffRequest() == false)
     {
     	//
 		FE_Task();
@@ -105,6 +104,7 @@ int main(void)
 		//
      	MP3_Task();
     }
+
     PM_EnterLowPowerMode();
 
     return 0 ;

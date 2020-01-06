@@ -63,14 +63,6 @@
 
 #define GUI_TIME_STRING_BUFFER_LENGTH	9
 
-/** Declare a sceen inside struct GUI_t. */
-#define GUI_SCREEN_DECLARE(screenName,objects)  \
-							struct				\
-							{					\
-								Screen_t;		\
-								objects			\
-							}screenName;		\
-
 /**
  * Abstraction for HAL init
  */
@@ -134,6 +126,18 @@ typedef struct
 	lv_obj_t* parent;
 	lv_group_t* group;
 }Screen_t;
+
+/** Declare a sceen inside struct GUI_t. */
+#define GUI_SCREEN_DECLARE(screenName,objects)  		\
+							struct						\
+							{							\
+								struct					\
+								{						\
+									lv_obj_t* parent;	\
+									lv_group_t* group;	\
+								};						\
+								objects					\
+							}screenName;				\
 
 /**
  * @brief GUI structure definition
@@ -1000,7 +1004,6 @@ static void GUI_OpenFolder(char* folder)
 		GUI_ListFolderContents(gui.browserPath);
 	}
 
-
 	//lv_group_focus_obj(gui.browserScreen.list);
 	lv_group_set_editing(gui.browserScreen.group, true);
 }
@@ -1467,7 +1470,7 @@ static void GUI_UpdateProgressBar(lv_task_t* task)
 		sprintf(text, "%d:%02d", remaining / 60, remaining % 60);
 		lv_label_set_text(gui.musicScreen.remainingTime, text);
 
-		lv_bar_set_value(gui.musicScreen.progressBar, elapsed*BAR_WIDTH/(remaining+elapsed), TRUE);
+		lv_bar_set_value(gui.musicScreen.progressBar, elapsed*BAR_WIDTH/(remaining+elapsed), true);
 	}
 }
 
@@ -1575,7 +1578,7 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 		data->state = LV_INDEV_STATE_PR;
 		data->key = LV_KEY_UP;
 	}
-	else if (Input_ReadPlayPauseButton() == 0)
+	else if (Input_ReadPlayButton() == 0)
 	{
 		data->state = LV_INDEV_STATE_PR;
 		data->key = LV_KEY_DOWN;

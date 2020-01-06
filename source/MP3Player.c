@@ -66,7 +66,7 @@ static FIL 					currentFile;
 static FILINFO 				currentFileInfo;
 //static DIR 				currentDir;
 static char 				curPath[256];
-static FE_FILE_SORT_TYPE 	plSortCriteria = ABC;	// Playlist sort criteria
+//static FE_FILE_SORT_TYPE 	plSortCriteria = ABC;	// Playlist sort criteria
 static uint8_t 				songsQueue[MAX_FILES_PER_DIR];
 static uint8_t 				queueLength;
 static uint8_t 				curSong;
@@ -196,14 +196,16 @@ static void MP3_PlayCurrentSong()
 		startPlayingTime = SDL_GetTicks();
 	}
 
+	/** Notify new track started playing. */
+	trackChangedCB(FE_ENTRY_NAME(&de));
+
 #else
 	// Open current song
 	FRESULT result = FE_OpenFileN(  curPath,
-									&currentFile,
-									&currentFileInfo,
-									FA_READ,
 									songsQueue[curSong],
-									"*.mp3");
+									&currentFileInfo,
+									&currentFile,
+									FA_READ);
 
 	if(result == FR_OK)
 	{
@@ -224,9 +226,12 @@ static void MP3_PlayCurrentSong()
 
 		status = PLAYING;
 	}
-#endif
+
 	/** Notify new track started playing. */
-	trackChangedCB(FE_ENTRY_NAME(&de));
+	trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
+
+#endif
+
 }
 
 

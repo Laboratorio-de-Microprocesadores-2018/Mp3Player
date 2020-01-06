@@ -82,10 +82,10 @@
 #else
 
  /* Get file/folder name from a FILINFO. */
-#define FE_ENTRY_NAME(filinfo) filinfo->fname
+#define FE_ENTRY_NAME(filinfo) (filinfo)->fname
 
 /* Get entry type from a FILINFO. */
-#define FE_ENTRY_TYPE(filinfo) filinfo->fattrib
+#define FE_ENTRY_TYPE(filinfo) (filinfo)->fattrib
 
 /* Check if an entry is a folder. */
 #define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==AM_DIR)

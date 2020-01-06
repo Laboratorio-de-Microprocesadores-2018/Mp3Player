@@ -21,10 +21,19 @@
 #include "fsl_sd.h"
 #include "usb_host_config.h"
 #include "usb_host.h"
-#include "diskio.h" // TODO: Al final pienso que no deberiamos incluir ni llamar funciones de acá
+#include "diskio.h" // TODO: Al final pienso que no deberiamos incluir ni llamar funciones de acï¿½
 
 #endif
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                   Local function prototypes ('static')                    //
+///////////////////////////////////////////////////////////////////////////////
+
+static int SortAlphaCompare(void* a, void* b);
+static void sdStatusChangeFn(bool isInserted, void* userData);
+static void usbStatusChangeFn(bool isInserted, void* userData);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                   Local variable definitions ('static')                   //
@@ -56,13 +65,6 @@ static FATFS g_fileSystems[3];
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-//                   Local function prototypes ('static')                    //
-///////////////////////////////////////////////////////////////////////////////
-
-static int SortAlphaCompare(void* a, void* b);
-static void sdStatusChangeFn(bool isInserted, void* userData);
-static void usbStatusChangeFn(bool isInserted, void* userData);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -119,7 +121,7 @@ void FE_Task(void)
 	//			if(FE_mountDrive(FE_USB)== kStatus_Success)
 	//			{
 	//
-	//				uint8_t k = FE_CountFilesMatching("/","*.mp3");
+	//				uint8_t k = FE_CountFiles("/","*.mp3");
 	//
 	//				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
 	//
@@ -145,9 +147,9 @@ void FE_Task(void)
 		if (sdIsInserted == true)
 		{
 			PRINTF("SD inserted\n");
-			if (FE_mountDrive(FE_SD) == kStatus_Success)
+			if (FE_MountDrive(FE_SD) == kStatus_Success)
 			{
-				uint8_t k = FE_CountFilesMatching("/", "*.mp3");
+				uint8_t k = FE_CountFiles("/", "*.mp3");
 
 				PRINTF("There are %d mp3 files in root folder of the SD\n", k);
 
@@ -161,7 +163,7 @@ void FE_Task(void)
 		if (sdIsInserted == false)
 		{
 			PRINTF("SD removed\n");
-			FE_unmountDrive(FE_SD);
+			FE_UnmountDrive(FE_SD);
 		}
 
 		sdStatusChanged = false;
@@ -326,8 +328,6 @@ FRESULT FE_CloseDir(DIR* dp)
 
 FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 {
-#if defined(_WIN64) || defined(_WIN32)
-
 	if (n > MAX_FILES_PER_DIR)
 		return -1;
 
@@ -355,9 +355,6 @@ FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 	memcpy(fileInfo, de, sizeof(FILINFO));
 
 	FE_CloseDir(dr);
-
-#else
-#endif
 }
 
 
@@ -379,26 +376,14 @@ FRESULT FE_OpenFileN(const char* path, uint8_t n, FILINFO* fileInfo, FIL* fp, BY
 
 
 #else
-	DIR dir;
+	FRESULT res = FE_GetFileN(path, n, fileInfo);
 
-	FRESULT res = f_findfirst(&dir, fileInfo, path, pattern);
-
+	char filePath[255];
+	sprintf(filePath,"%s/%s",path,FE_ENTRY_NAME(fileInfo));
 	if (res == FR_OK)
 	{
-		while ((n--) > 0 && res == FR_OK && fileInfo->fname[0])
-			res = f_findnext(&dir, fileInfo);
-
-		char filePath[255];
-		sprintf(filePath, "%s/%s", path, fileInfo->fname);
-		res = f_open(fp, filePath, mode);
-
+		return f_open(fp, filePath, mode);
 	}
-	else
-	{
-
-	}
-
-	f_closedir(&dir);
 
 	return res;
 
@@ -418,7 +403,7 @@ FRESULT FE_ReadFile(FIL* fp, void* buff, UINT btr, UINT* br)
 	else
 		return -1;
 #else
-	return f_read(*fp, buff, btr, br);
+	return f_read(fp, buff, btr, br);
 #endif
 }
 
