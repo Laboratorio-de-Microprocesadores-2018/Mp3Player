@@ -336,7 +336,7 @@ void GUI_Init(void)
 void GUI_Create(void)
 {
 	/* Create theme for the GUI. */
-	gui.theme = lv_theme_alien_init(2, NULL);
+	gui.theme = lv_theme_default_init(2, NULL);
 	gui.theme->style.cont->body.radius = 0;
 	lv_theme_set_current(gui.theme);
 
@@ -563,21 +563,21 @@ static void GUI_CreateMusicScreen()
 	/* Add song title */
 	lv_obj_t* Title = lv_label_create(cont, NULL);
 	lv_label_set_text(Title, "");
-	lv_label_set_style(Title, LV_LABEL_STYLE_MAIN, gui.theme->style.label.sec);
+	lv_label_set_style(Title, LV_LABEL_STYLE_MAIN, gui.theme->style.label.prim);
 	lv_label_set_long_mode(Title, LV_LABEL_LONG_SROLL_CIRC);
-
 	lv_obj_set_size(Title, ALBUM_ART_SIZE, 20);
 	lv_label_set_align(Title, LV_LABEL_ALIGN_LEFT);
 	lv_obj_align(Title, albumArt, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
 	gui.musicScreen.Title = Title;
 
 	lv_obj_t* Artist = lv_label_create(cont, Title);
-	lv_label_set_style(Title, LV_LABEL_STYLE_MAIN, gui.theme->style.label.prim);
+	lv_label_set_style(Artist, LV_LABEL_STYLE_MAIN, gui.theme->style.label.sec);
 	lv_obj_align(Artist, Title, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
 	gui.musicScreen.Artist = Artist;
 
 	lv_obj_t* queueProgress = lv_label_create(cont, Title);
-	lv_label_set_style(Title, LV_LABEL_STYLE_MAIN, gui.theme->style.label.prim);
+	lv_label_set_style(queueProgress, LV_LABEL_STYLE_MAIN, gui.theme->style.label.sec);
+	lv_label_set_align(queueProgress, LV_LABEL_ALIGN_RIGHT);
 	lv_obj_align(queueProgress, Title, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
 	gui.musicScreen.queueProgress = queueProgress;
 
@@ -1367,7 +1367,7 @@ static void GUI_ShowVolumeBar()
 
 
 	/* Create task to hide volume bar automatically */
-	gui.volumeBarTask = lv_task_create(GUI_VolumeBarTimeoutTask, 1000, LV_TASK_PRIO_LOW, NULL);
+	gui.volumeBarTask = lv_task_create(GUI_VolumeBarTimeoutTask, 1400, LV_TASK_PRIO_LOW, NULL);
 	lv_task_once(gui.volumeBarTask);
 
 }
