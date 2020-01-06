@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)..\..\..\drivers;$(ProjectDir)..\..\..\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)\..\..\source;$(ProjectDir)\..\..\drivers;$(ProjectDir)\..\..\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -87,7 +87,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\dirent-1.23.2\include;$(ProjectDir)\lvgl;$(ProjectDir)..\..\;$(ProjectDir)\SDL2\include;$(ProjectDir)..\..\..\source;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\dirent-1.23.2\include;$(ProjectDir)\lvgl;$(ProjectDir)\..\..\;$(ProjectDir)\SDL2\include;$(ProjectDir)\..\..\..\source;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;LV_CONF_INCLUDE_SIMPLE</PreprocessorDefinitions>
     </ClCompile>
