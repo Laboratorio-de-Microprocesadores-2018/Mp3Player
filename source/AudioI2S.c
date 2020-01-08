@@ -23,7 +23,7 @@
 #include "fsl_sai_edma.h"
 #include "fsl_dmamux.h"
 #include "fsl_port.h"
-
+#include "fsl_gpio.h"
 
 #define  AUDIO_BUFFER_SIZE 2304
 
@@ -210,6 +210,18 @@ bool Audio_QueueIsEmpty()
 	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 	return b;
 }
+
+
+
+bool Audio_AreHeadphonesPlugged()
+{
+	bool HPR = GPIO_PinRead(HPR_SENSE_GPIO,HPR_SENSE_PIN);
+	bool HPL = GPIO_PinRead(HPL_SENSE_GPIO,HPL_SENSE_PIN);
+
+	return (HPR || HPL);
+}
+
+
 
 
 static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData)

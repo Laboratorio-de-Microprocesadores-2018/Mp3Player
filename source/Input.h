@@ -12,9 +12,21 @@
 
 typedef void (*InputCallback)(void*);
 
-typedef enum {PREV,NEXT,MENU,PLAY,SELECT,NumberOfButtons} ButtonID;
+typedef enum {
+	PREV,
+	NEXT,
+	MENU,
+	PLAY,
+	SELECT,
+	NumberOfButtons
+} ButtonID;
 
-void Input_Init();
+
+
+/**
+ *  Initialize input module
+ */
+void Input_Init(void);
 
 /**
  *  Read input
@@ -32,6 +44,7 @@ uint8_t Input_ReadEncoderDirection(void);
 /**
  *  Attach Callbacks
  */
+void Input_Start(void);
 void Input_Attach(ButtonID button, ButtonEvent ev, ButtonCallback);
 void Input_AttachEncoderInc(InputCallback c);
 void Input_AttachEncoderDec(InputCallback c);

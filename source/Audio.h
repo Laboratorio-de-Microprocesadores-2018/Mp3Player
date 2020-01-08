@@ -118,5 +118,10 @@ void Audio_ResetQueue();
  */
 uint32_t Audio_GetCurrentFrameNumber();
 
+/**
+ *
+ */
+bool Audio_AreHeadphonesPlugged();
+
 
 #endif /* AUDIO_H_ */
