@@ -88,7 +88,8 @@ int main(void)
 {
   	/* Board hardware initialization. */
     BOARD_InitBootPins();
-    BOARD_InitBootClocks();
+    BOARD_BootClockRUN();
+    //BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
 
     /* Modules initialization */

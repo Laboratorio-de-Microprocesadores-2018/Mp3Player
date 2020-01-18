@@ -27,6 +27,8 @@
 
 
 
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //                   Local function prototypes ('static')                    //
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,7 +52,7 @@ static bool usbStatusChanged = false;
 
 #else
 
-usb_host_handle g_HostHandle;
+extern usb_host_handle g_HostHandle;
 extern sd_card_t g_sd;
 /* SD card detect configuration */
 static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
@@ -75,6 +77,38 @@ status_t FE_Init(void)
 {
 #ifdef SD_DISK_ENABLE
 
+
+	CLOCK_EnableClock(kCLOCK_PortE);
+
+	 const port_pin_config_t porte_pin_config = {
+		kPORT_PullUp,                                            /* Internal pull-up resistor is enabled */
+		kPORT_FastSlewRate,                                      /* Fast slew rate is configured */
+		kPORT_PassiveFilterDisable,                              /* Passive filter is disabled */
+		kPORT_OpenDrainDisable,                                  /* Open drain is disabled */
+		kPORT_HighDriveStrength,                                 /* High drive strength is configured */
+		kPORT_MuxAlt4,                                           /* Pin is configured as SDHC0_D1 */
+		kPORT_UnlockRegister                                     /* Pin Control Register fields [15:0] are not locked */
+	  };
+
+	 PORT_SetPinConfig(PORTE, 0, &porte_pin_config);   /* PORTE0 (pin 1) is configured as SDHC0_D1 */
+	 PORT_SetPinConfig(PORTE, 1, &porte_pin_config);   /* PORTE1 (pin 2) is configured as SDHC0_D0 */
+	 PORT_SetPinConfig(PORTE, 2, &porte_pin_config);	/* PORTE2 (pin 3) is configured as SDHC0_DCLK */
+	 PORT_SetPinConfig(PORTE, 3, &porte_pin_config);   /* PORTE3 (pin 4) is configured as SDHC0_CMD */
+	 PORT_SetPinConfig(PORTE, 4, &porte_pin_config);   /* PORTE4 (pin 5) is configured as SDHC0_D3 */
+	 PORT_SetPinConfig(PORTE, 5, &porte_pin_config);   /* PORTE5 (pin 6) is configured as SDHC0_D2 */
+
+
+
+	  const port_pin_config_t porte6_pin7_config = {
+		kPORT_PullDown,                                          /* Internal pull-down resistor is enabled */
+		kPORT_FastSlewRate,                                      /* Fast slew rate is configured */
+		kPORT_PassiveFilterDisable,                              /* Passive filter is disabled */
+		kPORT_OpenDrainDisable,                                  /* Open drain is disabled */
+		kPORT_LowDriveStrength,                                  /* Low drive strength is configured */
+		kPORT_MuxAsGpio,                                         /* Pin is configured as PTE6 */
+		kPORT_UnlockRegister                                     /* Pin Control Register fields [15:0] are not locked */
+	  };
+	 PORT_SetPinConfig(PORTE, 6, &porte6_pin7_config);   /* PORTE6 (pin 7) is configured as PTE6 */
 	/* Save host information. */
 	g_sd.host.base = SD_HOST_BASEADDR;
 	g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
