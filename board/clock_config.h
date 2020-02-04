@@ -108,7 +108,7 @@ void BOARD_ClockExternal(void);
 /*******************************************************************************
  * Definitions for BOARD_ClockSleep configuration
  ******************************************************************************/
-#define BOARD_CLOCKSLEEP_CORE_CLOCK                 4000000U  /*!< Core clock frequency: 4000000Hz */
+#define BOARD_CLOCKSLEEP_CORE_CLOCK                   31250U  /*!< Core clock frequency: 31250Hz */
 
 /*! @brief MCG set for BOARD_ClockSleep configuration.
  */

@@ -138,7 +138,7 @@ static void CLOCK_CONFIG_SetFllExtRefDiv(uint8_t frdiv)
  ******************************************************************************/
 void BOARD_InitBootClocks(void)
 {
-    BOARD_ClockInternal();
+    BOARD_ClockExternal();
 }
 
 /*******************************************************************************
@@ -148,7 +148,6 @@ void BOARD_InitBootClocks(void)
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 !!Configuration
 name: BOARD_ClockInternal
-called_from_default_init: true
 outputs:
 - {id: Bus_clock.outFreq, value: 20.97152 MHz}
 - {id: Core_clock.outFreq, value: 20.97152 MHz}
@@ -231,6 +230,7 @@ void BOARD_ClockInternal(void)
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 !!Configuration
 name: BOARD_ClockExternal
+called_from_default_init: true
 outputs:
 - {id: Bus_clock.outFreq, value: 60 MHz}
 - {id: Core_clock.outFreq, value: 120 MHz}
@@ -347,17 +347,17 @@ void BOARD_ClockExternal(void)
 !!Configuration
 name: BOARD_ClockSleep
 outputs:
-- {id: Bus_clock.outFreq, value: 4 MHz}
-- {id: Core_clock.outFreq, value: 4 MHz, locked: true, accuracy: '0.001'}
-- {id: Flash_clock.outFreq, value: 800 kHz}
-- {id: FlexBus_clock.outFreq, value: 2 MHz}
+- {id: Bus_clock.outFreq, value: 31.25 kHz}
+- {id: Core_clock.outFreq, value: 31.25 kHz}
+- {id: Flash_clock.outFreq, value: 6.25 kHz}
+- {id: FlexBus_clock.outFreq, value: 31.25/2 kHz}
 - {id: LPO_clock.outFreq, value: 1 kHz}
-- {id: System_clock.outFreq, value: 4 MHz}
+- {id: System_clock.outFreq, value: 31.25 kHz}
 settings:
 - {id: MCGMode, value: BLPI}
 - {id: powerMode, value: VLPR}
 - {id: MCG.CLKS.sel, value: MCG.IRCS}
-- {id: MCG.FCRDIV.scale, value: '1'}
+- {id: MCG.FCRDIV.scale, value: '128', locked: true}
 - {id: MCG.IRCS.sel, value: MCG.FCRDIV}
 - {id: SIM.OUTDIV4.scale, value: '5'}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
@@ -371,7 +371,7 @@ const mcg_config_t mcgConfig_BOARD_ClockSleep =
         .mcgMode = kMCG_ModeBLPI,                 /* BLPI - Bypassed Low Power Internal */
         .irclkEnableMode = MCG_IRCLK_DISABLE,     /* MCGIRCLK disabled */
         .ircs = kMCG_IrcFast,                     /* Fast internal reference clock selected */
-        .fcrdiv = 0x0U,                           /* Fast IRC divider: divided by 1 */
+        .fcrdiv = 0x7U,                           /* Fast IRC divider: divided by 128 */
         .frdiv = 0x0U,                            /* FLL reference clock divider: divided by 1 */
         .drs = kMCG_DrsLow,                       /* Low frequency range */
         .dmx32 = kMCG_Dmx32Default,               /* DCO has a default range of 25% */
