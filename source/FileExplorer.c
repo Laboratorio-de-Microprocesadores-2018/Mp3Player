@@ -18,7 +18,9 @@
 #else
 
 #include "fsl_debug_console.h"
+#include "fsl_sysmpu.h"
 #include "fsl_sd.h"
+#include "fsl_sd_disk.h"
 #include "usb_host_config.h"
 #include "usb_host.h"
 #include "diskio.h" // TODO: Al final pienso que no deberiamos incluir ni llamar funciones de ac�
@@ -51,7 +53,7 @@ static bool usbStatusChanged = false;
 #else
 
 usb_host_handle g_HostHandle;
-extern sd_card_t g_sd;
+//extern sd_card_t g_sd;
 /* SD card detect configuration */
 static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
 													0,
@@ -73,7 +75,7 @@ static FATFS g_fileSystems[3];
 
 status_t FE_Init(void)
 {
-#ifdef SD_DISK_ENABLE
+
 
 	/* Save host information. */
 	g_sd.host.base = SD_HOST_BASEADDR;
@@ -83,21 +85,21 @@ status_t FE_Init(void)
 	status_t status = SD_HostInit(&g_sd);
 
 	g_fileSystems[SDDISK].pdrv=SDDISK;
-#endif
 
-#ifdef USB_DISK_ENABLE
+	g_fileSystems[USBDISK].pdrv=USBDISK;
 
-	    g_fileSystems[USBDISK].pdrv=USBDISK;
-#endif
+	SYSMPU_Enable(SYSMPU, false);
 
-	    return kStatus_Success;
+	return status;
 }
 
 
-void FE_DeInit(void)
+void FE_Deinit(void)
 {
-	// TODO ??
+	SD_HostDeinit(&g_sd);
 }
+
+
 
 
 void FE_Task(void)
@@ -106,9 +108,7 @@ void FE_Task(void)
 #else
 
 	/* USB Task */
-	USB_HostKhciTaskFunction(g_HostHandle);
-
-	bool currStatus;
+	//USB_HostKhciTaskFunction(hostHandle);
 
 	//	// Check changes in USB drive
 	//	currStatus = FE_DriveStatus(FE_USB);
@@ -141,8 +141,6 @@ void FE_Task(void)
 		// Check changes in SD drive
 	if (sdStatusChanged)
 	{
-		// ACA NOTIFICAR A LA PARTE GRAFICA!!!
-		// GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
 
 		if (sdIsInserted == true)
 		{
@@ -152,8 +150,6 @@ void FE_Task(void)
 				uint8_t k = FE_CountFiles("/", "*.mp3");
 
 				PRINTF("There are %d mp3 files in root folder of the SD\n", k);
-
-				MP3_Play("/", 0);
 
 			}
 			else
@@ -166,6 +162,8 @@ void FE_Task(void)
 			FE_UnmountDrive(FE_SD);
 		}
 
+		GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
+
 		sdStatusChanged = false;
 	}
 #endif
@@ -177,8 +175,11 @@ status_t FE_MountDrive(FE_drive drive)
 #if defined(_WIN64) || defined(_WIN32)
 	return kStatus_Success;
 #else
-	const TCHAR driverNumberBuffer[3U] = { drive + '0', ':', '/' };
-	if (!f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U))
+	const TCHAR driverNumberBuffer[4U] = { '0' + drive , ':', '/', '\0' };
+
+	FRESULT res = f_mount(&g_fileSystems[drive], driverNumberBuffer, 1U);
+
+	if (res == FR_OK)
 	{
 		if (!f_chdrive((char const*)& driverNumberBuffer[0U]))
 		{
@@ -247,10 +248,11 @@ bool FE_DriveStatus(FE_drive drive)
 	else
 		return false;
 #else
-	if (disk_status(g_fileSystems[drive].pdrv) == 0)
-		return true;
-	else
-		return false;
+	if(drive == SDDISK)
+		return sdIsInserted;
+	else if(drive == USBDISK)
+		return usbIsInserted;
+
 	//
 //	 /* Save host information. */
 //	    g_sd.host.base = SD_HOST_BASEADDR;
@@ -285,36 +287,54 @@ bool FE_DriveStatus(FE_drive drive)
 //	    }
 
 #endif
+
+	return false;
 }
 
 
+
+#if defined(_WIN64) || defined(_WIN32)
 FRESULT FE_OpenDir(DIR** dp, const char* path)
 {
-#if defined(_WIN64) || defined(_WIN32)
 	*dp = opendir(path);
 
 	if (*dp != NULL)
 		return 0;
 	else
 		return -1;
-#else
-	return f_opendir(*dp, path);
-#endif
 }
+#else
+FRESULT FE_OpenDir(DIR* dp, const char* path)
+{
+	return f_opendir(dp, path);
+}
+#endif
 
 
+
+
+#if defined(_WIN64) || defined(_WIN32)
 FRESULT FE_ReadDir(DIR* dp, FILINFO** fno)
 {
-#if defined(_WIN64) || defined(_WIN32)
 	*fno = readdir(dp);
 
 	if (*fno != NULL)
 		return 0;
 	else
 		return -1;
-#else
-#endif
 }
+#else
+FRESULT FE_ReadDir(DIR* dp, FILINFO* fno)
+{
+	FRESULT res = f_readdir(dp,fno);
+
+	if(fno->fname[0] == '\0')
+		return FR_NO_FILE;
+	else
+		return res;
+}
+#endif
+
 
 
 FRESULT FE_CloseDir(DIR* dp)
@@ -322,6 +342,7 @@ FRESULT FE_CloseDir(DIR* dp)
 #if defined(_WIN64) || defined(_WIN32)
 	return closedir(dp);
 #else
+	return f_closedir(dp);
 #endif
 }
 
@@ -332,29 +353,45 @@ FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 		return -1;
 
 	/* Try to open directory. */
-	DIR* dr;
-	FRESULT res = FE_OpenDir(&dr, path);
-	if (res != 0)
-	{
-		printf("Path not found: [%s]\n", path);
-		return res;
-	}
-
-	uint8_t entriesCount = 0;
-
-	/* Now iterate through folder storing files info in an array. */
+#if defined(_WIN32) || defined(_WIN64)
+	DIR * dr;
 	FILINFO* de;
-	while (FE_ReadDir(dr, &de) == 0 && entriesCount < n)
+#else
+	DIR dr;
+	FILINFO de;
+#endif
+
+	FRESULT res = FE_OpenDir(&dr, path);
+
+	if(res == FR_OK)
 	{
-		//if (strcmp(FE_ENTRY_NAME(de), ".") != 0
-		//	&& strcmp(FE_ENTRY_NAME(de), "..") != 0)
+		for(int i=0; i<=n; i++)
 		{
-			entriesCount++;
+			res = FE_ReadDir(&dr, &de);
+
+			if(res != FR_OK)
+			{
+				printf("FE_GetFileN() Error: %d\n", res);
+				break;
+			}
+			//if (strcmp(FE_ENTRY_NAME(de), ".") != 0
+			//	&& strcmp(FE_ENTRY_NAME(de), "..") != 0)
 		}
 	}
-	memcpy(fileInfo, de, sizeof(FILINFO));
+	else
+	{
+		printf("FE_GetFileN() Error: %d\n", res);
+	}
 
+#if defined(_WIN32) || defined(_WIN64)
+	memcpy(fileInfo, de, sizeof(FILINFO));
 	FE_CloseDir(dr);
+#else
+	memcpy(fileInfo, &de, sizeof(FILINFO));
+	FE_CloseDir(&dr);
+#endif
+
+	return res;
 }
 
 
@@ -378,13 +415,12 @@ FRESULT FE_OpenFileN(const char* path, uint8_t n, FILINFO* fileInfo, FIL* fp, BY
 #else
 	FRESULT res = FE_GetFileN(path, n, fileInfo);
 
-	char filePath[255];
-	sprintf(filePath,"%s/%s",path,FE_ENTRY_NAME(fileInfo));
 	if (res == FR_OK)
 	{
+		char filePath[255];
+		sprintf(filePath,"%s/%s",path,FE_ENTRY_NAME(fileInfo));
 		return f_open(fp, filePath, mode);
 	}
-
 	return res;
 
 #endif
@@ -456,45 +492,70 @@ int32_t FE_Sort(FE_SortCriteria_t sort, const char* path, uint32_t* indexArray)
 {
 
 	/* Try to open directory. */
+#if defined(_WIN32) || defined(_WIN64)
 	DIR * dr;
+	FILINFO* de;
+#else
+	DIR dr;
+	FILINFO de;
+#endif
+
 	FRESULT res = FE_OpenDir(&dr, path);
+
 	if (res != 0)
 	{
-		printf("Path not found: [%s]\n", path);
+		printf("Path not found: [%s]. Error code %d\n", path,res);
 		return -1;
 	}
 
 	uint8_t entriesCount = 0;
 
 	/* Now iterate through folder storing files info in an array. */
-	FILINFO* de;
+
 	FILINFO dirEntries[MAX_FILES_PER_DIR];
-	while (FE_ReadDir(dr, &de) == 0 && entriesCount < MAX_FILES_PER_DIR)
+
+	while (FE_ReadDir(&dr, &de)==FR_OK && entriesCount < MAX_FILES_PER_DIR)
 	{
+
+#if defined(_WIN32) || defined(_WIN64)
 		memcpy(&dirEntries[entriesCount], de, sizeof(FILINFO));
+#else
+		memcpy(&dirEntries[entriesCount], &de, sizeof(FILINFO));
+#endif
 		entriesCount++;
 	}
+
+#if defined(_WIN32) || defined(_WIN64)
 	FE_CloseDir(dr);
+#else
+	FE_CloseDir(&dr);
+#endif
+
 
 	/* Build array of pointers. */
 	FILINFO* dirEntriesP[MAX_FILES_PER_DIR];
 	for (int i = 0; i < entriesCount; i++)
-		dirEntriesP[i] = &dirEntries[i];
-
-	for (int i = 0; i < entriesCount; i++)
 	{
+		dirEntriesP[i] = &dirEntries[i];
+#if defined(_WIN32) || defined(_WIN64)
 		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+#endif
 	}
 	printf("\n");
+
 
 	/* Sort them. */
 	qsort(dirEntriesP, entriesCount, sizeof(FILINFO*), SortAlphaCompare);
 
+
 	for (int i = 0; i < entriesCount; i++)
 	{
 		indexArray[i] = (dirEntriesP[i] - &dirEntries[0]);
+#if defined(_WIN32) || defined(_WIN64)
 		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+#endif
 	}
+	printf("\n\n");
 
 	return entriesCount;
 }
@@ -509,14 +570,14 @@ uint8_t FE_CountFiles(const char * path, const char * pattern)
 	FILINFO fileInfo;
 	FRESULT res = f_findfirst(&dir, &fileInfo, path, pattern);
 
-
 	if(res == FR_OK && fileInfo.fname[0])
 	{
 		n++;
 		while(f_findnext(&dir, &fileInfo)==FR_OK && fileInfo.fname[0])
 			n++;
 	}
-
+	else
+		printf("FE_CountFiles() Error code %d\n", res);
 	f_closedir(&dir);
 
 	return n;
@@ -537,7 +598,7 @@ static int SortAlphaCompare(void* a, void* b)
 	else if (FE_IS_FILE(entryA) && FE_IS_FOLDER(entryB))
 		return 1;
 	else
-		return _stricmp(FE_ENTRY_NAME(entryA), FE_ENTRY_NAME(entryB));
+		return strcmp(FE_ENTRY_NAME(entryA), FE_ENTRY_NAME(entryB));
 }
 
 

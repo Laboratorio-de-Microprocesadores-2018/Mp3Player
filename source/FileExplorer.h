@@ -29,7 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /* Maximum files per directory supported in one directory. */
-#define MAX_FILES_PER_DIR 100
+#define MAX_FILES_PER_DIR 50
 
 #if defined(_WIN64) || defined(_WIN32)
 
@@ -88,10 +88,13 @@
 #define FE_ENTRY_TYPE(filinfo) (filinfo)->fattrib
 
 /* Check if an entry is a folder. */
-#define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==AM_DIR)
+#define FE_IS_FOLDER(filinfo) ((FE_ENTRY_TYPE(filinfo)&AM_DIR)==1)
+
+/* Check if an entry is hidden. */
+#define FE_IS_HIDDEN(filinfo) ((FE_ENTRY_TYPE(filinfo)&AM_HID)==1)
 
 /* Check if an entry is a file. */
-#define FE_IS_FILE(filinfo) (FE_ENTRY_TYPE(filinfo)==AM_ARC)
+#define FE_IS_FILE(filinfo) ((FE_ENTRY_TYPE(filinfo)&AM_ARC)==1)
 
 /* */
 #define FE_EOF(fp) 		 f_eof(fp)
@@ -124,8 +127,8 @@
 /* Drive ID. */
 typedef enum
 {
-	FE_USB,
-	FE_SD
+	FE_SD = 0,
+	FE_USB = 1,
 } FE_drive;
 
 /* Sort criteria for FE_Sort. */
@@ -152,9 +155,9 @@ status_t FE_Init(void);
 
 /*
  * @brief Deinitialize file explorer.
- * TODO!
+ *
  */
-void FE_DeInit(void);
+void FE_Deinit(void);
 
 /**
  * @brief Task function should be called periodically in the main loop
@@ -195,14 +198,21 @@ bool FE_DriveStatus(FE_drive drive);
  * @param dp
  * @param path
  */
+#if defined(_WIN64) || defined(_WIN32)
 FRESULT FE_OpenDir(DIR** dp, const char* path);
-
+#else
+FRESULT FE_OpenDir(DIR* dp, const char* path);
+#endif
 /**
  * @brief
  * @param dp
  * @param fno
  */
+#if defined(_WIN64) || defined(_WIN32)
 FRESULT FE_ReadDir(DIR* dp, FILINFO** fno);
+#else
+FRESULT FE_ReadDir(DIR* dp, FILINFO* fno);
+#endif
 
 /**
  * @brief
