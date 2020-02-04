@@ -221,7 +221,7 @@ void LM49450_Enable(bool enable);
 /**
  *
  */
-void LM49450_Mute();
+void LM49450_Mute(void);
 
 
 /**
@@ -234,13 +234,13 @@ void LM49450_SetVolume(uint8_t vol);
  *	@brief Increase the volume of the output.
  *	@return True if applied, false if maximum reached
  */
-bool LM49450_VolumeUp();
+bool LM49450_VolumeUp(void);
 
 /**
  *	@brief Decrease the volume of the output.
  *	@return True if applied, false if minimum reached
  */
-bool LM49450_VolumeDown();
+bool LM49450_VolumeDown(void);
 
 
 void LM49450_Set3DConfig(LM49450_3Dconfig * config);

@@ -210,7 +210,7 @@ typedef struct
 #define LM49450_I2C 					I2C0
 
 #define LM49450_I2C_MASTER_SLAVE_ADDR 	0b1111101
-#define LM49450_I2C_BAUDRATE 			10000U
+#define LM49450_I2C_BAUDRATE 			100000U
 
 // Store the status of the registers, init with default values
 static LM49450_Registers registers = {	.CTRL 		 = 0x00,
@@ -237,9 +237,7 @@ static void LM49450_WriteReg(uint8_t regAddress, uint8_t data)
 
 	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR,
 	transfer.direction 	 	 = kI2C_Write,
-	transfer.subaddress	     = 0,
 	transfer.subaddressSize  = 1,
-	transfer.data 			 = NULL,
 	transfer.dataSize 		 = 1,
 	transfer.flags 		 	 = kI2C_TransferDefaultFlag;
     transfer.subaddress 	 = regAddress;
@@ -247,6 +245,21 @@ static void LM49450_WriteReg(uint8_t regAddress, uint8_t data)
     I2C_MasterTransferBlocking(LM49450_I2C , &transfer);
 }
 
+
+static void LM49450_ReadReg(uint8_t regAddress, uint8_t* data)
+{
+	// I2C transfer configuration
+	static i2c_master_transfer_t transfer;
+
+	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR,
+	transfer.direction 	 	 = kI2C_Read,
+	transfer.subaddressSize  = 1,
+	transfer.dataSize 		 = 1,
+	transfer.flags 		 	 = kI2C_TransferDefaultFlag;
+    transfer.subaddress 	 = regAddress;
+    transfer.data  			 = data;
+    I2C_MasterTransferBlocking(LM49450_I2C , &transfer);
+}
 /**
  *
  */
@@ -256,7 +269,7 @@ void LM49450_GetDefaultConfig(LM49450_Config * config)
 	config->oversampleRate = LM49450_DAC_OSR_125;
 	config->defaultDacFilter = true;
 	config->oscillatorMode = LM49450_FixedFrequency;
-	//config->mute = false;
+	config->mute = false;
 	//config->lineInEnable = false;
 	//config->enable = true;
 	config->dither = LM49450_DitherDefault;
@@ -280,18 +293,18 @@ void LM49450_GetDefaultConfig(LM49450_Config * config)
  */
 void LM49450_Init(LM49450_Config * config)
 {
-	// Init I2C pins
-	port_pin_config_t pinConfig = {
-	kPORT_PullUp,                                            /* Internal pull-up resistor is enabled */
-	kPORT_FastSlewRate,                                      /* Fast slew rate is configured */
-	kPORT_PassiveFilterDisable,                              /* Passive filter is disabled */
-	kPORT_OpenDrainEnable,                                   /* Open drain is enabled */
-	kPORT_LowDriveStrength,                                  /* Low drive strength is configured */
-	kPORT_MuxAlt5,                                           /* Pin is configured as I2C0_SCL */
-	kPORT_UnlockRegister                                     /* Pin Control Register fields [15:0] are not locked */
-	};
-	PORT_SetPinConfig(PORTE, 24, &pinConfig); /* PORTE24 (pin 31) is configured as I2C0_SCL */
-	PORT_SetPinConfig(PORTE, 25, &pinConfig); /* PORTE25 (pin 32) is configured as I2C0_SDA */
+//	// Init I2C pins
+//	port_pin_config_t pinConfig = {
+//	kPORT_PullUp,                                            /* Internal pull-up resistor is enabled */
+//	kPORT_FastSlewRate,                                      /* Fast slew rate is configured */
+//	kPORT_PassiveFilterDisable,                              /* Passive filter is disabled */
+//	kPORT_OpenDrainEnable,                                   /* Open drain is enabled */
+//	kPORT_LowDriveStrength,                                  /* Low drive strength is configured */
+//	kPORT_MuxAlt5,                                           /* Pin is configured as I2C0_SCL */
+//	kPORT_UnlockRegister                                     /* Pin Control Register fields [15:0] are not locked */
+//	};
+//	PORT_SetPinConfig(PORTE, 24, &pinConfig); /* PORTE24 (pin 31) is configured as I2C0_SCL */
+//	PORT_SetPinConfig(PORTE, 25, &pinConfig); /* PORTE25 (pin 32) is configured as I2C0_SDA */
 
 	// Init I2C module
 	/*
@@ -311,7 +324,7 @@ void LM49450_Init(LM49450_Config * config)
 					 CTRL_SS(config->oscillatorMode)		| \
 					 CTRL_MUTE(0) 							| \
 					 CTRL_LINE_IN(config->lineInEnable) 	| \
-					 CTRL_ENABLE(0);
+					 CTRL_ENABLE(config->enable);
 
 	registers.CLK = CLK_DAC_DITHER(config->dither) | CLK_RDIV(config->MclkDiv);
 
@@ -342,6 +355,29 @@ void LM49450_Init(LM49450_Config * config)
 	LM49450_WriteReg(13, registers.CMP_1_MSB);
 	LM49450_WriteReg(14, registers.CMP_2_LSB);
 	LM49450_WriteReg(15, registers.CMP_2_MSB);
+
+	LM49450_Registers registersCheck;
+
+	LM49450_ReadReg(0,  &registersCheck.CTRL);
+	LM49450_ReadReg(1,  &registersCheck.CLK);
+	LM49450_ReadReg(2,  &registersCheck.CHRGPMP_FRQ);
+	LM49450_ReadReg(3,  &registersCheck.I2S_MODE);
+	LM49450_ReadReg(4,  &registersCheck.I2S_CLK);
+	LM49450_ReadReg(5,  &registersCheck.HP_3D_CTRL);
+	LM49450_ReadReg(6,  &registersCheck.SPK_3D_CTRL);
+	LM49450_ReadReg(7,  &registersCheck.HP_VOLUME);
+	LM49450_ReadReg(8,  &registersCheck.SPK_VOLUME);
+	LM49450_ReadReg(10, &registersCheck.CMP_0_LSB);
+	LM49450_ReadReg(11, &registersCheck.CMP_0_MSB);
+	LM49450_ReadReg(12, &registersCheck.CMP_1_LSB);
+	LM49450_ReadReg(13, &registersCheck.CMP_1_MSB);
+	LM49450_ReadReg(14, &registersCheck.CMP_2_LSB);
+	LM49450_ReadReg(15, &registersCheck.CMP_2_MSB);
+
+	if(memcmp(&registers,&registersCheck,sizeof(LM49450_Registers))==0)
+		printf("LM49450 Config OK! \n");
+	else
+		printf("LM49450 Config ERROR! \n");
 }
 
 /**
@@ -377,6 +413,10 @@ void LM49450_SetVolume(uint8_t vol)
 	LM49450_WriteReg(7,  registers.HP_VOLUME);
 }
 
+uint8_t LM49450_GetVolume(void)
+{
+	return registers.HP_VOLUME;
+}
 /**
  *
  */
