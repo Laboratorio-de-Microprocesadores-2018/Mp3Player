@@ -39,8 +39,8 @@
 
 /* SDHC base address, clock and card detection pin */
 #define BOARD_SDHC_BASEADDR 			SDHC
-#define BOARD_SDHC_CLKSRC 				kCLOCK_PllFllSelClk
-#define BOARD_SDHC_CLK_FREQ 			CLOCK_GetFreq(kCLOCK_PllFllSelClk)
+#define BOARD_SDHC_CLKSRC 				kCLOCK_Osc0ErClk
+#define BOARD_SDHC_CLK_FREQ 			CLOCK_GetFreq(BOARD_SDHC_CLKSRC)
 #define BOARD_SDHC_IRQ 					SDHC_IRQn
 #define BOARD_SDHC_CD_GPIO_BASE 		SD_DETECT_GPIO
 
@@ -51,7 +51,7 @@
 #define BOARD_SDHC_CD_PORT_BASE 		SD_DETECT_PORT
 #define BOARD_SDHC_CD_PORT_IRQ 			PORTD_IRQn
 #define BOARD_SDHC_CD_PORT_IRQ_HANDLER 	PORTD_IRQHandler
-#define BOARD_SDHC_CARD_INSERT_CD_LEVEL (1U)
+#define BOARD_SDHC_CARD_INSERT_CD_LEVEL (0U)
 
 /* DAC base address */
 #define BOARD_DAC_BASEADDR 				DAC0
