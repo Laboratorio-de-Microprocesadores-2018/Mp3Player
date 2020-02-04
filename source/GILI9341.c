@@ -16,6 +16,10 @@ void GILI9341_Init(void)
 	ILI9341_Init();
 }
 
+void GILI9341_Deinit(void)
+{
+	ILI9341_Deinit();
+}
 //void GILI9341_Flush(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const lv_color_t * color_map)
 void GILI9341_Flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
