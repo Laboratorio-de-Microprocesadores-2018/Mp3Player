@@ -11,7 +11,7 @@
 #include "fsl_llwu.h"
 #include "fsl_pmc.h"
 
-#define PM_WAKEUP_PIN 	BTN_SELECT_PIN	// SW2: PC5
+#define PM_WAKEUP_PIN 	6 //BTN_SELECT_PIN	// SW2: PC5
 
 static int callbackCount = 0;
 static PM_deinitCallback PM_callbackArray[PM_ATTACHED_MODULE_COUNT];

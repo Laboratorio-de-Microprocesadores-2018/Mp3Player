@@ -21,13 +21,13 @@ typedef void (*PM_deinitCallback)(void);
 /**
  *
  */
-void PM_EnterLowPowerMode();
+void PM_EnterLowPowerMode(void);
 
 /**
  *
  * @return True if recovered from Low Power mode. False if normal reset.
  */
-bool PM_Recover();
+bool PM_Recover(void);
 
 /**
  *
