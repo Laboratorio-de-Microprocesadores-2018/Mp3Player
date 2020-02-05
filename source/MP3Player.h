@@ -49,12 +49,13 @@ typedef enum
 /**
  *
  */
-status_t MP3_Init();
+status_t MP3_Init(void);
+void MP3_Deinit(void);
 
 /**
  *
  */
-void MP3_Task();
+void MP3_Task(void);
 
 /**
  *
@@ -69,28 +70,28 @@ void MP3_Play(char* dirPath, uint32_t index);
 /**
  *
  */
-void MP3_Next();
+void MP3_Next(void);
 
 /**
  *
  */
-void MP3_Prev();
+void MP3_Prev(void);
 
 /**
  *
  */
-void MP3_PauseResume();
+void MP3_PauseResume(void);
 
 /**
  *
  */
-void MP3_Stop();
+void MP3_Stop(void);
 
 
 /**
  *
  */
-int MP3_GetPlaybackTime(void);
+uint32_t MP3_GetPlaybackTime(void);
 
 
 
@@ -99,16 +100,16 @@ status_t MP3_ComputeSongDuration(char* path, uint32_t * seconds);
 /**
  * @brief Get current song duration
  */
-uint32_t MP3_GetTrackDuration();
+uint32_t MP3_GetTrackDuration(void);
 
 
-MP3_Status MP3_GetStatus();
+MP3_Status MP3_GetStatus(void);
 
 /**
  * Sets audio volume level
  */
 void MP3_SetVolume(uint32_t level);
-int MP3_GetVolume();
+int MP3_GetVolume(void);
 int MP3_GetMaxVolume(void);
 
 /**
@@ -119,12 +120,12 @@ void MP3_SetTrackChangedCB(void(*callback)(char* filename));
 /**
  *
  */
-uint32_t MP3_GetSongNumber();
+uint32_t MP3_GetSongNumber(void);
 
 /**
  *
  */
-uint32_t MP3_GetQueueLength();
+uint32_t MP3_GetQueueLength(void);
 
 
 #endif /* MP3PLAYER_H_ */
