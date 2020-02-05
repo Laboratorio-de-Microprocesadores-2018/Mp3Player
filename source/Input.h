@@ -27,6 +27,7 @@ typedef enum {
  *  Initialize input module
  */
 void Input_Init(void);
+void Input_Deinit(void);
 
 /**
  *  Read input

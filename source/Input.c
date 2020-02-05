@@ -66,12 +66,12 @@ uint8_t Input_ReadMenuButton(void)
 
 uint8_t Input_ReadPlayButton(void)
 {
-	return GPIO_PinRead(BTN_NEXT_GPIO,BTN_PLAY_PIN);
+	return GPIO_PinRead(BTN_PLAY_GPIO,BTN_PLAY_PIN);
 }
 
 uint8_t Input_ReadSelectButton(void)
 {
-	return GPIO_PinRead(BTN_SELECT_GPIO,BTN_SELECT_PIN);
+	return GPIO_PinRead(GPIOC,BTN_SELECT_PIN); // GPIOC HARDCODEADO!
 }
 
 uint8_t Input_ReadEncoderCount(void)
@@ -137,7 +137,10 @@ void Input_Init()
 
 }
 
-
+void Input_Deinit()
+{
+	FTM_Deinit(INPUT_FTM);
+}
 void Input_Start()
 {
     // PIT initialization
