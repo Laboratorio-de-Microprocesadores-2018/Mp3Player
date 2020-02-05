@@ -213,15 +213,15 @@ typedef struct
 #define LM49450_I2C_BAUDRATE 			100000U
 
 // Store the status of the registers, init with default values
-static LM49450_Registers registers = {	.CTRL 		 = 0x00,
+static LM49450_Registers registers = {	.CTRL 		 = 0x01,
 										.CLK 		 = 0x00,
 										.CHRGPMP_FRQ = 0x49,
 										.I2S_MODE 	 = 0x00,
 										.I2S_CLK 	 = 0x00,
 										.HP_3D_CTRL  = 0x00,
 										.SPK_3D_CTRL = 0x00,
-										.HP_VOLUME 	 = 0x00,
-										.SPK_VOLUME  = 0x00,
+										.HP_VOLUME 	 = 0x14,
+										.SPK_VOLUME  = 0x10,
 										.CMP_0_LSB 	 = 0x00,
 										.CMP_0_MSB 	 = 0x00,
 										.CMP_1_LSB 	 = 0x00,
@@ -270,8 +270,8 @@ void LM49450_GetDefaultSlaveConfig(LM49450_SlaveConfig * config)
 	config->defaultDacFilter = true;
 	config->oscillatorMode = LM49450_FixedFrequency;
 	config->mute = false;
-	//config->lineInEnable = false;
-	//config->enable = true;
+	config->lineInEnable = false;
+	config->enable = true;
 	config->dither = LM49450_DitherDefault;
 	config->MclkDiv; /////////////////////////////////////////////////
 	config->chargePumpDiv; ////////////////////////////////////////////
