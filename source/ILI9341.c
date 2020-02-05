@@ -6,6 +6,7 @@
  */
 
 #include "ILI9341.h"
+#include "pin_mux.h"
 #include "fsl_clock.h"
 #include "fsl_gpio.h"
 #include "fsl_port.h"
@@ -16,26 +17,19 @@
 #include "fsl_debug_console.h"
 #include "GUI.h"
 
-#define ILI9341_SPI 				SPI0
-#define DSPI_MASTER_CLK_SRC 		DSPI0_CLK_SRC
-#define DSPI_MASTER_CLK_FREQ 		CLOCK_GetFreq(DSPI0_CLK_SRC)
+#define ILI9341_SPI 				SPI1
+#define DSPI_MASTER_CLK_SRC 		DSPI1_CLK_SRC
+#define DSPI_MASTER_CLK_FREQ 		CLOCK_GetFreq(DSPI1_CLK_SRC)
 #define ILI9341_PCS_FOR_INIT 		kDSPI_Pcs0
 #define ILI9341_PCS_FOR_TRANSFER 	kDSPI_MasterPcs0
 
 #define ILI9341_DMA 				DMA0
-#define ILI9341_TX_REQ 				kDmaRequestMux0SPI0Tx
-#define ILI9341_RX_REQ 				kDmaRequestMux0SPI0Rx
+//#define ILI9341_TX_REQ 				kDmaRequestMux0SPI1
+#define ILI9341_RX_REQ 				kDmaRequestMux0SPI1
 #define ILI9341_RX_CHN 				4
 #define ILI9341_TX_CHN 				5
 #define ILI9341_INT_CHN				6
 
-#define DATA_COMMAND_GPIO 			GPIOC
-#define DATA_COMMAND_PORT 			PORTC
-#define DATA_COMMAND_PIN			4
-
-#define RESET_GPIO 					GPIOC
-#define RESET_PORT 					PORTC
-#define RESET_PIN					12
 
 #define TRANSFER_BAUDRATE 			50000000U
 
@@ -47,7 +41,7 @@ static edma_handle_t SPI_DMA_TxDataToIntermediaryHandle;
 static edma_handle_t SPI_DMA_IntermediaryToTxRegHandle;
 static dspi_transfer_t transfer;
 static uint32_t SPI_COMMAND;
-
+static uint8_t * endOfTransferPtr;
 
 static void ILI9341_InitSequence();
 
@@ -60,35 +54,26 @@ void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, 
 	 cosa que en el callback EDMA_DspiMasterCallback en fsl_dspi_edma.c NO HACE! */
 	 DSPI_FlushFifo(ILI9341_SPI, true, true);
 	 DSPI_ClearStatusFlags(base, (uint32_t)(kDSPI_EndOfQueueFlag));
-	 ILI9341_SendCommand(ILI9341_NOP);
+	 //ILI9341_SendCommand(ILI9341_NOP);
 
-	 GUI_FlushReady();
+	/* Advance pointer */
+	transfer.txData += transfer.dataSize;
+
+	if(transfer.txData >= endOfTransferPtr)
+	{
+		endOfTransferPtr = NULL;
+		GUI_FlushReady();
+	}
+	else
+	{
+		transfer.dataSize = MIN(511, endOfTransferPtr-transfer.txData);
+		DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
+	}
 }
 
 
 void ILI9341_Init()
 {
-	/* Init ports and pins */
-	CLOCK_EnableClock(kCLOCK_PortC);			/* Port B Clock Gate Control: Clock enabled */
-	CLOCK_EnableClock(kCLOCK_PortD);            /* Port D Clock Gate Control: Clock enabled */
-
-	PORT_SetPinMux(PORTD, 0, kPORT_MuxAlt2);	/* PORTD0 (pin 93) is configured as SPI0_PCS0 */
-	PORT_SetPinMux(PORTD, 1, kPORT_MuxAlt2);    /* PORTD1 (pin 94) is configured as SPI0_SCK */
-	PORT_SetPinMux(PORTD, 2, kPORT_MuxAlt2);    /* PORTD2 (pin 95) is configured as SPI0_SOUT */
-	PORT_SetPinMux(PORTD, 3, kPORT_MuxAlt2);    /* PORTD3 (pin 96) is configured as SPI0_SIN */
-	PORT_SetPinMux(RESET_PORT, RESET_PIN, kPORT_MuxAsGpio);  /* PORTC4 (pin 96) is configured as GPIO*/
-	PORT_SetPinMux(DATA_COMMAND_PORT, DATA_COMMAND_PIN, kPORT_MuxAsGpio); /* PORTC12 (pin 96) is configured as GPIO*/
-
-	gpio_pin_config_t GPIOConfig =
-	{
-			.pinDirection = kGPIO_DigitalOutput,
-			.outputLogic = 1U
-	};
-
-	GPIO_PinInit(RESET_GPIO,RESET_PIN, &GPIOConfig);
-	GPIO_PinInit(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,&GPIOConfig);
-
-
 	/* Init SPI master */
 	dspi_master_config_t masterConfig;
 	masterConfig.whichCtar = kDSPI_Ctar0;
@@ -117,17 +102,8 @@ void ILI9341_Init()
 
 	DMAMUX_Init(DMAMUX);
 
-	DMAMUX_SetSource(DMAMUX, ILI9341_TX_CHN,ILI9341_TX_REQ);
-	DMAMUX_EnableChannel(DMAMUX, ILI9341_RX_CHN);
-
 	DMAMUX_SetSource(DMAMUX, ILI9341_RX_CHN,ILI9341_RX_REQ);
-	DMAMUX_EnableChannel(DMAMUX, ILI9341_TX_CHN);
-
-	edma_config_t DMA_Config;
-	EDMA_GetDefaultConfig(&DMA_Config);
-	DMA_Config.enableDebugMode = false;
-
-	EDMA_Init(ILI9341_DMA, &DMA_Config);
+	DMAMUX_EnableChannel(DMAMUX, ILI9341_RX_CHN);
 
 	EDMA_CreateHandle(&(SPI_DMA_RxRegToRxDataHandle), ILI9341_DMA, ILI9341_RX_CHN);
 	EDMA_CreateHandle(&(SPI_DMA_TxDataToIntermediaryHandle), ILI9341_DMA, ILI9341_INT_CHN);
@@ -138,19 +114,23 @@ void ILI9341_Init()
 										&SPI_DMA_TxDataToIntermediaryHandle,
 										&SPI_DMA_IntermediaryToTxRegHandle);
 
-
 	ILI9341_Reset();
 
 	ILI9341_InitSequence();
+}
 
+void ILI9341_Deinit()
+{
+	DMAMUX_Deinit(DMAMUX);
+	DSPI_Deinit(ILI9341_SPI);
 }
 
 void ILI9341_Reset()
 {
-	GPIO_PinWrite(RESET_GPIO,RESET_PIN,0);
+	GPIO_PinWrite(LCD_RESET_GPIO,LCD_RESET_PIN,0);
 	uint64_t c = 1320000;
 	while(c>0) c--;
-	GPIO_PinWrite(RESET_GPIO,RESET_PIN,1);
+	GPIO_PinWrite(LCD_RESET_GPIO,LCD_RESET_PIN,1);
 	c = 1320000;
 	while(c>0) c--;
 }
@@ -206,7 +186,7 @@ static void ILI9341_InitSequence()
 	ILI9341_SendByte(DATA, 0xBE);
 	// --
 	ILI9341_SendByte(COMMAND, ILI9341_MADCTL);	//  Memory Access Control
-	ILI9341_SendByte(DATA, 0x28);
+	ILI9341_SendByte(DATA, 0x48);
 
 	ILI9341_SendByte(COMMAND, ILI9341_PIXFMT);
 	ILI9341_SendByte(DATA, 0x55);
@@ -380,13 +360,13 @@ static void ILI9341_InitSequence()
 }
 void ILI9341_SendByte(ILI9341_MsgType type, uint8_t byte)
 {
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,type);
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,type);
 	DSPI_MasterWriteCommandDataBlocking(ILI9341_SPI, (SPI_COMMAND & 0xFFFF0000) | byte);
 }
 
 void ILI9341_SendCommand(uint16_t command)
 {
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,COMMAND);
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,COMMAND);
 	DSPI_MasterWriteCommandDataBlocking(ILI9341_SPI, (SPI_COMMAND & 0xFFFF0000) | command);
 }
 
@@ -394,24 +374,15 @@ void ILI9341_SendDataBlocking(uint8_t * data, uint32_t len)
 {
 	assert(ILI9341_IsBusy()==false);
 
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
 
-	uint8_t rxData[5300];
+	dspi_transfer_t t;
+	t.txData = data;
+	t.rxData = NULL;
+	t.dataSize = len;
+	t.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
 
-	dspi_transfer_t transfer;
-	transfer.txData = data;
-	transfer.rxData = rxData;
-	transfer.dataSize = len;
-	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
-
-
-
-	for(int i=0; i<len;i++)
-		DSPI_MasterWriteCommandDataBlocking(ILI9341_SPI, (SPI_COMMAND & 0xFFFF0000) | data[i]);
-
-	return;
-
-	status_t s = DSPI_MasterTransferBlocking(ILI9341_SPI, &transfer);
+	status_t s = DSPI_MasterTransferBlocking(ILI9341_SPI, &t);
 
 	if(s != kStatus_Success)
 		PRINTF("ERROR IN TRANSFER\n");
@@ -422,18 +393,20 @@ void ILI9341_SendData(uint8_t * data, uint32_t len)
 {
 	assert(ILI9341_IsBusy()==false);
 
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
+
 
 	/* Config transfer */
 	transfer.txData = data;
 	transfer.rxData = NULL;
-	transfer.dataSize = len;
+	transfer.dataSize = MIN(511,len);
 	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
+	endOfTransferPtr = data + len;
 
 	status_t s = DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
 
-	assert(s==kStatus_Success);
-
+	if(s == kStatus_DSPI_OutOfRange)
+		printf("ILI9341_SendData() Out of range!\n");
 }
 
 void ILI9341_SendRepeatedData(uint8_t * data,uint8_t len,uint32_t n)
@@ -465,7 +438,7 @@ void ILI9341_SendRepeatedData(uint8_t * data,uint8_t len,uint32_t n)
 	EDMA_SetTransferConfig(ILI9341_DMA, ILI9341_TX_CHN, &transfer, NULL);
 
 
-	GPIO_PinWrite(DATA_COMMAND_GPIO,DATA_COMMAND_PIN,DATA);
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
 	DSPI_EnableDMA(ILI9341_SPI, kDSPI_TxDmaEnable);
 	DSPI_StartTransfer(ILI9341_SPI);
 

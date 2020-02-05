@@ -80,13 +80,13 @@ typedef enum {COMMAND,DATA}ILI9341_MsgType;
 /**
  * 	Initialize TFT display
  */
-void ILI9341_Init();
-
+void ILI9341_Init(void);
+void ILI9341_Deinit(void);
 
 /**
  * Reset display
  */
-void ILI9341_Reset();
+void ILI9341_Reset(void);
 
 
 /**
@@ -116,7 +116,7 @@ void ILI9341_SendRepeatedData(uint8_t * data, uint8_t len, uint32_t n);
 /**
  *  Return true if there is a transfer happening through DMA
  */
-bool ILI9341_IsBusy();
+bool ILI9341_IsBusy(void);
 
 
 #endif /* ILI9341_H_ */
