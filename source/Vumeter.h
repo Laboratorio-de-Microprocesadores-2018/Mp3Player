@@ -12,10 +12,11 @@
 #define NSAMPLES 1024
 #define NBINS 8
 
-void Vumeter_Init();
+void Vumeter_Init(void);
+void Vumeter_Deinit(void);
 void Vumeter_Generate(int16_t * s);
-void Vumeter_Display();
-void Vumeter_Clear();
-bool Vumeter_BackBufferEmpty();
+void Vumeter_Display(void);
+void Vumeter_Clear(void);
+bool Vumeter_BackBufferEmpty(void);
 
 #endif /* VUMETER_H_ */

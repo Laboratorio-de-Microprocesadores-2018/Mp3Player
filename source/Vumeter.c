@@ -20,6 +20,7 @@ static uint16_t binLimits[NBINS+1];
 
 static bool backBufferEmpty;
 
+static bool init = false;
 // Static colors
 
 static Color Green  = {.RGB={0,20,0}};
@@ -47,7 +48,14 @@ void Vumeter_Init()
 
 	backBufferEmpty = true;
 
+	init = true;
 
+
+}
+
+void Vumeter_Deinit()
+{
+	LedMatrix_Deinit();
 }
 
 bool Vumeter_BackBufferEmpty()
@@ -58,68 +66,71 @@ bool Vumeter_BackBufferEmpty()
 // ~760us xxxx Ahora tarda 1.2~1.3ms (Si se modifica la funcion, medir de vuelta!)
 void Vumeter_Generate(int16_t * ss)
 {
-	backBufferEmpty = false;
-
-	// Take only one channel samples (skip right channel)
-	int16_t s[NSAMPLES];
-	for(int i=0; i<NSAMPLES; i++)
-		s[i]=ss[2*i];
-
-	// Convert samples to float
-	float32_t samples[NSAMPLES];
-	arm_q15_to_float(s,samples,NSAMPLES);
-
-	// Buffer to store complex FFT
-	float32_t fftComplex[2*NSAMPLES];
-	arm_rfft_fast_f32(&fftInstance,samples, fftComplex,0);
-
-	// Compute magnitude
-	arm_cmplx_mag_f32(fftComplex,samples,NSAMPLES);
-
-	// Compute mean of FFT magnitude for each bin
-	float32_t mean[NBINS] = {};
-	for(int i=0; i<NBINS; i++)
+	if(init == true)
 	{
-		arm_mean_f32(&samples[binLimits[i]], binLimits[i+1]-binLimits[i], &mean[i]);
-		mean[i] = log10f(mean[i]);
-	}
+		backBufferEmpty = false;
 
-	// Find its maximum
-//	float32_t max;
-//	uint32_t index;
-//	arm_max_f32(mean, NBINS, &max, &index);
+		// Take only one channel samples (skip right channel)
+		int16_t s[NSAMPLES];
+		for(int i=0; i<NSAMPLES; i++)
+			s[i]=ss[2*i];
 
-	// Convert to an integer to send to bars on the display
-	// (constrain 0-NBINS)
-	uint8_t binValues[NBINS] = {};
-	for(int i=0; i<NBINS; i++)
-		binValues[i] = MIN(MAX((uint8_t)((mean[i]+1)/2.5*NBINS), 0), NBINS);
+		// Convert samples to float
+		float32_t samples[NSAMPLES];
+		arm_q15_to_float(s,samples,NSAMPLES);
 
+		// Buffer to store complex FFT
+		float32_t fftComplex[2*NSAMPLES];
+		arm_rfft_fast_f32(&fftInstance,samples, fftComplex,0);
 
-	uint8_t offsetX =  MATRIX_HEIGHT-1;
-	int8_t dirX = -1;
+		// Compute magnitude
+		arm_cmplx_mag_f32(fftComplex,samples,NSAMPLES);
 
-	uint8_t offsetY = MATRIX_HEIGHT-1;
-	int8_t dirY = -1;
-
-	for(int y=0; y<MATRIX_HEIGHT; y++)
-	{
-		int x;
-		for(x=0; x < binValues[y]; x++)
+		// Compute mean of FFT magnitude for each bin
+		float32_t mean[NBINS] = {};
+		for(int i=0; i<NBINS; i++)
 		{
-			if (x < 3)
-				screen[offsetY + dirY * y][offsetX + dirX * x] = Green;
-			else if (3 <= x && x < 5)
-				screen[offsetY + dirY * y][offsetX + dirX * x] = Yellow;
-			else if (5 <= x && x < 7)
-				screen[offsetY + dirY * y][offsetX + dirX * x] = Orange;
-			else if (x == 7)
-				screen[offsetY + dirY * y][offsetX + dirX * x] = Red;
+			arm_mean_f32(&samples[binLimits[i]], binLimits[i+1]-binLimits[i], &mean[i]);
+			mean[i] = log10f(mean[i]);
 		}
-		while(x<MATRIX_WIDTH)
+
+		// Find its maximum
+	//	float32_t max;
+	//	uint32_t index;
+	//	arm_max_f32(mean, NBINS, &max, &index);
+
+		// Convert to an integer to send to bars on the display
+		// (constrain 0-NBINS)
+		uint8_t binValues[NBINS] = {};
+		for(int i=0; i<NBINS; i++)
+			binValues[i] = MIN(MAX((uint8_t)((mean[i]+1)/2.5*NBINS), 0), NBINS);
+
+
+		uint8_t offsetX =  MATRIX_HEIGHT-1;
+		int8_t dirX = -1;
+
+		uint8_t offsetY = MATRIX_HEIGHT-1;
+		int8_t dirY = -1;
+
+		for(int y=0; y<MATRIX_HEIGHT; y++)
 		{
-			screen[offsetY + dirY * y][offsetX + dirX * x] = Clear;
-			x++;
+			int x;
+			for(x=0; x < binValues[y]; x++)
+			{
+				if (x < 3)
+					screen[offsetY + dirY * y][offsetX + dirX * x] = Green;
+				else if (3 <= x && x < 5)
+					screen[offsetY + dirY * y][offsetX + dirX * x] = Yellow;
+				else if (5 <= x && x < 7)
+					screen[offsetY + dirY * y][offsetX + dirX * x] = Orange;
+				else if (x == 7)
+					screen[offsetY + dirY * y][offsetX + dirX * x] = Red;
+			}
+			while(x<MATRIX_WIDTH)
+			{
+				screen[offsetY + dirY * y][offsetX + dirX * x] = Clear;
+				x++;
+			}
 		}
 	}
 
