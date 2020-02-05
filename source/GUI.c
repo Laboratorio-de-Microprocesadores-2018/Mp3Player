@@ -58,7 +58,7 @@
 #define ALBUM_ART_SPACING		(10)
 
 /** Video buffer size. */
-#define LV_VDB_BUFF_SIZE (uint32_t)(LV_HOR_RES_MAX*LV_VER_RES_MAX/20)
+#define LV_VDB_BUFF_SIZE       	(LV_HOR_RES_MAX*LV_VER_RES_MAX/10) //(uint32_t)255
 
 
 #define GUI_TIME_STRING_BUFFER_LENGTH	9
@@ -206,7 +206,7 @@ typedef struct
 	Screen_t* currentScreen;
 
 	/* File browser path and depth. */
-	uint8_t browserPath[255];
+	char browserPath[255];
 	uint8_t browserDepth;
 
 	/* Task to make volume bar hide automatically. */
@@ -305,8 +305,8 @@ LV_IMG_DECLARE(defaultAlbumArt);
 /* Display buffer for lvgl. */
 static lv_disp_buf_t dispBuffer;
 
-static LV_ATTRIBUTE_MEM_ALIGN lv_color_t vdb_buf1[LV_VDB_BUFF_SIZE];
-static LV_ATTRIBUTE_MEM_ALIGN lv_color_t vdb_buf2[LV_VDB_BUFF_SIZE];
+static lv_color_t vdb_buf1[LV_VDB_BUFF_SIZE]; //LV_ATTRIBUTE_MEM_ALIGN;
+static lv_color_t vdb_buf2[LV_VDB_BUFF_SIZE]; //LV_ATTRIBUTE_MEM_ALIGN;
 
 
 
@@ -333,7 +333,11 @@ void GUI_Init(void)
 	// FE_SetDriveChangedCB(GUI_UpdateDriveStatus); TODO!
 }
 
-
+void GUI_Deinit(void)
+{
+	GILI9341_Init();
+	lv_deinit();
+}
 /**
 * Create a mp3 graphic user interface
 */
@@ -371,14 +375,13 @@ void GUI_Create(void)
  */
 void GUI_Task()
 {
-	lv_task_handler();
-
 	static uint32_t lastTickTime;
 
 	uint32_t currTime = GET_TICK; 
 
 	if(currTime-lastTickTime >= 1)
 	{
+		lv_task_handler();
 		lv_tick_inc(currTime-lastTickTime);
 		lastTickTime = currTime;
 	}
@@ -794,20 +797,24 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		DirEntry_t* direntry = (DirEntry_t*)(obj->user_data);
 		switch (direntry->type)
 		{
-		case ENTRY_FOLDER:
-			GUI_OpenFolder(lv_list_get_btn_text(obj));
-			break;
-		case ENTRY_SONG:
-		{
-			//char filePath[255];
-			//sprintf(filePath, "%s\\%s.mp3", gui.browserPath, lv_list_get_btn_text(obj));
-			MP3_SetSongsQueue(gui.browserScreen.songsIndex, gui.browserScreen.nSongs);
-			MP3_Play(gui.browserPath, direntry->index);
+			case ENTRY_FOLDER:
+			{
+				GUI_OpenFolder(lv_list_get_btn_text(obj));
+				break;
+			}
+			case ENTRY_SONG:
+			{
+				//char filePath[255];
+				//sprintf(filePath, "%s\\%s.mp3", gui.browserPath, lv_list_get_btn_text(obj));
+				MP3_SetSongsQueue(gui.browserScreen.songsIndex, gui.browserScreen.nSongs);
+				MP3_Play(gui.browserPath, direntry->index);
 
-			/* Show music screen */
-			GUI_ShowScreen(MUSIC_TAB);
-		}
-		break;
+				/* Show music screen */
+				GUI_ShowScreen(MUSIC_TAB);
+				break;
+			}
+			case ENTRY_FILE:
+				break;
 		}
 	}
 	break;
@@ -830,8 +837,6 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 
 static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 {
-	TabID_t tabId = 0;
-
 	lv_key_t pressedKey = LV_KEY_HOME;
 
 	switch (event)
@@ -876,8 +881,6 @@ static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 
 static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 {
-	TabID_t tabId = 0;
-
 	lv_key_t pressedKey = LV_KEY_HOME;
 
 	switch (event)
@@ -951,8 +954,6 @@ static void GUI_OpenFolder(char* folder)
 	if (strcmp(folder, ".") == 0)
 		return;
 
-	/* Delete all previous objects from the list. */
-	lv_list_clean(gui.browserScreen.list);
 
 	// Now build the new path
 	char newPath[255];
@@ -976,19 +977,32 @@ static void GUI_OpenFolder(char* folder)
 
 		/* Redirect SD path. */
 		if (strcmp(folder, "SD") == 0)
+#if defined(_WIN64) || defined(_WIN32)
 			strcat(newPath, "Music");
+#else
+			strcat(newPath, "0:/");
+#endif
 		/* Redirect USB path. */
 		else if (strcmp(folder, "USB") == 0)
+#if defined(_WIN64) || defined(_WIN32)
 			strcat(newPath, "Music");
+#else
+			strcat(newPath, "1:/");
+#endif
 		/* Folow folder path. */
 		else
 		{
 			if (gui.browserDepth != 0)
+#if defined(_WIN64) || defined(_WIN32)
 				strcat(newPath, "\\");
+#else
+			strcat(newPath, "/");
+#endif
 			strcat(newPath, folder);
 		}
 
 	}
+
 
 	bool status = GUI_ListFolderContents(newPath);
 
@@ -1001,7 +1015,8 @@ static void GUI_OpenFolder(char* folder)
 	else
 	{
 		/* If listing failed keep on current path.*/
-		GUI_ListFolderContents(gui.browserPath);
+		status = GUI_ListFolderContents(gui.browserPath);
+		assert(status==true);
 	}
 
 	//lv_group_focus_obj(gui.browserScreen.list);
@@ -1014,6 +1029,9 @@ static void GUI_OpenFolder(char* folder)
 static bool GUI_ListFolderContents(char* path)
 {
 	lv_obj_t* button = NULL;
+
+	/* Delete all previous objects from the list. */
+	lv_list_clean(gui.browserScreen.list);
 
 	/* If root folder, only show drives in list. */
 	if (*path == '\0')
@@ -1038,75 +1056,87 @@ static bool GUI_ListFolderContents(char* path)
 	}
 
 	/* Sort folder.*/
-	int32_t folderIndex[MAX_FILES_PER_DIR];
+	uint32_t folderIndex[MAX_FILES_PER_DIR];
 	int32_t nFiles = FE_Sort(SORT_ALPHABETIC, path, folderIndex);
 	int32_t nSongs = 0;
 	if (nFiles > 0)
 	{
-		// Comentado porque el mismo sistema de archivos tiene el directorio ".." !!
+#if defined(_WIN64) || defined(_WIN32)
+		// El mismo sistema de archivos tiene el directorio ".." !!
+#else
 		///* If succeeded, add button to go up one level in folder structure. */
-		//button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, "..");
-		//button->user_data = lv_mem_alloc(sizeof(EntryType_t));
-		//*(EntryType_t*)button->user_data = ENTRY_FOLDER;
-		////lv_group_add_obj(gui.browserScreen.group, button);
-		//lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+		button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, "..");
+		button->user_data = lv_mem_alloc(sizeof(EntryType_t));
+		*(EntryType_t*)button->user_data = ENTRY_FOLDER;
+		//lv_group_add_obj(gui.browserScreen.group, button);
+		lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+#endif
+
 
 		FILINFO de;
 		for (int i = 0; i < nFiles; i++)
 		{
 			FE_GetFileN(path, folderIndex[i], &de);
-
-			if (FE_IS_FOLDER(&de))
+			if(FE_IS_HIDDEN(&de) == false)
 			{
-				printf("Directory: %s\\%s\n", path, FE_ENTRY_NAME(&de));
-
-				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, FE_ENTRY_NAME(&de));
-
-				DirEntry_t* direntry = (DirEntry_t*)lv_mem_alloc(sizeof(DirEntry_t));
-				direntry->type = ENTRY_FOLDER;
-				direntry->index = folderIndex[i];
-				button->user_data = direntry;
-			}
-			else if (FE_ENTRY_NAME(&de) != NULL)
-			{
-				char name[150];
-
-				strcpy(name, FE_ENTRY_NAME(&de));
-
-				char* ext = strrchr(name, '.');
-				*ext++ = '\0';
-
-				// Lowercase extension
-				char* p = ext;
-				for (; *p; ++p)* p = tolower(*p);
-
-				if (strcmp(ext, "mp3") == 0)
+				if (FE_IS_FOLDER(&de))
 				{
-					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_AUDIO, name);
+					printf("Directory: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+
+					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, FE_ENTRY_NAME(&de));
 
 					DirEntry_t* direntry = (DirEntry_t*)lv_mem_alloc(sizeof(DirEntry_t));
-					direntry->type = ENTRY_SONG;
-					direntry->index = nSongs;
-					gui.browserScreen.songsIndex[nSongs++] = folderIndex[i];
+					direntry->type = ENTRY_FOLDER;
+					direntry->index = folderIndex[i];
 					button->user_data = direntry;
-					printf("Song: %s\\%s\n", path, FE_ENTRY_NAME(&de));
 				}
-				else
+				else if (FE_ENTRY_NAME(&de) != NULL)
 				{
-					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_FILE, FE_ENTRY_NAME(&de));
-					lv_obj_set_click(button, false);
-					lv_btn_set_state(button, LV_BTN_STATE_INA);
+					char name[150];
 
-					DirEntry_t* direntry = (DirEntry_t*)lv_mem_alloc(sizeof(DirEntry_t));
-					direntry->type = ENTRY_FILE;
-					direntry->index = -1;
-					button->user_data = direntry;
-					printf("File: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+					strcpy(name, FE_ENTRY_NAME(&de));
+
+					char* ext = strrchr(name, '.');
+					if(ext!=NULL)
+					{
+						*ext++ = '\0';
+						// Lowercase extension
+						char* p = ext;
+						for (; *p; ++p)
+							*p = tolower(*p);
+					}
+					if(ext!=NULL && strcmp(ext, "mp3") == 0)
+					{
+						button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_AUDIO, name);
+
+						DirEntry_t* direntry = (DirEntry_t*)lv_mem_alloc(sizeof(DirEntry_t));
+						direntry->type = ENTRY_SONG;
+						direntry->index = nSongs;
+						gui.browserScreen.songsIndex[nSongs++] = folderIndex[i];
+						button->user_data = direntry;
+	#if defined(_WIN32) || defined(_WIN64)
+						printf("Song: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+	#endif
+					}
+					else
+					{
+						button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_FILE, FE_ENTRY_NAME(&de));
+						lv_obj_set_click(button, false);
+						lv_btn_set_state(button, LV_BTN_STATE_INA);
+
+						DirEntry_t* direntry = (DirEntry_t*)lv_mem_alloc(sizeof(DirEntry_t));
+						direntry->type = ENTRY_FILE;
+						direntry->index = -1;
+						button->user_data = direntry;
+	#if defined(_WIN32) || defined(_WIN64)
+						printf("File: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+	#endif
+					}
 				}
-			}
 
-			//lv_group_add_obj(gui.browserScreen.group, button);
-			lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+				//lv_group_add_obj(gui.browserScreen.group, button);
+				lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+			}
 
 		}
 		gui.browserScreen.nSongs = nSongs;
@@ -1406,7 +1436,8 @@ static void GUI_SetTrackInfo(char * _fileName)
 
 		/* Delete extension. */
 		char* dot = strrchr(fileName, '.');
-		*dot = '\0';
+		if(dot != NULL)
+			*dot = '\0';
 
 		/** Try to identify artist from filename looking for
 		a '-' separation token */
@@ -1482,7 +1513,7 @@ static void GUI_UpdateProgressBar(lv_task_t* task)
  * @param[in] drive Drive number: SD=0, USB=1
  * @param[in] status true: Drive is mounted false: Drive is unavailable
  */
-void GUI_UpdateDriveStatus(void)
+void GUI_UpdateDriveStatus(uint8_t drive, bool status)
 {
 	/* If root folder with drives is currently shown, update it. */
 	if (gui.currentScreen == (Screen_t*)& gui.browserScreen)
@@ -1491,6 +1522,12 @@ void GUI_UpdateDriveStatus(void)
 		{
 			GUI_ListFolderContents("\0");
 		}
+	}
+	else if(gui.browserPath[0]==('0'+drive) && status == false)
+	{
+		gui.browserPath[0] = '\0';
+		gui.browserDepth = 0;
+		GUI_ListFolderContents("\0");
 	}
 }
 
@@ -1558,12 +1595,8 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 
-    if(Input_ReadSelectButton() == 0)
-    {
-    	data->state = LV_INDEV_STATE_PR;
-    	data->key = LV_KEY_ENTER;
-    }
-    else if(Input_ReadNextButton() == 0)
+
+    if(Input_ReadNextButton() == 0)
     {
     	data->state = LV_INDEV_STATE_PR;
     	data->key = LV_KEY_RIGHT;
@@ -1583,11 +1616,11 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 		data->state = LV_INDEV_STATE_PR;
 		data->key = LV_KEY_DOWN;
 	}
-    else
-    {
-    	data->state = LV_INDEV_STATE_REL;
-    	data->key = LV_KEY_HOME;
-    }
+	else if(Input_ReadSelectButton() == 0)
+       {
+       	data->state = LV_INDEV_STATE_PR;
+       	data->key = LV_KEY_ENTER;
+       }
 
     return false;
 }
