@@ -9,9 +9,9 @@
 #ifndef ASSERT_H_
 #define ASSERT_H_
 
-void __assertion_failed(const char *file, int line, const char *func, const char *failedExpr) __attribute__ ((noreturn));
+void __assert_func(const char *file, int line, const char *func, const char *failedExpr) __attribute__ ((noreturn));
 #define assert(expr) \
 		 if (expr){} \
-		 else __assertion_failed(__FILE__, __LINE__, __FUNCTION__, #expr)
+		 else __assert_func(__FILE__, __LINE__, __FUNCTION__, #expr)
 
 #endif
