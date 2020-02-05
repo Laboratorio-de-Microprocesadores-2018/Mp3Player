@@ -197,7 +197,7 @@ typedef struct
 	bool clockLineMaster;
 	LM49450_3Dconfig headphone3D;
 	LM49450_3Dconfig speaker3D;
-}LM49450_Config;
+}LM49450_SlaveConfig;
 
 /////////////////////////////////////////////////////////////////////////////////
 //                         				API	  		                           //
@@ -206,12 +206,12 @@ typedef struct
 /**
  *
  */
-void LM49450_GetDefaultConfig(LM49450_Config * config);
+void LM49450_GetDefaultSlaveConfig(LM49450_SlaveConfig * config);
 
 /**
  *
  */
-void LM49450_Init(LM49450_Config * config);
+void LM49450_SlaveInit(LM49450_SlaveConfig * config);
 
 /**
  *
@@ -229,7 +229,7 @@ void LM49450_Mute(void);
  *
  */
 void LM49450_SetVolume(uint8_t vol);
-
+uint8_t LM49450_GetVolume(void);
 /**
  *	@brief Increase the volume of the output.
  *	@return True if applied, false if maximum reached

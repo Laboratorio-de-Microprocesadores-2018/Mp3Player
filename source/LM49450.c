@@ -263,7 +263,7 @@ static void LM49450_ReadReg(uint8_t regAddress, uint8_t* data)
 /**
  *
  */
-void LM49450_GetDefaultConfig(LM49450_Config * config)
+void LM49450_GetDefaultSlaveConfig(LM49450_SlaveConfig * config)
 {
 	config->reference = LM49450_InternalRef;
 	config->oversampleRate = LM49450_DAC_OSR_125;
@@ -291,7 +291,7 @@ void LM49450_GetDefaultConfig(LM49450_Config * config)
 /**
  *
  */
-void LM49450_Init(LM49450_Config * config)
+void LM49450_SlaveInit(LM49450_SlaveConfig * config)
 {
 //	// Init I2C pins
 //	port_pin_config_t pinConfig = {
