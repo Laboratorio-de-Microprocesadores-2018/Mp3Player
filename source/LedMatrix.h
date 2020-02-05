@@ -80,12 +80,12 @@ static const RED={};
 /**
  *
  */
-void LedMatrix_Init();
+void LedMatrix_Init(void);
 
 /**
  *
  */
-void LedMatrix_Clear();
+void LedMatrix_Clear(void);
 
 /**
  *
@@ -105,8 +105,8 @@ void LedMatrix_PlainColor(Color c);
 /**
  *
  */
-void LedMatrix_ColorTest();
-void LedMatrix_ShortColorTest();
+void LedMatrix_ColorTest(void);
+void LedMatrix_ShortColorTest(void);
 /**
  *
  */
@@ -115,11 +115,11 @@ void LedMatrix_Print(char * c, uint8_t len,Color fontColor, Color backgroundColo
 /**
  *
  */
-void LedMatrix_StopScrolling();
+void LedMatrix_StopScrolling(void);
 
 /**
  *
  */
-void LedMatrix_StartScrolling();
+void LedMatrix_StartScrolling(void);
 
 #endif /* LED_MATRIX_H_ */

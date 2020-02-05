@@ -22,28 +22,28 @@
 //                       Constants and macro definitions                       //
 /////////////////////////////////////////////////////////////////////////////////
 
-#define TEXT_BUFFER_LEN 40
-#define NUMBER_OF_LEDS (MATRIX_WIDTH * MATRIX_HEIGHT)
-#define SCREEN_BUFFER_SIZE  (NUMBER_OF_LEDS * 3)
-#define SCROLL_PERIOD 0.17
+#define TEXT_BUFFER_LEN 		40
+#define NUMBER_OF_LEDS 			(MATRIX_WIDTH * MATRIX_HEIGHT)
+#define SCREEN_BUFFER_SIZE  	(NUMBER_OF_LEDS * 3)
+#define SCROLL_PERIOD 			0.17
 
-#define LED_SPI SPI0
-#define LED_DMA_MUX DMAMUX
-#define LED_DMA DMA0
-#define LED_DMA_Tx_SOURCE kDmaRequestMux0SPI0Tx
-#define LED_DMA_Rx_SOURCE kDmaRequestMux0SPI0Rx
+#define LED_SPI 				SPI2
+#define LED_DMA_MUX 			DMAMUX
+#define LED_DMA 				DMA0
+#define LED_DMA_SOURCE 			kDmaRequestMux0SPI2
 
-#define DSPI_MASTER_CLK_FREQ CLOCK_GetFreq(DSPI0_CLK_SRC)
-#define LED_PCS_FOR_INIT kDSPI_Pcs0
-#define LED_PCS_FOR_TRANSFER kDSPI_MasterPcs0
-#define PADDING_SIZE 13
-#define TRANSFER_SIZE 384U         /* Transfer dataSize */
-#define TRANSFER_BAUDRATE 2500000U /* Transfer baudrate 2.5Mhz */
-#define TX_CHANNEL 3
-#define RX_CHANNEL 4
-#define INTERMEDIARY_CHANNEL 5
 
-#define COLOR_TEST 0
+#define DSPI_MASTER_CLK_FREQ	CLOCK_GetFreq(DSPI0_CLK_SRC)
+#define LED_PCS_FOR_INIT 		kDSPI_Pcs0
+#define LED_PCS_FOR_TRANSFER 	kDSPI_MasterPcs0
+#define PADDING_SIZE 			13
+#define TRANSFER_SIZE 			384U         /* Transfer dataSize */
+#define TRANSFER_BAUDRATE 		2500000U /* Transfer baudrate 2.5Mhz */
+#define TX_CHANNEL 				1
+#define RX_CHANNEL 				2
+#define INTERMEDIARY_CHANNEL 	3
+
+#define COLOR_TEST 				0
 
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
@@ -77,6 +77,8 @@ static uint16_t screenTextBufferLength;
 // Bit to be send to SPI
 
 static uint16_t bitstream[2*PADDING_SIZE+TRANSFER_SIZE] = {};
+
+static bool init = false;
 
 // Table to encode the colors through SPI
 static const uint16_t bitCode[] = {
@@ -128,32 +130,12 @@ static void LedMatrix_ScrollText();
 
 void LedMatrix_Init(void)
 {
-	CLOCK_EnableClock(kCLOCK_PortD);                    /* Port D Clock Gate Control: Clock enabled */
-	PORT_SetPinMux(PORTD, 0, kPORT_MuxAlt2);            /* PORTD0 (pin 93) is configured as SPI0_PCS0 */
-	PORT_SetPinMux(PORTD, 1, kPORT_MuxAlt2);            /* PORTD1 (pin 94) is configured as SPI0_SCK */
-	PORT_SetPinMux(PORTD, 2, kPORT_MuxAlt2);            /* PORTD2 (pin 95) is configured as SPI0_SOUT */
-	PORT_SetPinMux(PORTD, 3, kPORT_MuxAlt2);            /* PORTD3 (pin 96) is configured as SPI0_SIN */
-
-	/* DMA Mux setting and EDMA init */
-
 	/* DMA MUX init */
 	DMAMUX_Init(LED_DMA_MUX);
-	DMAMUX_SetSource(LED_DMA_MUX, TX_CHANNEL,(uint8_t)LED_DMA_Tx_SOURCE);
-	DMAMUX_EnableChannel(LED_DMA_MUX, TX_CHANNEL);
-	DMAMUX_SetSource(LED_DMA_MUX, RX_CHANNEL,(uint8_t)LED_DMA_Rx_SOURCE);
+	//DMAMUX_SetSource(LED_DMA_MUX, TX_CHANNEL,(uint8_t)LED_DMA_Tx_SOURCE);
+	//DMAMUX_EnableChannel(LED_DMA_MUX, TX_CHANNEL);
+	DMAMUX_SetSource(LED_DMA_MUX, RX_CHANNEL,(uint8_t)LED_DMA_SOURCE);
 	DMAMUX_EnableChannel(LED_DMA_MUX, RX_CHANNEL);
-
-	/* EDMA init */
-	/*
-	 * userConfig.enableRoundRobinArbitration = false;
-	 * userConfig.enableHaltOnError = true;
-	 * userConfig.enableContinuousLinkMode = false;
-	 * userConfig.enableDebugMode = false;
-	 */
-	edma_config_t userConfig;
-	EDMA_GetDefaultConfig(&userConfig);
-	EDMA_Init(LED_DMA, &userConfig);
-
 
 	/* SPI master config */
 	dspi_master_config_t masterConfig;
@@ -201,6 +183,8 @@ void LedMatrix_Init(void)
 	scrollIndex = 0;
 	scrolling=false;
 
+	init = true;
+
 	//sysTickInit();
 	// Add to systick periodic callback to scroll text
 	//sysTickAddCallback(LedMatrix_ScrollText,SCROLL_PERIOD);
@@ -211,7 +195,11 @@ void LedMatrix_Init(void)
 	LedMatrix_Clear();
 }
 
-
+void LedMatrix_Deinit()
+{
+	DMAMUX_Deinit(DMAMUX);
+	DSPI_Deinit(LED_SPI);
+}
 void LedMatrix_Clear(void)
 {
 	Color c = {.val=0};
@@ -513,7 +501,8 @@ void LedMatrix_StartScrolling()
 
 static void LedMatrix_Update()
 {
-	DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
+	if(init == true)
+		DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
 }
 
 static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
