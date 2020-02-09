@@ -10,57 +10,62 @@
 #include "fsl_smc.h"
 #include "fsl_llwu.h"
 #include "fsl_pmc.h"
+#include "fsl_rcm.h"
+#include "fsl_port.h"
+#include "fsl_debug_console.h"
 
 #define PM_WAKEUP_PIN 	6 //BTN_SELECT_PIN	// SW2: PC5
 
-static int callbackCount = 0;
-static PM_deinitCallback PM_callbackArray[PM_ATTACHED_MODULE_COUNT];
-
-static void PM_DeinitAttachModules(void);
 
 void PM_EnterLowPowerMode()
 {
-	PM_DeinitAttachModules();
-	// Setup SMC for VLLS power mode
-	SMC_SetPowerModeProtection(SMC, kSMC_AllowPowerModeVlls);
+
 	// Setup wakeup pin on LLWU
+    PORT_SetPinMux(BTN_SELECT_PORT, BTN_SELECT_PIN, kPORT_MuxAsGpio);
+	PORT_SetPinInterruptConfig(BTN_SELECT_PORT,BTN_SELECT_PIN, kPORT_InterruptFallingEdge);
+
 	LLWU_ClearExternalWakeupPinFlag(LLWU, PM_WAKEUP_PIN);
 	LLWU_SetExternalWakeupPinMode(LLWU,  PM_WAKEUP_PIN, kLLWU_ExternalPinFallingEdge);
+	EnableIRQ(LLWU_IRQn);
 
 	smc_power_mode_vlls_config_t powerConfig;
 	powerConfig.subMode = kSMC_StopSub3;
-	powerConfig.enablePorDetectInVlls0=true;
 
 	SMC_PreEnterStopModes();
 	SMC_SetPowerModeVlls(SMC, &powerConfig);
 	SMC_PostExitStopModes();
 }
 
-_Bool PM_Recover()
+bool PM_Recover()
 {
-	bool retVal = false;
-	if(LLWU_GetExternalWakeupPinFlag(LLWU, PM_WAKEUP_PIN) == true)
+	SMC_SetPowerModeProtection(SMC, kSMC_AllowPowerModeAll);
+
+	uint32_t resetCause = RCM_GetPreviousResetSources(RCM);
+	if (resetCause & kRCM_SourceWakeup) /* Wakeup from VLLS. */
 	{
-		LLWU_ClearExternalWakeupPinFlag(LLWU, PM_WAKEUP_PIN);
-		retVal = true;
-	}
-	if(PMC_GetPeriphIOIsolationFlag(PMC))
 		PMC_ClearPeriphIOIsolationFlag(PMC);
+		NVIC_ClearPendingIRQ(LLWU_IRQn);
 
-	return retVal;
-}
-
-void PM_AttachDeinitFunction(PM_deinitCallback fun)
-{
-	if(callbackCount < PM_ATTACHED_MODULE_COUNT)
-	{
-		PM_callbackArray[callbackCount] = fun;
-		callbackCount++;
+		if(LLWU_GetExternalWakeupPinFlag(LLWU,6)==true)
+		{
+			//PRINTF("Wake up with button!\n");
+			LLWU_ClearExternalWakeupPinFlag(LLWU, PM_WAKEUP_PIN);
+		}
+		/** RTC Alarm! */
+		else if(LLWU_GetInternalWakeupModuleFlag(LLWU, 5) == true)
+		{
+			//PRINTF("Wake up with RTC alarm!\n");
+		}
+		/** RTC Seconds */
+//		else if(LLWU_GetInternalWakeupModuleFlag(LLWU, 7) == true)
+//		{
+//
+//		}
 	}
-}
+	else if ( resetCause & (kRCM_SourcePor|kRCM_SourceJtag) )
+	{
+		//PRINTF("Power on reset!\n");
+	}
 
-static void PM_DeinitAttachModules(void)
-{
-	for(int i = 0 ; i<callbackCount ; i++)
-		PM_callbackArray[i]();
+
 }
