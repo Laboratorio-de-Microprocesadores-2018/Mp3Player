@@ -20,16 +20,18 @@
 
 #if AUDIO_OUTPUT == I2S_OUTPUT
 
-#include "fsl_sai_edma.h"
+#define SAI_XFER_QUEUE_SIZE CIRC_BUFFER_LEN
+
+//#include "fsl_sai_edma.h"
 #include "fsl_dmamux.h"
 #include "fsl_port.h"
 #include "fsl_gpio.h"
+#include "fsl_edma.h"
+#include "fsl_sai.h"
+#include "fsl_debug_console.h"
+#include "pin_mux.h"
+#include "LM49450.h"
 
-#define  AUDIO_BUFFER_SIZE 2304
-
-#undef 	SAI_XFER_QUEUE_SIZE
-#define CIRC_BUFFER_LEN 2
-#define SAI_XFER_QUEUE_SIZE CIRC_BUFFER_LEN
 
 #define AUDIO_SAI 			I2S0
 #define AUDIO_DMA 			DMA0
@@ -41,89 +43,174 @@ typedef struct{
 	uint16_t nSamples;
 	uint32_t sampleRate;
 	uint32_t frameNumber;
-}PCM_AudioFrame;
+}audioQueue_t;
 
-static PCM_AudioFrame audioFrame[CIRC_BUFFER_LEN+1];
 static edma_handle_t DMA_Handle;
-static sai_edma_handle_t SAI_Handle;
+static audioQueue_t audioQueue[CIRC_BUFFER_LEN];
+volatile uint8_t queueDriver;
+volatile uint8_t queueUser;
+
+//static sai_handle_t SAI_Handle;
+//static sai_handle_t SAI_Handle;
 static sai_transfer_format_t SAI_TransferFormat;
 
 /**
  *
  */
-static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData);
+//static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData);
+//static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDone, uint32_t tcds)
 
+AT_NONCACHEABLE_SECTION_ALIGN(static edma_tcd_t tcdMemoryPoolPtr[(CIRC_BUFFER_LEN+1)], sizeof(edma_tcd_t));
+static void Edma_Callback(edma_handle_t *DMA_Handle, void *userData, bool transferDone, uint32_t tcds);
 
 
 
 status_t Audio_Init()
 {
 	//////////////////////////////////////////////////////////
-	// Sets up necessary pins.
-	PORT_SetPinMux(PORTC, 8, kPORT_MuxAlt4);	/* PORTC8  is configured as I2S0_TX_MCLK */
-	PORT_SetPinMux(PORTC, 1, kPORT_MuxAlt6);    /* PORTC1  is configured as I2S0_TXD0  */
-	PORT_SetPinMux(PORTB, 19, kPORT_MuxAlt4);   /* PORTB19 is configured as I2S0_TX_FS */
-	PORT_SetPinMux(PORTB, 18, kPORT_MuxAlt4);   /* PORTB18 is configured as I2S0_TX_BCLK*/
-
-	//////////////////////////////////////////////////////////
-	// Sets up the DMA.
+	// Sets up the dma channel to transfer
 	DMAMUX_Init(DMAMUX0);
-//	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, SAI_TX_DMA_REQUEST);
+	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, kDmaRequestMux0I2S0Tx);
 	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
 
-	//////////////////////////////////////////////////////////
-	// Initialize EDMA.
-	edma_config_t userConfig;
-	EDMA_GetDefaultConfig(&userConfig);
-	userConfig.enableRoundRobinArbitration = false;
-	userConfig.enableHaltOnError = true;
-	userConfig.enableContinuousLinkMode = false;
-	userConfig.enableDebugMode = true;
-	EDMA_Init(AUDIO_DMA, &userConfig);
-	EDMA_CreateHandle(&DMA_Handle, AUDIO_DMA, AUDIO_DMA_CHANNEL);
+//	edma_channel_Preemption_config_t premptionConfig;
+//	premptionConfig.channelPriority=15;
+//	premptionConfig.enableChannelPreemption = false;
+//	premptionConfig.enablePreemptAbility = true;
+//	EDMA_SetChannelPreemptionConfig(DMA0,AUDIO_DMA_CHANNEL,&premptionConfig);
 
+	EDMA_CreateHandle(&DMA_Handle, AUDIO_DMA, AUDIO_DMA_CHANNEL);
+	EDMA_InstallTCDMemory(&DMA_Handle, tcdMemoryPoolPtr, CIRC_BUFFER_LEN);
+	EDMA_SetCallback(&DMA_Handle, Edma_Callback, NULL);
 
 	//////////////////////////////////////////////////////////
 	// Initialize SAI.
 	sai_config_t config;
 	SAI_TxGetDefaultConfig(&config);
+	config.mclkSource = kSAI_MclkSourceSelect1;
+	config.bclkSource  = kSAI_BclkSourceMclkDiv;
+	config.masterSlave = kSAI_Master;
+	config.mclkOutputEnable = true;
+	config.protocol = kSAI_BusLeftJustified;
+	config.syncMode = kSAI_ModeAsync;
 	SAI_TxInit(AUDIO_SAI, &config);
-	SAI_TxEnable(AUDIO_SAI, true);
-	SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL, &DMA_Handle);
+	AUDIO_SAI->TCSR |= I2S_TCSR_DBGE_MASK;
+
+	// Esta instala los TCDS, hecho arriba SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL);
+
+
+	sai_transceiver_t transceiverConfig;
+	SAI_GetLeftJustifiedConfig(&transceiverConfig, kSAI_WordWidth16bits, kSAI_MonoLeft, kSAI_Channel0Mask);
+	// ESTA EN REALIDAD LLAMA A LADE ABAJO SAI_TransferTxSetConfig(AUDIO_SAI,&SAI_Handle,&transceiverConfig);
+	SAI_TxSetConfig(AUDIO_SAI, &transceiverConfig);
+
+	sai_master_clock_t mclkConfig;
+	mclkConfig.mclkHz = 12000000;
+	mclkConfig.mclkOutputEnable = true;
+	mclkConfig.mclkSource = kSAI_MclkSourceSelect1;
+	mclkConfig.mclkSourceClkHz = 12000000;
+	SAI_SetMasterClockConfig(AUDIO_SAI, &mclkConfig);
+
+	/* Set sample rate*/
+//	SAI_TxSetBitClockRate(AUDIO_SAI, 12000000,kSAI_SampleRate44100Hz, kSAI_WordWidth16bits, transceiverConfig.channelNums);
+
+
+	LM49450_SlaveConfig LM49450config;
+	LM49450_GetDefaultSlaveConfig(&LM49450config);
+	LM49450config.oversampleRate = LM49450_DAC_OSR_125;
+	LM49450config.I2sMode = LM49450_I2s_LeftJustified;
+	LM49450config.chargePumpDiv = 73;
+
+
+	//LM49450config.reference = LM49450_InternalRef;
+
+	//LM49450config.defaultDacFilter = true;
+	//LM49450config.oscillatorMode = LM49450_FixedFrequency;
+	//LM49450config.mute = false;
+	//LM49450config.lineInEnable = false;
+	//LM49450config.enable = true;
+	//LM49450config.dither = LM49450_DitherDefault;
+	//LM49450config.MclkDiv; /////////////////////////////////////////////////
+
+	//LM49450config.wordSize = LM49450_I2sWordSize_16; // Solo se usa en right justified mode
+	//LM49450config.stereoMode = LM49450_StereoNormal;
+	//LM49450config.wordOrder = LM49450_WordOrderNormal;
+
+// Solo en master mode!!
+	//LM49450config.I2sClkDiv;/////////////////////////////////////////////////////
+	//LM49450config.bitsPerWord = LM49450_I2sBitsPerWord_16; // Solo se usa en master mode
+
+//	LM49450config.wordSelectLineMaster = false;
+//	LM49450config.clockLineMaster = false;
+
+	//LM49450config.headphone3D.enable = false;
+	//LM49450config.speaker3D.enable = false;
+	//config.lineInEnable = true;
+
+	LM49450_SlaveInit(&LM49450config);
+
+	LM49450_SetVolume(20);
+
+	LM49450_Enable(true);
+
 
 	return kStatus_Success;
 
 }
 
-status_t Audio_Deinit()
+void Audio_Deinit(void)
 {
-
+	return;
 }
 
 void Audio_Play(/*uint32_t sampleRate,*/)
 {
-	/* Enable Tx */
-	SAI_TxEnable(AUDIO_SAI, true);
+//	SAI_TxEnable(AUDIO_SAI, true);
+// Esto lo hace el sdk!
+//	/* Enable Tx */
+//	SAI_TxEnable(AUDIO_SAI, true);
+//
+//	/* Enable DMA */
+//	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
 
-	/* Enable DMA */
-	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
-
-	SAI_TransferFormat.sampleRate_Hz =0000000000000000000000000000000000000000000000000;
-	SAI_TransferFormat.bitWidth = 16;
-	SAI_TransferFormat.stereo = kSAI_Stereo;
-	//SAI_TransferFormat.masterClockHz = SAI_MCLK;
-	SAI_TransferFormat.watermark = 3;
-
-
-	//SAI_TransferTxSetFormatEDMA(AUDIO_SAI,&SAI_Handle,&SAI_TransferFormat,SAI_MCLK,SAI_BCLK);
-
-
+//	SAI_TransferFormat.sampleRate_Hz = 44100;
+//	SAI_TransferFormat.bitWidth = 16;
+//	SAI_TransferFormat.stereo = kSAI_MonoRight;
+//	SAI_TransferFormat.masterClockHz = 60000;
+//	SAI_TransferFormat.watermark = 4;
+//
+//	SAI_TransferTxSetFormatEDMA(AUDIO_SAI,&SAI_Handle,&SAI_TransferFormat,60000,2*16*44100/1000);
+//	SAI_TxClearStatusFlags(AUDIO_SAI, kSAI_FIFOErrorFlag);
 }
 
 
 void Audio_Pause()
 {
-	SAI_TransferAbortSendEDMA(AUDIO_SAI, &SAI_Handle);
+	 /* Disable dma */
+	EDMA_AbortTransfer(&DMA_Handle);
+
+	/* Disable the channel FIFO */
+	SAI_TxSetChannelFIFOMask(AUDIO_SAI,0);
+
+	/* Disable DMA enable bit */
+	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, false);
+
+	/* Disable Tx */
+	SAI_TxEnable(AUDIO_SAI, false);
+
+	/* If Tx is disabled, reset the FIFO pointer and clear error flags */
+	if ((AUDIO_SAI->TCSR & I2S_TCSR_TE_MASK) == 0UL)
+	{
+		AUDIO_SAI->TCSR |= (I2S_TCSR_FR_MASK | I2S_TCSR_SR_MASK);
+		AUDIO_SAI->TCSR &= ~I2S_TCSR_SR_MASK;
+	}
+
+	/* Handle the queue index */
+	audioQueue[queueDriver].samples[0] = 0;
+	audioQueue[queueDriver].nSamples = 0;
+
+	queueDriver = (queueDriver + 1U) % CIRC_BUFFER_LEN;
+
 }
 
 void Audio_Resume()
@@ -139,134 +226,222 @@ void Audio_Resume()
 
 void Audio_Stop()
 {
-	SAI_TransferTerminateReceiveEDMA(AUDIO_SAI, &SAI_Handle);
+	//SAI_TransferTerminateTransmitEDMA(AUDIO_SAI, &SAI_Handle);
 	Audio_ResetQueue();
 }
 
 
 uint16_t * Audio_GetBackBuffer()
 {
-	return audioFrame[DMA_Handle.tail].samples;
+	return audioQueue[queueUser].samples;
 }
 
 void Audio_ResetQueue()
 {
-	for(int i=0; i<CIRC_BUFFER_LEN; i++)
+	for(int i=0; i<SAI_XFER_QUEUE_SIZE; i++)
 	{
-		memset(audioFrame[i].samples,0,AUDIO_BUFFER_SIZE);
-		audioFrame[i].nSamples = AUDIO_BUFFER_SIZE;
-		audioFrame[i].sampleRate = 44100;
+		memset(audioQueue[i].samples,0,AUDIO_BUFFER_SIZE*sizeof(uint32_t));
+		audioQueue[i].nSamples = AUDIO_BUFFER_SIZE;
+		audioQueue[i].sampleRate = 44100;
 	}
 }
 
 
 uint32_t Audio_GetCurrentFrameNumber()
 {
-	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	uint32_t n = audioFrame[DMA_Handle.header].frameNumber;
-	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+	//NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+	uint32_t n = audioQueue[DMA_Handle.header].frameNumber;
+	//NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 	return n;
 }
 
-void Audio_PushFrame(int16_t* samples, uint16_t nSamples, uint32_t sampleRate, uint32_t frameNumber)
+bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_t sampleRate, uint32_t frameNumber)
 {
 	// Average stereo channels
-	for(int i=0; i<nSamples; i++)
+	if(nChans==2)
 	{
-		audioFrame[DMA_Handle.tail].samples[i] = ((uint16_t)(samples[i]+32768))>>4;
+		for(int i=0; i<nSamples/2; i++)
+		{
+			audioQueue[queueUser].samples[i] = samples[2*i];
+		}
+	}
+	else if(nChans == 1)
+	{
+		for(int i=0; i<nSamples; i++)
+		{
+			audioQueue[queueUser].samples[i] = samples[i];
+			//audioQueue[DMA_Handle.tail].samples[2*i] = samples[i];
+		}
+	}
+	else
+	{
+		PRINTF("Audio_PushFrame() Invalid number of channels: %d\n",nChans);
 	}
 
-	audioFrame[DMA_Handle.tail].nSamples = nSamples/2;
-	audioFrame[DMA_Handle.tail].sampleRate = sampleRate;
-	audioFrame[DMA_Handle.tail].frameNumber = frameNumber;
+	audioQueue[queueUser].nSamples = nSamples;
+	audioQueue[queueUser].sampleRate = sampleRate;
+	audioQueue[queueUser].frameNumber = frameNumber;
+	queueUser = (queueUser + 1U) % CIRC_BUFFER_LEN; // Todo esto creo que va al final y la transferencia deberia usar el queuserr idnex no?
 
-	sai_transfer_t transfer = {.data = (uint8_t*)audioFrame[DMA_Handle.tail].samples, .dataSize = 2*nSamples};
+	edma_transfer_config_t config = {0};
+	EDMA_PrepareTransfer(&config,
+							 (void *)(audioQueue[DMA_Handle.tail].samples),
+							 sizeof(uint16_t),
+							 (void *)SAI_TxGetDataRegisterAddress(I2S0,0),
+							 sizeof(uint16_t),
+							 sizeof(uint16_t),	// One sample per request
+							 audioQueue[DMA_Handle.tail].nSamples * sizeof(uint16_t),// Transfer an entire frame
+							 kEDMA_MemoryToPeripheral);
 
-	status_t s = SAI_TransferSendEDMA(AUDIO_SAI,&SAI_Handle,&transfer);
+	status_t s = EDMA_SubmitTransfer(&DMA_Handle, &config);
 
-	assert(s==kStatus_Success);
+	if(s == kStatus_Success)
+	{
+		/* Start DMA transfer */
+		EDMA_StartTransfer(&DMA_Handle);
+
+		 /* Enable DMA enable bit */
+		SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
+
+		/* Enable SAI Tx clock */
+		SAI_TxEnable(AUDIO_SAI, true);
+
+		/* Enable the channel FIFO */
+		SAI_TxSetChannelFIFOMask(AUDIO_SAI, kSAI_Channel0Mask);
+
+		return kStatus_Success;
+	}
+
+	return s;
+
+
+//
+//	sai_transfer_t transfer;
+//	transfer.data = (uint8_t*)audioQueue[SAI_Handle.queueUser].samples;
+//	transfer.dataSize = nSamples*sizeof(samples[0]);
+
+//	status_t s = SAI_TransferSendNonBlocking(AUDIO_SAI, &SAI_Handle, &transfer);
+//	size_t count;
+//	while(SAI_TransferGetSendCount(AUDIO_SAI,&SAI_Handle,&count) != kStatus_NoTransferInProgress);
+
+//
+//	status_t s = SAI_TransferSendEDMA(AUDIO_SAI,&SAI_Handle,&transfer);
+//
+//	if(s==kStatus_Success)
+//		return true;
+//	else
+//		return false;
+
+
 }
 
 void Audio_SetSampleRate(uint32_t sr)
 {
-	SAI_TransferFormat.sampleRate_Hz = sr;
+	LM49450_SetSampleRate(12000000,sr);
 
-	SAI_TxSetFormat(AUDIO_SAI,&SAI_TransferFormat,0000,0000);
+	sai_transfer_format_t format;
+	format.bitWidth = kSAI_WordWidth16bits;
+	format.channelMask = kSAI_Channel0Mask;
+	format.isFrameSyncCompact = true;
+	format.masterClockHz = 12000000;
+	format.protocol = kSAI_BusLeftJustified;
+	format.sampleRate_Hz = sr;
+	format.stereo = kSAI_MonoLeft;
+	format.watermark = 4;
+	SAI_TxSetFormat(AUDIO_SAI, &format, 12000000, 12000000);
+
+
+	//SAI_TxSetBitClockRate(AUDIO_SAI, 12000000,sr, kSAI_WordWidth16bits, 1);
 
 }
 
 bool Audio_QueueIsFree()
 {
-	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	bool b = (DMA_Handle.tail+1)%DMA_Handle.tcdSize != DMA_Handle.header;
-	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
-	return b;
+	return audioQueue[queueUser].nSamples == 0;
+//	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+//	bool b = SAI_Handle.saiQueue[SAI_Handle.queueUser].data == NULL;
+//	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+//	return b;
 }
 
 bool Audio_QueueIsEmpty()
 {
-	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	bool b = (DMA_Handle.tcdUsed == 0);
-	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
-	return b;
+	return audioQueue[queueDriver].nSamples == 0;
+//	NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
+//	bool b = SAI_Handle.saiQueue[SAI_Handle.queueDriver].data == NULL;
+//	NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
+//	return b;
 }
 
 
 
 bool Audio_AreHeadphonesPlugged()
 {
-	bool HPR = GPIO_PinRead(HPR_SENSE_GPIO,HPR_SENSE_PIN);
+	bool HPR = GPIO_PinRead(HPL_SENSE_GPIO,HPR_SENSE_PIN);
 	bool HPL = GPIO_PinRead(HPL_SENSE_GPIO,HPL_SENSE_PIN);
 
 	return (HPR || HPL);
 }
 
-
-
-
-static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData)
+void Audio_SetVolume(uint8_t level)
 {
-	Audio_SetSampleRate(audioFrame[DMA_Handle.header].sampleRate);
+// TODO
+//	if(headphonesPlugged)
+//	{
+//
+//	}
+//	else
+//	{
+//
+//	}
+	LM49450_SetVolume(level);
 }
-
-static void EDMA_Configuration(void)
+uint8_t Audio_GetVolume(void)
 {
-
-    edma_config_t userConfig;
-    EDMA_GetDefaultConfig(&userConfig);
-
-    userConfig.enableRoundRobinArbitration = false;
-    userConfig.enableHaltOnError = true;
-    userConfig.enableContinuousLinkMode = false;
-    userConfig.enableDebugMode = true;
-
-    EDMA_Init(AUDIO_DMA, &userConfig);
-
-	/* Creates the DMA handle. */
-	EDMA_CreateHandle(&DMA_Handle, AUDIO_DMA, AUDIO_DMA_CHANNEL);
+// TODO
+//	if(headphonesPlugged)
+//	{
+//
+//	}
+//	else
+//	{
+//
+//	}
+	return LM49450_GetVolume();
 }
-
-static void DMAMUX_Configuration(void)
+uint8_t Audio_GetMaxVolume(void)
 {
-	// Sets up the DMA.
-	DMAMUX_Init(DMAMUX0);
-
-	DMAMUX_SetSource(DMAMUX0, AUDIO_DMA_CHANNEL, kDmaRequestMux0I2S0Tx);
-
-	DMAMUX_EnableChannel(DMAMUX0, AUDIO_DMA_CHANNEL);
+	return 32;
 }
 
 
-static void SAI_Configuration(void)
+//static void SAI_Callback(I2S_Type *base, sai_edma_handle_t *handle, status_t status, void *userData)
+//{
+//	int a = 8;
+//}
+
+
+static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDone, uint32_t tcds)
 {
-	sai_config_t config;
+	/* Mark a frame as completed. */
+	audioQueue[queueDriver].samples[0] = 0;
+	audioQueue[queueDriver].nSamples = 0;
 
-	SAI_TxGetDefaultConfig(&config);
+	queueDriver = (queueDriver + 1U) % CIRC_BUFFER_LEN;
 
-	SAI_TxInit(AUDIO_SAI, &config);
+	/* If all data finished, just stop the transfer */
+	if (audioQueue[queueDriver].nSamples == 0)
+	{
+		SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, false);
+		EDMA_AbortTransfer(&DMA_Handle);
+	}
+	else
+	{
+		//Audio_SetSampleRate(audioQueue[queueDriver].sampleRate);
+	}
 
-	SAI_TransferTxCreateHandleEDMA(AUDIO_SAI, &SAI_Handle, SAI_Callback, NULL, &DMA_Handle);
 }
+
 
 
 #endif
