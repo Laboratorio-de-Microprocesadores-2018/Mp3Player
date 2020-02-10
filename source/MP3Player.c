@@ -72,7 +72,7 @@ static char 				curPath[256];
 static uint32_t				songsQueue[MAX_FILES_PER_DIR];
 static uint8_t 				queueLength;
 static uint8_t 				curSong;
-
+static uint32_t				curSongDuration;
 
 static uint8_t 				readBuf[READ_BUFFER_SIZE];
 static uint8_t * 			readPtr;
@@ -225,15 +225,11 @@ static void MP3_PlayCurrentSong()
 		PRINTF("Playing '%s' \n",currentFileInfo.fname);
 
 		/** Notify new track started playing. */
-		if(trackChangedCB != NULL)
-			trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
+//		if(trackChangedCB != NULL)
+//			trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
 
-		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME*sizeof(int16_t));
-//		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,2,48000,0);
-//		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,2,48000,0);
-//		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
 
-		Audio_Play();
+//		Audio_Play();
 
 		readPtr = readBuf;
 		bytesLeft = 0;
@@ -320,7 +316,7 @@ uint32_t MP3_GetPlaybackTime(void)
 
 uint32_t MP3_GetTrackDuration()
 {
-	return 334;
+	return curSongDuration;
 }
 
 MP3_Status MP3_GetStatus()
@@ -398,10 +394,19 @@ void MP3_Task()
 		status_t s = MP3_DecodeFrame();
 		if(s==kStatus_Success)
 		{
-			mp3FrameInfo.bitsPerSample;
-			mp3FrameInfo.nChans;
-			mp3FrameInfo.samprate;
-			mp3FrameInfo.bitrate;
+			PRINTF("%s: %d bits per sample, %d chans, %d hz, %d samples, %d kbits/s?? \n",
+										FE_ENTRY_NAME(&currentFileInfo),
+										mp3FrameInfo.bitsPerSample,
+										mp3FrameInfo.nChans,
+										mp3FrameInfo.samprate,
+										mp3FrameInfo.outputSamps,
+										mp3FrameInfo.bitrate);
+
+			curSongDuration = currentFileInfo.fsize / (mp3FrameInfo.bitrate/8);
+
+			/** Notify new track started playing. */
+			if(trackChangedCB != NULL)
+				trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
 
 			Audio_SetSampleRate(mp3FrameInfo.samprate);
 
@@ -421,9 +426,8 @@ void MP3_Task()
 			status_t s = MP3_DecodeFrame();
 			if(s==kStatus_Success)
 			{
-//				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
-//					Vumeter_Generate(audioBuf);
-
+				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
+					Vumeter_Generate(audioBuf);
 
 					Audio_PushFrame(&audioBuf[0],
 										 mp3FrameInfo.outputSamps,
@@ -445,8 +449,8 @@ void MP3_Task()
 			}
 		}
 
-//		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
-//			Vumeter_Display();
+		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
+			Vumeter_Display();
 		CLEAR_DBG_PIN(1);
 
 		break;
