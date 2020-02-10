@@ -108,7 +108,7 @@ void FE_Task(void)
 #else
 
 	/* USB Task */
-	USB_HostKhciTaskFunction(hostHandle);
+	//USB_HostKhciTaskFunction(hostHandle);
 
 	//	// Check changes in USB drive
 	//	currStatus = FE_DriveStatus(FE_USB);
