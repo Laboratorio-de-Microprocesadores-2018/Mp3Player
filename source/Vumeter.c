@@ -50,7 +50,6 @@ void Vumeter_Init()
 
 	init = true;
 
-
 }
 
 void Vumeter_Deinit()

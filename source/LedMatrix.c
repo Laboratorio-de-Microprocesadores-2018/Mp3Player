@@ -33,7 +33,7 @@
 #define LED_DMA_SOURCE 			kDmaRequestMux0SPI2
 
 
-#define DSPI_MASTER_CLK_FREQ	CLOCK_GetFreq(DSPI0_CLK_SRC)
+#define DSPI_MASTER_CLK_FREQ	CLOCK_GetFreq(DSPI2_CLK_SRC)
 #define LED_PCS_FOR_INIT 		kDSPI_Pcs0
 #define LED_PCS_FOR_TRANSFER 	kDSPI_MasterPcs0
 #define PADDING_SIZE 			13
@@ -43,7 +43,7 @@
 #define RX_CHANNEL 				2
 #define INTERMEDIARY_CHANNEL 	3
 
-#define COLOR_TEST 				0
+#define COLOR_TEST 				1
 
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
@@ -54,7 +54,9 @@
  * Prototypes
  ******************************************************************************/
 /* DSPI user callback */
-static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData);
+//static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData);
+static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData);
+
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -100,10 +102,13 @@ static const uint16_t bitCode[] = {
     0b110110110110
 };
 
-static dspi_master_edma_handle_t SPI_handle;
-static edma_handle_t dspiEdmaMasterRxRegToRxDataHandle;
-static edma_handle_t dspiEdmabitstreamToIntermediaryHandle;
-static edma_handle_t dspiEdmaMasterIntermediaryToTxRegHandle;
+
+//static dspi_master_edma_handle_t SPI_handle;
+//static edma_handle_t dspiEdmaMasterRxRegToRxDataHandle;
+//static edma_handle_t dspiEdmabitstreamToIntermediaryHandle;
+//static edma_handle_t dspiEdmaMasterIntermediaryToTxRegHandle;
+
+static dspi_master_handle_t SPI_handle;
 static dspi_transfer_t transfer;
 static volatile bool isTransferCompleted = false;
 
@@ -160,16 +165,18 @@ void LedMatrix_Init(void)
 
 	/* Set up dspi master */
 
-	EDMA_CreateHandle(&(dspiEdmaMasterRxRegToRxDataHandle), LED_DMA, RX_CHANNEL);
+//	EDMA_CreateHandle(&(dspiEdmaMasterRxRegToRxDataHandle), LED_DMA, RX_CHANNEL);
+//
+//	EDMA_CreateHandle(&(dspiEdmabitstreamToIntermediaryHandle), LED_DMA, INTERMEDIARY_CHANNEL);
+//
+//	EDMA_CreateHandle(&(dspiEdmaMasterIntermediaryToTxRegHandle), LED_DMA, TX_CHANNEL);
+//
+//	DSPI_MasterTransferCreateHandleEDMA(LED_SPI, &SPI_handle, DSPI_MasterUserCallback,
+//										NULL, &dspiEdmaMasterRxRegToRxDataHandle,
+//										&dspiEdmabitstreamToIntermediaryHandle,
+//										&dspiEdmaMasterIntermediaryToTxRegHandle);
 
-	EDMA_CreateHandle(&(dspiEdmabitstreamToIntermediaryHandle), LED_DMA, INTERMEDIARY_CHANNEL);
-
-	EDMA_CreateHandle(&(dspiEdmaMasterIntermediaryToTxRegHandle), LED_DMA, TX_CHANNEL);
-
-	DSPI_MasterTransferCreateHandleEDMA(LED_SPI, &SPI_handle, DSPI_MasterUserCallback,
-										NULL, &dspiEdmaMasterRxRegToRxDataHandle,
-										&dspiEdmabitstreamToIntermediaryHandle,
-										&dspiEdmaMasterIntermediaryToTxRegHandle);
+	DSPI_MasterTransferCreateHandle(LED_SPI, &SPI_handle, DSPI_MasterUserCallback, NULL);
 
 	/* Config transfer */
 	transfer.txData = (uint8_t*)bitstream;
@@ -502,10 +509,14 @@ void LedMatrix_StartScrolling()
 static void LedMatrix_Update()
 {
 	if(init == true)
-		DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
+	{
+		DSPI_MasterTransferNonBlocking(LED_SPI, &SPI_handle, &transfer);
+		//DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
+	}
 }
 
-static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
+//static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
+static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData)
 {
 
     isTransferCompleted = true;

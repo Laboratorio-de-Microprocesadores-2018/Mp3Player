@@ -100,10 +100,9 @@ status_t Audio_Init()
 
 
 	sai_transceiver_t transceiverConfig;
-	SAI_GetLeftJustifiedConfig(&transceiverConfig, kSAI_WordWidth16bits, kSAI_MonoLeft, kSAI_Channel0Mask);
+	SAI_GetLeftJustifiedConfig(&transceiverConfig, kSAI_WordWidth16bits, kSAI_MonoLeft, kSAI_Channel0Mask);// | kSAI_Channel1Mask);
 	transceiverConfig.bitClock.bclkSource = kSAI_BclkSourceMclkOption1;
 
-	// ESTA EN REALIDAD LLAMA A LADE ABAJO SAI_TransferTxSetConfig(AUDIO_SAI,&SAI_Handle,&transceiverConfig);
 	SAI_TxSetConfig(AUDIO_SAI, &transceiverConfig);
 
 	sai_master_clock_t mclkConfig;
@@ -187,34 +186,30 @@ void Audio_Play(/*uint32_t sampleRate,*/)
 void Audio_Pause()
 {
 
+	/* Disable dma */
+	EDMA_AbortTransfer(&DMA_Handle);
+
+	//	/* Disable the channel FIFO */
+	SAI_TxSetChannelFIFOMask(AUDIO_SAI,kSAI_Channel0Mask);// | kSAI_Channel1Mask); STEREO
+
 	/* Disable DMA enable bit */
 	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, false);
 
+	/* Disable Tx */
+	SAI_TxEnable(AUDIO_SAI, false);
 
-	 /* Disable dma */
-	EDMA_AbortTransfer(&DMA_Handle);
 
+	/* If Tx is disabled, reset the FIFO pointer and clear error flags */
+	if ((AUDIO_SAI->TCSR & I2S_TCSR_TE_MASK) == 0UL)
+	{
+		AUDIO_SAI->TCSR |= (I2S_TCSR_FR_MASK | I2S_TCSR_SR_MASK);
+		AUDIO_SAI->TCSR &= ~I2S_TCSR_SR_MASK;
+	}
 
 	/* Handle the queue index */
 	audioQueue[queueDriver].samples[0] = 0;
 	audioQueue[queueDriver].nSamples = 0;
 	queueDriver = (queueDriver + 1U) % CIRC_BUFFER_LEN;
-
-//	/* Disable the channel FIFO */
-//	SAI_TxSetChannelFIFOMask(AUDIO_SAI,0);
-
-
-
-//	/* Disable Tx */
-//	SAI_TxEnable(AUDIO_SAI, false);
-//
-//	/* If Tx is disabled, reset the FIFO pointer and clear error flags */
-//	if ((AUDIO_SAI->TCSR & I2S_TCSR_TE_MASK) == 0UL)
-//	{
-//		AUDIO_SAI->TCSR |= (I2S_TCSR_FR_MASK | I2S_TCSR_SR_MASK);
-//		AUDIO_SAI->TCSR &= ~I2S_TCSR_SR_MASK;
-//	}
-
 
 }
 
@@ -285,10 +280,10 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 	// Average stereo channels
 	if(nChans==2)
 	{
-		for(int i=0; i<nSamples; i++)
+		for(int i=0; i<nSamples/2; i++)
 		{
-			audioQueue[queueUser].samples[i] = samples[i];
-			//audioQueue[queueUser].samples[i] = samples[2*i]; ACAAAAAAAAAAAAAAAAAAAAAAAAAA
+			//audioQueue[queueUser].samples[i] = samples[i];
+			audioQueue[queueUser].samples[i] = samples[2*i];
 		}
 	}
 	else if(nChans == 1)
@@ -304,7 +299,7 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 		PRINTF("Audio_PushFrame() Invalid number of channels: %d\n",nChans);
 	}
 
-	audioQueue[queueUser].nSamples = nSamples;///nChans;
+	audioQueue[queueUser].nSamples = nSamples/nChans; // STEREO
 	audioQueue[queueUser].sampleRate = sampleRate;
 	audioQueue[queueUser].frameNumber = frameNumber;
 
@@ -313,12 +308,26 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 							 (void *)(audioQueue[queueUser].samples),
 							 sizeof(uint16_t),
 							 (void *)SAI_TxGetDataRegisterAddress(I2S0,0),
-							 sizeof(uint16_t)*2,
-							 sizeof(uint16_t)*2,	// One sample per request
+							 sizeof(uint16_t), /*  sizeof(uint32_t) STEREO */
+							 sizeof(uint16_t),
 							 audioQueue[queueUser].nSamples * sizeof(uint16_t),// Transfer an entire frame
-							 kEDMA_MemoryToPeripheral);
+							 kEDMA_MemoryToPeripheral); // kEDMA_MemoryToPeripheral STEREO
+
+// ESTO ES PARA STEREO
+	//EDMA_SetMinorOffsetConfig(AUDIO_DMA,AUDIO_DMA_CHANNEL, minorOffsetConfig);
+//	config.minorLoopBytes |= DMA_NBYTES_MLOFFYES_DMLOE_MASK; // Enable destination minor loop offset
+//	config.minorLoopBytes &= ~DMA_NBYTES_MLOFFYES_SMLOE_MASK;// Disable source minor loop offset
+//	config.minorLoopBytes &= ~DMA_NBYTES_MLOFFYES_MLOFF_MASK;
+//	config.minorLoopBytes |= DMA_NBYTES_MLOFFYES_MLOFF(-4);
 
 	status_t s = EDMA_SubmitTransfer(&DMA_Handle, &config);
+
+//	edma_minor_offset_config_t minorOffsetConfig;
+//	minorOffsetConfig.enableDestMinorOffset = true;
+//	minorOffsetConfig.enableSrcMinorOffset = false;
+//	minorOffsetConfig.minorOffset = -4;
+//	EDMA_TcdSetMinorOffsetConfig(&DMA_Handle.tcdPool[DMA_Handle.tail], minorOffsetConfig);
+
 
 	queueUser = (queueUser + 1U) % CIRC_BUFFER_LEN;
 
@@ -334,7 +343,7 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 		SAI_TxEnable(AUDIO_SAI, true);
 
 		/* Enable the channel FIFO */
-		SAI_TxSetChannelFIFOMask(AUDIO_SAI, kSAI_Channel0Mask);
+		SAI_TxSetChannelFIFOMask(AUDIO_SAI, kSAI_Channel0Mask); //   STEREO
 
 		return kStatus_Success;
 	}
