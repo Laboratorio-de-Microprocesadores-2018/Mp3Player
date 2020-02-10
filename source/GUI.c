@@ -33,6 +33,7 @@
 #include "Calendar.h"
 #include "GILI9341.h"
 #include "Input.h"
+#include "CPUTimeMeasurement.h"
 #endif
 
 
@@ -58,7 +59,7 @@
 #define ALBUM_ART_SPACING		(10)
 
 /** Video buffer size. */
-#define LV_VDB_BUFF_SIZE       	(LV_HOR_RES_MAX*LV_VER_RES_MAX/10) //(uint32_t)255
+#define LV_VDB_BUFF_SIZE       	(16*1024) //(uint32_t)255
 
 
 #define GUI_TIME_STRING_BUFFER_LENGTH	9
@@ -243,7 +244,7 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event);
-
+static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event);
 /**
  * @brief Hide current screen and show a new one.
  * @param[in] screen ID of the screen to be shown.
@@ -305,8 +306,8 @@ LV_IMG_DECLARE(defaultAlbumArt);
 /* Display buffer for lvgl. */
 static lv_disp_buf_t dispBuffer;
 
-static lv_color_t vdb_buf1[LV_VDB_BUFF_SIZE]; //LV_ATTRIBUTE_MEM_ALIGN;
-static lv_color_t vdb_buf2[LV_VDB_BUFF_SIZE]; //LV_ATTRIBUTE_MEM_ALIGN;
+static lv_color_t vdb_buf1[LV_VDB_BUFF_SIZE] LV_ATTRIBUTE_MEM_ALIGN;
+static lv_color_t vdb_buf2[LV_VDB_BUFF_SIZE] LV_ATTRIBUTE_MEM_ALIGN;
 
 
 
@@ -335,7 +336,7 @@ void GUI_Init(void)
 
 void GUI_Deinit(void)
 {
-	GILI9341_Init();
+	GILI9341_Deinit();
 	lv_deinit();
 }
 /**
@@ -379,11 +380,18 @@ void GUI_Task()
 
 	uint32_t currTime = GET_TICK; 
 
-	if(currTime-lastTickTime >= 1)
+	if(currTime-lastTickTime >= 4)
 	{
-		lv_task_handler();
+		SET_DBG_PIN(2);
+
 		lv_tick_inc(currTime-lastTickTime);
 		lastTickTime = currTime;
+
+
+		lv_task_handler();
+
+		CLEAR_DBG_PIN(2);
+
 	}
 }
 
@@ -587,6 +595,18 @@ static void GUI_CreateMusicScreen()
 	lv_label_set_align(queueProgress, LV_LABEL_ALIGN_RIGHT);
 	lv_obj_align(queueProgress, Title, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
 	gui.musicScreen.queueProgress = queueProgress;
+
+	/* Volume bar */
+	lv_obj_t* volumeBar = lv_slider_create(cont, NULL);
+	lv_obj_set_size(volumeBar, BAR_WIDTH, BAR_HEIGHT);
+	lv_obj_align(volumeBar, NULL, LV_ALIGN_CENTER, 0, 0);
+	lv_obj_set_event_cb(volumeBar, GUI_VolumeBarEventHandler);
+	lv_slider_set_range(volumeBar, 0, MP3_GetMaxVolume());
+	lv_slider_set_value(volumeBar, MP3_GetVolume(), false);
+	lv_group_add_obj(gui.musicScreen.group, volumeBar);
+	lv_obj_set_hidden(volumeBar,true);
+	gui.musicScreen.volumeBar = volumeBar;
+
 
 	// Hide screen for default
 	lv_obj_set_hidden(cont, true);
@@ -1081,7 +1101,7 @@ static bool GUI_ListFolderContents(char* path)
 			{
 				if (FE_IS_FOLDER(&de))
 				{
-					printf("Directory: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+					PRINTF("Directory: %s\\%s\n", path, FE_ENTRY_NAME(&de));
 
 					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, FE_ENTRY_NAME(&de));
 
@@ -1115,7 +1135,7 @@ static bool GUI_ListFolderContents(char* path)
 						gui.browserScreen.songsIndex[nSongs++] = folderIndex[i];
 						button->user_data = direntry;
 	#if defined(_WIN32) || defined(_WIN64)
-						printf("Song: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+						PRINTF("Song: %s\\%s\n", path, FE_ENTRY_NAME(&de));
 	#endif
 					}
 					else
@@ -1129,7 +1149,7 @@ static bool GUI_ListFolderContents(char* path)
 						direntry->index = -1;
 						button->user_data = direntry;
 	#if defined(_WIN32) || defined(_WIN64)
-						printf("File: %s\\%s\n", path, FE_ENTRY_NAME(&de));
+						PRINTF("File: %s\\%s\n", path, FE_ENTRY_NAME(&de));
 	#endif
 					}
 				}
@@ -1153,7 +1173,7 @@ static bool GUI_ListFolderContents(char* path)
 	FRESULT res = FE_OpenDir(&dr, path);
 	if (res != 0)
 	{
-		printf("Path not found: [%s]\n", path);
+		PRINTF("Path not found: [%s]\n", path);
 		return false;
 	}
 
@@ -1175,7 +1195,7 @@ static bool GUI_ListFolderContents(char* path)
 			//Is the entity a File or Folder?
 			if (FE_IS_FOLDER(de))
 			{
-				printf("Directory: %s\\%s\n", path, FE_ENTRY_NAME(de));
+				PRINTF("Directory: %s\\%s\n", path, FE_ENTRY_NAME(de));
 
 				//ListDirectoryContents(.....); //Recursion, I love it!
 				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, FE_ENTRY_NAME(de));
@@ -1210,7 +1230,7 @@ static bool GUI_ListFolderContents(char* path)
 					direntry->type = ENTRY_SONG;
 					direntry->index = dirIndex++;
 					button->user_data = direntry;
-					printf("Song: %s\\%s\n", path, FE_ENTRY_NAME(de));
+					PRINTF("Song: %s\\%s\n", path, FE_ENTRY_NAME(de));
 				}
 				else
 				{
@@ -1222,7 +1242,7 @@ static bool GUI_ListFolderContents(char* path)
 					direntry->type = ENTRY_FILE;
 					direntry->index = -1;
 					button->user_data = direntry;
-					printf("File: %s\\%s\n", path, FE_ENTRY_NAME(de));
+					PRINTF("File: %s\\%s\n", path, FE_ENTRY_NAME(de));
 				}
 			}
 
@@ -1246,7 +1266,7 @@ static bool GUI_ListFolderContents(char* path)
 	//	sprintf(wildcard, "%s\\%s", path, "*.*");
 	//	if ((hFind = FindFirstFile(wildcard, &fdFile)) == INVALID_HANDLE_VALUE)
 	//	{
-	//		printf("Path not found: [%s]\n", path);
+	//		PRINTF("Path not found: [%s]\n", path);
 	//		return false;
 	//	}
 	//
@@ -1268,7 +1288,7 @@ static bool GUI_ListFolderContents(char* path)
 	//			//Is the entity a File or Folder?
 	//			if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 	//			{
-	//				printf("Directory: %s\\%s\n", path, fdFile.cFileName);
+	//				PRINTF("Directory: %s\\%s\n", path, fdFile.cFileName);
 	//
 	//				//ListDirectoryContents(.....); //Recursion, I love it!
 	//				button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_DIRECTORY, fdFile.cFileName);
@@ -1286,7 +1306,7 @@ static bool GUI_ListFolderContents(char* path)
 	//					button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_AUDIO, name);
 	//					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
 	//					*(EntryType_t*)button->user_data = ENTRY_SONG;
-	//					printf("Song: %s\\%s\n", path, fdFile.cFileName);
+	//					PRINTF("Song: %s\\%s\n", path, fdFile.cFileName);
 	//				}
 	//				else
 	//				{
@@ -1295,7 +1315,7 @@ static bool GUI_ListFolderContents(char* path)
 	//					lv_btn_set_state(button, LV_BTN_STATE_INA);
 	//					button->user_data = lv_mem_alloc(sizeof(EntryType_t));
 	//					*(EntryType_t*)button->user_data = ENTRY_FILE;
-	//					printf("File: %s\\%s\n", path, fdFile.cFileName);
+	//					PRINTF("File: %s\\%s\n", path, fdFile.cFileName);
 	//				}
 	//			}
 	//
@@ -1366,7 +1386,7 @@ static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event)
 		lv_task_reset(gui.volumeBarTask);
 
 		/* Set device volume. */
-		printf("Volume: %u\n", lv_slider_get_value(slider));
+		//PRINTF("Volume: %u\n", lv_slider_get_value(slider));
 #if defined(_WIN32) || defined(_WIN64)
 		MP3_SetVolume(lv_slider_get_value(slider)*4);
 #else
@@ -1378,24 +1398,18 @@ static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event)
 static void GUI_VolumeBarTimeoutTask(lv_task_t* task)
 {
 	(void)task;
-	lv_obj_del(gui.musicScreen.volumeBar);
-	gui.musicScreen.volumeBar = NULL;
+	lv_obj_set_hidden(gui.musicScreen.volumeBar,true);
+	lv_group_focus_obj(gui.musicScreen.parent);
+	lv_group_set_editing(gui.musicScreen.group, false);
+
 }
 
 static void GUI_ShowVolumeBar()
 {
-	lv_obj_t* bar = lv_slider_create(gui.musicScreen.parent, NULL);
-	lv_obj_set_size(bar, BAR_WIDTH, BAR_HEIGHT);
-	lv_obj_align(bar, NULL, LV_ALIGN_CENTER, 0, 0);
-	lv_obj_set_event_cb(bar, GUI_VolumeBarEventHandler);
-	lv_slider_set_range(bar, 0, MP3_GetMaxVolume());
-	lv_slider_set_value(bar, MP3_GetVolume(), false);
-	lv_group_add_obj(gui.musicScreen.group, bar);
-	gui.musicScreen.volumeBar = bar;
-
+	lv_obj_set_hidden(gui.musicScreen.volumeBar,false);
 
 	/* Focus the slider and set to editing mode. */
-	lv_group_focus_obj(bar);
+	lv_group_focus_obj(gui.musicScreen.volumeBar);
 	lv_group_set_editing(gui.musicScreen.group, true);
 
 
