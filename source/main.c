@@ -149,40 +149,47 @@ void MP3_TaskHook(struct _lv_task_t * task)
 
 int main(void)
 {
-  	/* Board hardware initialization. */
-    BOARD_InitBootPins();
-
-    PM_Recover();
-
+    //CLOCK_EnableClock(kCLOCK_PortC);
     BOARD_InitBootClocks();
-    BOARD_InitDebugConsole();
+	//PORT_SetPinMux(BTN_SELECT_PORT, BTN_SELECT_PIN, kPORT_MuxAsGpio);
+	PM_Recover();
+	PM_EnterLowPowerMode();
+	while(1);
 
-    /* Modules initialization */
-    APP_Init();
-
-    lv_task_create(MP3_TaskHook,5, LV_TASK_PRIO_HIGHEST, NULL);
-
-    /* Main loop */
-    while(1)
-    {
-    	if(GUI_PowerOffRequest())
-    	{
-    		MP3_Stop();
-    		BOARD_DeInitPins();
-    		APP_Deinit();
-			PM_EnterLowPowerMode();
-			PRINTF("GUI_PowerOffRequest() ERROR, shouldn't have reached here! \n");
-    	}
-
-
-    	//
-		FE_Task();
-		//
-		GUI_Task();
-
-		//
-     	//MP3_Task();
-    }
+  	/* Board hardware initialization. */
+//    BOARD_InitBootPins();
+//
+//    PM_Recover();
+//
+//    BOARD_InitBootClocks();
+//    BOARD_InitDebugConsole();
+//
+//    /* Modules initialization */
+//    APP_Init();
+//
+//    lv_task_create(MP3_TaskHook,5, LV_TASK_PRIO_HIGHEST, NULL);
+//
+//    /* Main loop */
+//    while(1)
+//    {
+//    	if(GUI_PowerOffRequest())
+//    	{
+//    		MP3_Stop();
+//    		BOARD_DeInitPins();
+//    		APP_Deinit();
+//			PM_EnterLowPowerMode();
+//			PRINTF("GUI_PowerOffRequest() ERROR, shouldn't have reached here! \n");
+//    	}
+//
+//
+//    	//
+//		FE_Task();
+//		//
+//		GUI_Task();
+//
+//		//
+//     	//MP3_Task();
+//    }
 
     return 0 ;
 }

@@ -738,7 +738,8 @@ void BOARD_DeInitPins(void)
     PORT_SetPinMux(PORTA, 19U, kPORT_PinDisabledOrAnalog);
 
     /* PORTA4 (pin 38) is configured as NMI_b */
-    PORT_SetPinMux(PORTA, 4U, kPORT_PinDisabledOrAnalog);
+   // PORT_SetPinMux(PORTA, 4U, kPORT_PinDisabledOrAnalog);
+    GPIO_PinWrite(GPIOA, 4, 1);
 
     /* PORTA5 (pin 39) is configured as I2S0_TX_BCLK */
     PORT_SetPinMux(PORTA, 5U, kPORT_PinDisabledOrAnalog);
@@ -848,7 +849,7 @@ void BOARD_DeInitPins(void)
                      | (uint32_t)(kPORT_PullDisable));
 
     /* PORTE1 (pin 2) is configured as SDHC0_D0 */
-    PORT_SetPinMux(PORTE, 1U, kPORT_MuxAlt4);
+    PORT_SetPinMux(PORTE, 1U, kPORT_PinDisabledOrAnalog);
 
     PORTE->PCR[1] = ((PORTE->PCR[1] &
                       /* Mask bits to zero which are setting */
