@@ -16,6 +16,7 @@
 #include "fsl_common.h"
 #include "fsl_debug_console.h"
 #include "GUI.h"
+#include "CPUTimeMeasurement.h"
 
 #define ILI9341_SPI 				SPI1
 #define DSPI_MASTER_CLK_SRC 		DSPI1_CLK_SRC
@@ -24,7 +25,6 @@
 #define ILI9341_PCS_FOR_TRANSFER 	kDSPI_MasterPcs0
 
 #define ILI9341_DMA 				DMA0
-//#define ILI9341_TX_REQ 				kDmaRequestMux0SPI1
 #define ILI9341_RX_REQ 				kDmaRequestMux0SPI1
 #define ILI9341_RX_CHN 				4
 #define ILI9341_TX_CHN 				5
@@ -59,15 +59,17 @@ void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, 
 	/* Advance pointer */
 	transfer.txData += transfer.dataSize;
 
-	if(transfer.txData >= endOfTransferPtr)
-	{
-		endOfTransferPtr = NULL;
-		GUI_FlushReady();
-	}
-	else
+	if(transfer.txData < endOfTransferPtr)
 	{
 		transfer.dataSize = MIN(511, endOfTransferPtr-transfer.txData);
 		DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
+	}
+	else
+	{
+		endOfTransferPtr = NULL;
+
+		GUI_FlushReady();
+		CLEAR_DBG_PIN(3);
 	}
 }
 
@@ -82,9 +84,9 @@ void ILI9341_Init()
 	masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveHigh;
 	masterConfig.ctarConfig.cpha = kDSPI_ClockPhaseFirstEdge;
 	masterConfig.ctarConfig.direction = kDSPI_MsbFirst;
-	masterConfig.ctarConfig.pcsToSckDelayInNanoSec = 100;//0*1000000000/TRANSFER_BAUDRATE;
-	masterConfig.ctarConfig.lastSckToPcsDelayInNanoSec = 100;//0*1000000000/TRANSFER_BAUDRATE;
-	masterConfig.ctarConfig.betweenTransferDelayInNanoSec = 500;// 0*1000000000/TRANSFER_BAUDRATE;
+	masterConfig.ctarConfig.pcsToSckDelayInNanoSec = 0;//0*1000000000/TRANSFER_BAUDRATE;
+	masterConfig.ctarConfig.lastSckToPcsDelayInNanoSec = 0;//0*1000000000/TRANSFER_BAUDRATE;
+	masterConfig.ctarConfig.betweenTransferDelayInNanoSec = 0;// 0*1000000000/TRANSFER_BAUDRATE;
 	masterConfig.whichPcs = ILI9341_PCS_FOR_INIT;
 	masterConfig.pcsActiveHighOrLow = kDSPI_PcsActiveLow;
 	masterConfig.enableContinuousSCK = false;
@@ -259,6 +261,8 @@ static void ILI9341_InitSequence()
 	ILI9341_SendByte(DATA, 0x27);
 	ILI9341_SendByte(DATA, 0x00);
 
+	ILI9341_SendByte(COMMAND, 0x51);
+	ILI9341_SendByte(DATA, 100);
 
 	ILI9341_SendByte(COMMAND, ILI9341_SLPOUT);	// Exit Sleep
 	uint64_t c = 1320000;
@@ -393,8 +397,9 @@ void ILI9341_SendData(uint8_t * data, uint32_t len)
 {
 	assert(ILI9341_IsBusy()==false);
 
-	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
+	SET_DBG_PIN(3);
 
+	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
 
 	/* Config transfer */
 	transfer.txData = data;
@@ -406,7 +411,7 @@ void ILI9341_SendData(uint8_t * data, uint32_t len)
 	status_t s = DSPI_MasterTransferEDMA(ILI9341_SPI, &SPI_Handle, &transfer);
 
 	if(s == kStatus_DSPI_OutOfRange)
-		printf("ILI9341_SendData() Out of range!\n");
+		PRINTF("ILI9341_SendData() Out of range!\n");
 }
 
 void ILI9341_SendRepeatedData(uint8_t * data,uint8_t len,uint32_t n)
