@@ -153,9 +153,13 @@ status_t MP3_Init()
 
 void MP3_Deinit(void)
 {
+	
+#if defined(_WIN64) || defined(_WIN32)
+#else
 	Vumeter_Deinit();
 	Audio_Deinit();
 	MP3FreeDecoder(mp3Decoder);
+#endif
 }
 
 void MP3_SetSongsQueue(uint32_t* songIndexs, uint32_t nSongs)

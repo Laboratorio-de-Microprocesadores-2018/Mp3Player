@@ -55,6 +55,9 @@
 /* Check if an entry is a folder. */
 #define FE_IS_FOLDER(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_DIR)
 
+/* Check if an entry is hidden. */
+#define FE_IS_HIDDEN(filinfo) ((FE_ENTRY_TYPE(filinfo)&0))
+
 /* Check if an entry is a file. */
 #define FE_IS_FILE(filinfo) (FE_ENTRY_TYPE(filinfo)==DT_REG)
 
