@@ -83,7 +83,7 @@
 /*-------------------
  *  Monitor of PC
  *-------------------*/
-#define USE_MONITOR         1
+#define USE_MONITOR         0
 
 #ifndef USE_MONITOR
 #  define USE_MONITOR         0
