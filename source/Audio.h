@@ -21,7 +21,10 @@
 #define DAC_OUTPUT 0
 #define I2S_OUTPUT 1
 
-#define AUDIO_OUTPUT I2S_OUTPUT
+#define AUDIO_OUTPUT 				I2S_OUTPUT
+
+#define  AUDIO_BUFFER_SIZE 			2304
+#define  CIRC_BUFFER_LEN 			5
 
 /////////////////////////////////////////////////////////////////////////////////
 //                         				API	  		                           //
@@ -84,14 +87,15 @@ void Audio_SetSampleRate(uint32_t sr);
  * @param frameNumber Number of the frame.
  * @return True if there is still place in the queue, false otherwise.
  */
-bool Audio_PushFrame(int32_t* samples, uint16_t nSamples,uint32_t nChans, uint32_t sampleRate, uint32_t frameNumber);
+
+bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_t sampleRate, uint32_t frameNumber);
 
 /**
  * @brief
  * @TODO Maybe its unnecessary, consider to delete it.
  *
  */
-uint32_t * Audio_GetBackBuffer(void);
+uint16_t * Audio_GetBackBuffer(void);
 
 /**
  * @brief Checks if queue is not full.

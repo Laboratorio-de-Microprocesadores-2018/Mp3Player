@@ -17,6 +17,8 @@
 #include "mp3dec.h"
 #include "Vumeter.h"
 
+#include "CPUTimeMeasurement.h"
+
 #include "math.h"
 #include "assert.h"
 
@@ -70,7 +72,7 @@ static char 				curPath[256];
 static uint32_t				songsQueue[MAX_FILES_PER_DIR];
 static uint8_t 				queueLength;
 static uint8_t 				curSong;
-
+static uint32_t				curSongDuration;
 
 static uint8_t 				readBuf[READ_BUFFER_SIZE];
 static uint8_t * 			readPtr;
@@ -103,7 +105,7 @@ status_t MP3_Init()
 #if defined(_WIN64) || defined(_WIN32)
 
 	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-		printf("Failed to init SDL audio\n");
+		PRINTF("Failed to init SDL audio\n");
 		return -1;
 	}
 
@@ -111,14 +113,14 @@ status_t MP3_Init()
 	int flags = MIX_INIT_MP3;
 
 	if (flags != (result = Mix_Init(flags))) {
-		printf("Could not initialize mixer (result: %d).\n", result);
-		printf("Mix_Init: %s\n", Mix_GetError());
+		PRINTF("Could not initialize mixer (result: %d).\n", result);
+		PRINTF("Mix_Init: %s\n", Mix_GetError());
 		return -1;
 	}
 
 	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096) == -1)
 	{
-		printf("Mix_OpenAudio: %s\n", Mix_GetError());
+		PRINTF("Mix_OpenAudio: %s\n", Mix_GetError());
 		return -1;
 	}
 
@@ -201,7 +203,7 @@ static void MP3_PlayCurrentSong()
 
 	if (music == NULL)
 	{
-		printf("Error loading %s! Error %s\n", filePath, Mix_GetError());
+		PRINTF("Error loading %s! Error %s\n", filePath, Mix_GetError());
 	}
 	else
 	{
@@ -227,26 +229,22 @@ static void MP3_PlayCurrentSong()
 		PRINTF("Playing '%s' \n",currentFileInfo.fname);
 
 		/** Notify new track started playing. */
-		if(trackChangedCB != NULL)
-			trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
+//		if(trackChangedCB != NULL)
+//			trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
 
-		memset(audioBuf,0,MAX_SAMPLES_PER_FRAME*sizeof(int16_t));
-		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,2,48000,0);
-		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,2,48000,0);
-//		Audio_PushFrame(audioBuf,MAX_SAMPLES_PER_FRAME,44100,0);
 
-		Audio_Play();
+//		Audio_Play();
 
 		readPtr = readBuf;
 		bytesLeft = 0;
 		frameCounter = 0;
 		playbackTimeMs = 0;
 
-		status = PLAYING;
+		status = PARSING_METADATA;
 	}
 	else
 	{
-		printf("MP3_PlayCurrentSong() Error opening file: %d\n", result);
+		PRINTF("MP3_PlayCurrentSong() Error opening file: %d\n", result);
 	}
 
 #endif
@@ -283,7 +281,7 @@ void MP3_Prev()
 	if(status != IDLE)
 		MP3_Stop();
 
-	if (playbackTimeMs < 5)
+	if (playbackTimeMs < 5000)
 		curSong = (curSong + queueLength - 1) % queueLength;
 
 	MP3_PlayCurrentSong();
@@ -299,7 +297,7 @@ void MP3_PauseResume()
 		Audio_Pause();
 #endif
 		status = PAUSE;
-		printf("Paused\n");
+		PRINTF("Paused\n");
 	}
 	else if(status == PAUSE)
 	{
@@ -309,7 +307,7 @@ void MP3_PauseResume()
 		Audio_Resume();
 #endif
 		status = PLAYING;
-		printf("Playing '%s' \n",FE_ENTRY_NAME(&currentFileInfo));
+		PRINTF("Playing '%s' \n",FE_ENTRY_NAME(&currentFileInfo));
 
 	}
 
@@ -322,7 +320,7 @@ uint32_t MP3_GetPlaybackTime(void)
 
 uint32_t MP3_GetTrackDuration()
 {
-	return 334;
+	return curSongDuration;
 }
 
 MP3_Status MP3_GetStatus()
@@ -330,16 +328,16 @@ MP3_Status MP3_GetStatus()
 	return status;
 }
 
-void MP3_SetVolume(uint32_t level)
+void MP3_SetVolume(uint8_t level)
 {
 #if defined(_WIN64) || defined(_WIN32)
 	Mix_VolumeMusic(level);
 #else
-	//TODO!! 
+	Audio_SetVolume(level);
 #endif
 }
 
-int MP3_GetMaxVolume()
+uint8_t MP3_GetMaxVolume(void)
 {
 #if defined(_WIN64) || defined(_WIN32)
 	return MIX_MAX_VOLUME/4;
@@ -348,12 +346,12 @@ int MP3_GetMaxVolume()
 #endif
 }
 
-int MP3_GetVolume(void)
+uint8_t MP3_GetVolume(void)
 {
 #if defined(_WIN64) || defined(_WIN32)
 	return Mix_VolumeMusic(-1);
 #else
-	return 0; //TODO!! 
+	return Audio_GetVolume();
 #endif
 }
 
@@ -387,13 +385,44 @@ void MP3_Task()
 		break;
 }
 #else
+
 	switch(status)
 	{
 	case IDLE:
 
 		break;
+	case PARSING_METADATA:
+	{
+		SET_DBG_PIN(1);
 
+		status_t s = MP3_DecodeFrame();
+		if(s==kStatus_Success)
+		{
+			PRINTF("%s: %d bits per sample, %d chans, %d hz, %d samples, %d kbits/s?? \n",
+										FE_ENTRY_NAME(&currentFileInfo),
+										mp3FrameInfo.bitsPerSample,
+										mp3FrameInfo.nChans,
+										mp3FrameInfo.samprate,
+										mp3FrameInfo.outputSamps,
+										mp3FrameInfo.bitrate);
+
+			curSongDuration = currentFileInfo.fsize / (mp3FrameInfo.bitrate/8);
+
+			/** Notify new track started playing. */
+			if(trackChangedCB != NULL)
+				trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
+
+			Audio_SetSampleRate(mp3FrameInfo.samprate);
+
+			status = PLAYING;
+		}
+		CLEAR_DBG_PIN(1);
+
+		break;
+	}
 	case PLAYING:
+
+		SET_DBG_PIN(1);
 
 		// Decode as many frames as possible
 		while(Audio_QueueIsFree())
@@ -401,11 +430,10 @@ void MP3_Task()
 			status_t s = MP3_DecodeFrame();
 			if(s==kStatus_Success)
 			{
-//				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
-//					Vumeter_Generate(audioBuf);
+				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
+					Vumeter_Generate(audioBuf);
 
-
-					Audio_PushFrame(audioBuf,
+					Audio_PushFrame(&audioBuf[0],
 										 mp3FrameInfo.outputSamps,
 										 mp3FrameInfo.nChans,
 										 mp3FrameInfo.samprate,
@@ -425,8 +453,9 @@ void MP3_Task()
 			}
 		}
 
-//		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
-//			Vumeter_Display();
+		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
+			Vumeter_Display();
+		CLEAR_DBG_PIN(1);
 
 		break;
 
@@ -451,6 +480,7 @@ void MP3_Task()
 		break;
 	}
 #endif
+
 }
 /**
  *    @brief

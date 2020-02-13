@@ -58,7 +58,8 @@ board: FRDM-K64F
 #define SIM_OSC32KSEL_OSC32KCLK_CLK                       0U  /*!< OSC32KSEL select: OSC32KCLK clock */
 #define SIM_PLLFLLSEL_MCGFLLCLK_CLK                       0U  /*!< PLLFLL select: MCGFLLCLK clock */
 #define SIM_PLLFLLSEL_MCGPLLCLK_CLK                       1U  /*!< PLLFLL select: MCGPLLCLK clock */
-#define SIM_SDHC_CLK_SEL_OSCERCLK_CLK                     2U  /*!< SDHC clock select: OSCERCLK clock */
+#define SIM_SDHC_CLK_SEL_OSCERCLK_CLK                     0U  /*!< SDHC clock select: OSCERCLK clock */
+#define SIM_TRACE_CLK_SEL_CORE_SYSTEM_CLK                 1U  /*!< Trace clock select: Core/system clock */
 #define SIM_USB_CLK_120000000HZ                   120000000U  /*!< Input SIM frequency for USB: 120000000Hz */
 
 /*******************************************************************************
@@ -234,7 +235,7 @@ called_from_default_init: true
 outputs:
 - {id: Bus_clock.outFreq, value: 60 MHz}
 - {id: Core_clock.outFreq, value: 120 MHz}
-- {id: Flash_clock.outFreq, value: 24 MHz}
+- {id: Flash_clock.outFreq, value: 20 MHz}
 - {id: FlexBus_clock.outFreq, value: 40 MHz}
 - {id: LPO_clock.outFreq, value: 1 kHz}
 - {id: MCGFFCLK.outFreq, value: 375 kHz}
@@ -242,6 +243,7 @@ outputs:
 - {id: PLLFLLCLK.outFreq, value: 120 MHz}
 - {id: SDHCCLK.outFreq, value: 12 MHz}
 - {id: System_clock.outFreq, value: 120 MHz}
+- {id: TRACECLKIN.outFreq, value: 120 MHz}
 - {id: USB48MCLK.outFreq, value: 48 MHz}
 settings:
 - {id: MCGMode, value: PEE}
@@ -258,15 +260,17 @@ settings:
 - {id: RTC_CR_CLKO_CFG, value: Disabled}
 - {id: RTC_CR_OSCE_CFG, value: Enabled}
 - {id: SDHCClkConfig, value: 'yes'}
-- {id: SIM.OUTDIV2.scale, value: '2'}
+- {id: SIM.OUTDIV1.scale, value: '1', locked: true}
+- {id: SIM.OUTDIV2.scale, value: '2', locked: true}
 - {id: SIM.OUTDIV3.scale, value: '3'}
-- {id: SIM.OUTDIV4.scale, value: '5'}
+- {id: SIM.OUTDIV4.scale, value: '6'}
 - {id: SIM.PLLFLLSEL.sel, value: MCG.MCGPLLCLK}
 - {id: SIM.SDHCSRCSEL.sel, value: OSC.OSCERCLK}
 - {id: SIM.TIMESRCSEL.sel, value: OSC.OSCERCLK}
 - {id: SIM.USBDIV.scale, value: '5'}
 - {id: SIM.USBFRAC.scale, value: '2'}
 - {id: SIM.USBSRCSEL.sel, value: SIM.USBDIV}
+- {id: TraceClkConfig, value: 'yes'}
 - {id: USBClkConfig, value: 'yes'}
 sources:
 - {id: OSC.OSC.outFreq, value: 12 MHz, enabled: true}
@@ -298,7 +302,7 @@ const sim_clock_config_t simConfig_BOARD_ClockExternal =
     {
         .pllFllSel = SIM_PLLFLLSEL_MCGPLLCLK_CLK, /* PLLFLL select: MCGPLLCLK clock */
         .er32kSrc = SIM_OSC32KSEL_OSC32KCLK_CLK,  /* OSC32KSEL select: OSC32KCLK clock */
-        .clkdiv1 = 0x1240000U,                    /* SIM_CLKDIV1 - OUTDIV1: /1, OUTDIV2: /2, OUTDIV3: /3, OUTDIV4: /5 */
+        .clkdiv1 = 0x1250000U,                    /* SIM_CLKDIV1 - OUTDIV1: /1, OUTDIV2: /2, OUTDIV3: /3, OUTDIV4: /6 */
     };
 const osc_config_t oscConfig_BOARD_ClockExternal =
     {
@@ -337,6 +341,8 @@ void BOARD_ClockExternal(void)
     CLOCK_EnableUsbfs0Clock(kCLOCK_UsbSrcPll0, SIM_USB_CLK_120000000HZ);
     /* Set SDHC clock source. */
     CLOCK_SetSdhc0Clock(SIM_SDHC_CLK_SEL_OSCERCLK_CLK);
+    /* Set debug trace clock source. */
+    CLOCK_SetTraceClock(SIM_TRACE_CLK_SEL_CORE_SYSTEM_CLK);
 }
 
 /*******************************************************************************

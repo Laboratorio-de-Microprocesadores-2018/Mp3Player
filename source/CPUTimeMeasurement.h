@@ -8,20 +8,21 @@
 #ifndef CPUTIMEMEASUREMENT_H_
 #define CPUTIMEMEASUREMENT_H_
 
-#include "fsl_device_registers.h"
 
+#include "pin_mux.h"
 
-//#define MEASURE_CPU_TIME
+#define MEASURE_CPU_TIME
 
 #ifdef MEASURE_CPU_TIME
-	#define MEASURE_CPU_TIME_PORT PORTC
-	#define MEASURE_CPU_TIME_GPIO GPIOC
-	#define MEASURE_CPU_TIME_PIN	9
-	#define SET_TEST_PIN BITBAND_REG(MEASURE_CPU_TIME_GPIO->PDOR, MEASURE_CPU_TIME_PIN) = 1
-	#define CLEAR_TEST_PIN BITBAND_REG(MEASURE_CPU_TIME_GPIO->PDOR, MEASURE_CPU_TIME_PIN) = 0
+
+	#define SET_DBG_PIN(n)  BITBAND_REG(DBG##n##_GPIO->PDOR, DBG##n##_PIN) = 1
+	#define CLEAR_DBG_PIN(n) BITBAND_REG(DBG##n##_GPIO->PDOR, DBG##n##_PIN) = 0
+	#define TOGGLE_DBG_PIN(n) BITBAND_REG(DBG##n##_GPIO->PTOR, DBG##n##_PIN) = 1
+
 #else
-	#define SET_TEST_PIN
-	#define CLEAR_TEST_PIN
+	#define SET_DBG_PIN(n)
+	#define CLEAR_DBG_PIN(n)
+	#define TOGGLE_DBG_PIN(n)
 #endif
 
 

@@ -377,7 +377,7 @@ FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 
 			if(res != FR_OK)
 			{
-				printf("FE_GetFileN() Error: %d\n", res);
+				PRINTF("FE_GetFileN() Error: %d\n", res);
 				break;
 			}
 			//if (strcmp(FE_ENTRY_NAME(de), ".") != 0
@@ -386,7 +386,7 @@ FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 	}
 	else
 	{
-		printf("FE_GetFileN() Error: %d\n", res);
+		PRINTF("FE_GetFileN() Error: %d\n", res);
 	}
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -510,7 +510,7 @@ int32_t FE_Sort(FE_SortCriteria_t sort, const char* path, uint32_t* indexArray)
 
 	if (res != 0)
 	{
-		printf("Path not found: [%s]. Error code %d\n", path,res);
+		PRINTF("Path not found: [%s]. Error code %d\n", path,res);
 		return -1;
 	}
 
@@ -544,10 +544,10 @@ int32_t FE_Sort(FE_SortCriteria_t sort, const char* path, uint32_t* indexArray)
 	{
 		dirEntriesP[i] = &dirEntries[i];
 #if defined(_WIN32) || defined(_WIN64)
-		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+		PRINTF("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
 #endif
 	}
-	printf("\n");
+	PRINTF("\n");
 
 
 	/* Sort them. */
@@ -558,10 +558,10 @@ int32_t FE_Sort(FE_SortCriteria_t sort, const char* path, uint32_t* indexArray)
 	{
 		indexArray[i] = (dirEntriesP[i] - &dirEntries[0]);
 #if defined(_WIN32) || defined(_WIN64)
-		printf("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
+		PRINTF("%d, ", (uint8_t)(dirEntriesP[i] - &dirEntries[0]));
 #endif
 	}
-	printf("\n\n");
+	PRINTF("\n\n");
 
 	return entriesCount;
 }
@@ -583,7 +583,7 @@ uint8_t FE_CountFiles(const char * path, const char * pattern)
 			n++;
 	}
 	else
-		printf("FE_CountFiles() Error code %d\n", res);
+		PRINTF("FE_CountFiles() Error code %d\n", res);
 	f_closedir(&dir);
 
 	return n;

@@ -4,7 +4,7 @@
 #include "clock_config.h"
 #include "MK64F12.h"
 #include "fsl_debug_console.h"
-
+#include "fsl_rcm.h"
 #include "Audio.h"
 #include "arm_math.h"
 #include "lvgl/src/lv_misc/lv_task.h"
@@ -41,7 +41,7 @@ void LM49450_Test()
 	while(n--)
 		asm("nop");
 
-    int32_t sinTable[N];
+    int16_t sinTable[N];
 
     for(int i=0; i<N; i++)
 	{
@@ -50,13 +50,11 @@ void LM49450_Test()
 
 
     Audio_Init();
+
 //
 //    Audio_SetSampleRate(sr);
 	int frameCounter = 0;
-//	Audio_PushFrame(sinTable,N,2,N*F,frameCounter++);
-//	Audio_PushFrame(sinTable,N,2,N*F,frameCounter++);
-//	Audio_PushFrame(sinTable,N,2,N*F,frameCounter++);
-//	Audio_PushFrame(sinTable,N,2,N*F,frameCounter++);
+
 	Audio_Play();
 	while(1)
 	{
@@ -75,28 +73,20 @@ bool powerOffReq;
 void APP_Init()
 {
 
-
 	// Init DMA, common to many modules!
     edma_config_t userConfig;
     EDMA_GetDefaultConfig(&userConfig);
-    userConfig.enableRoundRobinArbitration = true;
-    userConfig.enableHaltOnError = true;
+    userConfig.enableRoundRobinArbitration = false;
+    userConfig.enableHaltOnError = false;
     userConfig.enableContinuousLinkMode = false;
     userConfig.enableDebugMode = true;
 
     EDMA_Init(DMA0, &userConfig);
 
-	LM49450_Test();
+	//LM49450_Test();
 
-	// Power on from sleep
-	if(PM_Recover())
+	if(RCM_GetPreviousResetSources(RCM) & kRCM_SourceJtag | kRCM_SourcePor)
 	{
-		//printf("Recover!\n");
-	}
-	// First power on
-	else
-	{
-		//printf("First power on!\n");
 		Calendar_Init();
 	}
 
@@ -161,31 +151,16 @@ int main(void)
 {
   	/* Board hardware initialization. */
     BOARD_InitBootPins();
+
+    PM_Recover();
+
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
 
     /* Modules initialization */
     APP_Init();
 
-//    while(1)
-//    {
-//    	FE_Task();
-//    	if( FE_DriveStatus(0) == true)
-//    	{
-//    		uint32_t index[5]={2,3,4,6,5};
-//    		//int n = FE_Sort(SORT_ALPHABETIC,"/",index);
-//    		MP3_SetSongsQueue(index, 5);
-//    		MP3_Play("/",0);
-//    		break;
-//    	}
-//    }
-//
-//    while(1)
-//    {
-//    	MP3_Task();
-//    }
-
-    //lv_task_create(MP3_TaskHook,5, LV_TASK_PRIO_HIGHEST, NULL);
+    lv_task_create(MP3_TaskHook,5, LV_TASK_PRIO_HIGHEST, NULL);
 
     /* Main loop */
     while(1)
@@ -193,18 +168,20 @@ int main(void)
     	if(GUI_PowerOffRequest())
     	{
     		MP3_Stop();
+    		BOARD_DeInitPins();
     		APP_Deinit();
-			BOARD_DeInitPins();
 			PM_EnterLowPowerMode();
-			printf("GUI_PowerOffRequest() ERROR, shouldn't have reached here! \n");
+			PRINTF("GUI_PowerOffRequest() ERROR, shouldn't have reached here! \n");
     	}
+
+
     	//
 		FE_Task();
 		//
 		GUI_Task();
 
 		//
-     	MP3_Task();
+     	//MP3_Task();
     }
 
     return 0 ;

@@ -30,6 +30,7 @@
 /* Player status */
 typedef enum {
 	IDLE,
+	PARSING_METADATA,
 	PLAYING,
 	PLAYING_LAST_FRAMES,
 	PAUSE_PENDING,
@@ -108,9 +109,9 @@ MP3_Status MP3_GetStatus(void);
 /**
  * Sets audio volume level
  */
-void MP3_SetVolume(uint32_t level);
-int MP3_GetVolume(void);
-int MP3_GetMaxVolume(void);
+void MP3_SetVolume(uint8_t level);
+uint8_t MP3_GetVolume(void);
+uint8_t MP3_GetMaxVolume(void);
 
 /**
  *

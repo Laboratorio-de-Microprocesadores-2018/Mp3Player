@@ -213,6 +213,7 @@ void LM49450_GetDefaultSlaveConfig(LM49450_SlaveConfig * config);
  */
 void LM49450_SlaveInit(LM49450_SlaveConfig * config);
 
+bool LM49450_SetSampleRate(int32_t mclk, uint32_t sampleRate);
 /**
  *
  */

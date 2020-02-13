@@ -9,6 +9,7 @@
 #include "LM49450.h"
 #include "fsl_i2c.h"
 #include "fsl_port.h"
+#include "fsl_debug_console.h"
 
 #define CTRL_EXT_REF_MASK				(0x80U)
 #define CTRL_EXT_REF_SHIFT				(0x07U)
@@ -273,13 +274,13 @@ void LM49450_GetDefaultSlaveConfig(LM49450_SlaveConfig * config)
 	config->lineInEnable = false;
 	config->enable = true;
 	config->dither = LM49450_DitherDefault;
-	config->MclkDiv; /////////////////////////////////////////////////
-	config->chargePumpDiv; ////////////////////////////////////////////
+	config->MclkDiv = 0x00;
+	config->chargePumpDiv = 0x49;
 	config->wordSize = LM49450_I2sWordSize_16;
 	config->stereoMode = LM49450_StereoNormal;
 	config->wordOrder = LM49450_WordOrderNormal;
 	config->I2sMode = LM49450_I2s_Normal;
-	config->I2sClkDiv;/////////////////////////////////////////////////////
+	config->I2sClkDiv = 0x00;
 	config->bitsPerWord = LM49450_I2sBitsPerWord_16;
 	config->wordSelectLineMaster = false;
 	config->clockLineMaster = false;
@@ -375,10 +376,37 @@ void LM49450_SlaveInit(LM49450_SlaveConfig * config)
 	LM49450_ReadReg(15, &registersCheck.CMP_2_MSB);
 
 	if(memcmp(&registers,&registersCheck,sizeof(LM49450_Registers))==0)
-		printf("LM49450 Config OK! \n");
+		PRINTF("LM49450 Config OK! \n");
 	else
-		printf("LM49450 Config ERROR! \n");
+		PRINTF("LM49450 Config ERROR! \n");
 }
+
+
+bool LM49450_SetSampleRate(int32_t mclk, uint32_t sampleRate)
+{
+
+
+	uint8_t dacMode = (registers.CTRL&CTRL_DAC_MODE_MASK)>>CTRL_DAC_MODE_SHIFT;
+
+	uint32_t OSR[] = {250,256,128,128};
+
+	uint32_t clkB = sampleRate * OSR[dacMode];
+
+	 assert(mclk >= clkB);
+
+	uint32_t rdiv = (mclk<<1)/clkB-1;
+
+	if(rdiv>=0 && rdiv<=63)
+	{
+		registers.CLK = (registers.CLK & ~CLK_RDIV_MASK) | CLK_RDIV(rdiv);
+		LM49450_WriteReg(1,registers.CLK);
+		return true;
+	}
+	else
+		return false;
+
+}
+
 
 /**
  *

@@ -10,7 +10,7 @@ typedef struct
     uint8_t second; /*!< Range from 0 to 59.*/
 } TM_date;
 
-status_t Calendar_Init();
-TM_date Calendar_GetDate();
+status_t Calendar_Init(void);
+TM_date Calendar_GetDate(void);
 status_t Calendar_SetDate(TM_date date);
 
