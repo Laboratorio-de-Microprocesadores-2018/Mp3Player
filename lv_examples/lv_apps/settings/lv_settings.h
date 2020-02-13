@@ -98,6 +98,13 @@ void lv_settings_add(lv_settings_item_t * item);
  */
 void lv_settings_refr(lv_settings_item_t * item);
 
+
+/**
+ * Set the settings parent.
+ * @param object pointer to the parent.
+ */
+void lv_settings_set_parent(lv_obj_t * parent);
+
 /**********************
  *      MACROS
  **********************/
