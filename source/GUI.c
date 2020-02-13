@@ -30,6 +30,8 @@
 #include "lv_drivers/indev/mousewheel.h"
 #include "lv_drivers/display/monitor.h"
 
+#define PRINTF printf
+
 #else
 #include "Calendar.h"
 #include "GILI9341.h"
@@ -410,15 +412,21 @@ void GUI_Task()
 
 	if(currTime-lastTickTime >= 4)
 	{
+#if defined(_WIN64) || defined(_WIN32)
+#elif
 		SET_DBG_PIN(2);
-
+#endif
 		lv_tick_inc(currTime-lastTickTime);
 		lastTickTime = currTime;
 
 
 		lv_task_handler();
-
+#if defined(_WIN64) || defined(_WIN32)
+#elif
 		CLEAR_DBG_PIN(2);
+#endif
+
+		
 
 	}
 }

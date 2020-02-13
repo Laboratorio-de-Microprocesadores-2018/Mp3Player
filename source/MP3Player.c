@@ -10,6 +10,7 @@
 #if defined(_WIN64) || defined(_WIN32)
 #include "SDL.h"
 #include "SDL_mixer.h"
+#define PRINTF printf
 
 #else
 
@@ -51,6 +52,7 @@ static FILINFO 				currentFileInfo;
 static uint32_t 			songsQueue[MAX_FILES_PER_DIR];
 static uint32_t 			queueLength;
 static uint32_t 			curSong;
+static uint32_t				curSongDuration;
 static char 				curPath[256];
 
 static void 				MP3_PlayCurrentSong();

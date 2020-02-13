@@ -15,6 +15,7 @@
 
 #if defined(_WIN64) || defined(_WIN32)
 #define FR_OK 0
+#define PRINTF printf
 #else
 
 #include "fsl_debug_console.h"
