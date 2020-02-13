@@ -94,11 +94,15 @@ static uint32_t keycode_to_ascii(uint32_t sdl_key)
     /*Remap some key to LV_KEY_... to manage groups*/
     switch(sdl_key) {
         case SDLK_RIGHT:
-        case SDLK_KP_PLUS:
+			return LV_KEY_NEXT;
+
+		case SDLK_KP_PLUS:
             return LV_KEY_RIGHT;
 
         case SDLK_LEFT:
-        case SDLK_KP_MINUS:
+			return LV_KEY_PREV;
+
+		case SDLK_KP_MINUS:
             return LV_KEY_LEFT;
 
         case SDLK_UP:
