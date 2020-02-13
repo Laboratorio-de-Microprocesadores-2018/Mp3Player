@@ -29,7 +29,9 @@
 #include "lv_drivers/indev/keyboard.h"
 #include "lv_drivers/indev/mousewheel.h"
 #include "lv_drivers/display/monitor.h"
-
+#include "lv_examples/lv_apps/settings/lv_settings.h"
+#include "lv_drivers/indev/keyboard.h"
+#include "lv_drivers/indev/mousewheel.h"
 #define PRINTF printf
 
 #else
@@ -37,6 +39,7 @@
 #include "GILI9341.h"
 #include "Input.h"
 #include "CPUTimeMeasurement.h"
+#include "lv_examples/lv_apps/settings/lv_settings.h"
 #endif
 
 
@@ -78,9 +81,9 @@
 #define KEYPAD_READ_CB		keyboard_read
 #define ENCODER_READ_CB		mousewheel_read
 #else
-#define GET_TICK			lv_tick_get();
+#define GET_TICK			lv_tick_get()
 #define MONITOR_INIT		GILI9341_Init()
-#define MONITOR_DEINIT		GILI9341_Denit()
+#define MONITOR_DEINIT		GILI9341_Deinit()
 #define MONITOR_FLUSH_CB	GILI9341_Flush
 #define KEYPAD_READ_CB		GUI_KeyPadRead
 #define ENCODER_READ_CB		GUI_EncoderRead
@@ -413,7 +416,8 @@ void GUI_Task()
 	if(currTime-lastTickTime >= 4)
 	{
 #if defined(_WIN64) || defined(_WIN32)
-#elif
+
+#else
 		SET_DBG_PIN(2);
 #endif
 		lv_tick_inc(currTime-lastTickTime);
@@ -422,7 +426,7 @@ void GUI_Task()
 
 		lv_task_handler();
 #if defined(_WIN64) || defined(_WIN32)
-#elif
+#else
 		CLEAR_DBG_PIN(2);
 #endif
 
@@ -1870,12 +1874,18 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
     if(Input_ReadNextButton() == 0)
     {
     	data->state = LV_INDEV_STATE_PR;
-    	data->key = LV_KEY_NEXT;
+    	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
+    		data->key = LV_KEY_RIGHT;
+    	else
+    		data->key = LV_KEY_NEXT;
     }
     else if(Input_ReadPrevButton() == 0)
     {
     	data->state = LV_INDEV_STATE_PR;
-    	data->key = LV_KEY_PREV;
+    	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
+    		data->key = LV_KEY_LEFT;
+    	else
+    		data->key = LV_KEY_PREV;
     }
 	else if (Input_ReadMenuButton() == 0)
 	{

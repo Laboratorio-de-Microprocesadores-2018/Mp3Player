@@ -11,9 +11,7 @@
  /*********************
   *      INCLUDES
   *********************/
-#include "lv_examples/lv_apps/settings/lv_settings.h"
-#include "lv_drivers/indev/keyboard.h"
-#include "lv_drivers/indev/mousewheel.h"
+
 
 /////////////////////////////////////////////////////////////////////////////////
 //                             Included header files                           //
