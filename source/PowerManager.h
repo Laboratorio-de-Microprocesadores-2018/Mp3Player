@@ -22,7 +22,7 @@
 #define APP_WAKEUP_BUTTON_IRQ BOARD_SW2_IRQ
 //#define BTN_SELECT_PORT PORTC /*!<@brief PORT device name: PORTC */
 //#define BTN_SELECT_PIN 6U     /*!<@brief PORTC pin index: 6 (SW2) */
-#define PM_WAKEUP_PIN 6 	  /* SW2: PC6*/
+#define PM_WAKEUP_PIN 6 	  /* SW2: PTC1*/
 
 /**
  *
