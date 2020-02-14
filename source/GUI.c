@@ -25,21 +25,15 @@
 
 #if defined(_WIN64) || defined(_WIN32)
 #include <windows.h>
-#include <assert.h>
 #include "lv_drivers/indev/keyboard.h"
 #include "lv_drivers/indev/mousewheel.h"
 #include "lv_drivers/display/monitor.h"
-#include "lv_examples/lv_apps/settings/lv_settings.h"
-#include "lv_drivers/indev/keyboard.h"
-#include "lv_drivers/indev/mousewheel.h"
-#define PRINTF printf
 
 #else
 #include "Calendar.h"
 #include "GILI9341.h"
 #include "Input.h"
 #include "CPUTimeMeasurement.h"
-#include "lv_examples/lv_apps/settings/lv_settings.h"
 #endif
 
 
@@ -76,18 +70,17 @@
 #if defined(_WIN64) || defined(_WIN32)
 #define GET_TICK			SDL_GetTicks()
 #define MONITOR_INIT		monitor_init()
-#define MONITOR_DEINIT		
 #define MONITOR_FLUSH_CB	monitor_flush
 #define KEYPAD_READ_CB		keyboard_read
 #define ENCODER_READ_CB		mousewheel_read
 #else
-#define GET_TICK			lv_tick_get()
+#define GET_TICK			lv_tick_get();
 #define MONITOR_INIT		GILI9341_Init()
-#define MONITOR_DEINIT		GILI9341_Deinit()
 #define MONITOR_FLUSH_CB	GILI9341_Flush
 #define KEYPAD_READ_CB		GUI_KeyPadRead
 #define ENCODER_READ_CB		GUI_EncoderRead
 #endif
+
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -201,10 +194,7 @@ typedef struct
 
 	/* Settings screen. */
 	GUI_SCREEN_DECLARE(
-	settingsScreen,
-	lv_obj_t* settingsBtn;
-	lv_settings_item_t* settingsRootItem;
-	lv_obj_t* settingsLabel;)
+	settingsScreen,)
 	
 	/* Power screen. */
 	GUI_SCREEN_DECLARE(
@@ -228,13 +218,11 @@ typedef struct
 }GUI_t;
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 //                   Local function prototypes ('static')                    //
 ///////////////////////////////////////////////////////////////////////////////
-
-/**
- * @brief Creation and definition of GUI structure.
+ /**
+ * Creation and definition of GUI structure
  */
 static void GUI_HalInit(void);
 
@@ -258,15 +246,6 @@ static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event);
 /**
- * @brief Settings menu Event handler callbacks
- */
-static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e);
-static void GUI_TimeMenuEventCB(lv_obj_t * obj, lv_event_t e);
-static void GUI_EcualizadorMenuEventCB(lv_obj_t * obj, lv_event_t e);
-static void GUI_ScreenTimeoutMenuEventCB(lv_obj_t * btn, lv_event_t e);
-static void submenu_event_cb(lv_obj_t * btn, lv_event_t e);
-
-/**
  * @brief Hide current screen and show a new one.
  * @param[in] screen ID of the screen to be shown.
  * @note All screens must be created before calling this function.
@@ -282,25 +261,14 @@ static void GUI_OpenFolder(char* folder);
  *
  */
 static bool GUI_ListFolderContents(char * folder);
-
 /**
  *
  */
 static void GUI_SetTrackInfo(char* fileName);
 
-/**
- *
- */
 static void GUI_UpdateProgressBar(lv_task_t* task);
-
-/**
- *
- */
 static void GUI_UpdateHeader(lv_task_t* task);
 
-/**
- *
- */
 static void GUI_ShowVolumeBar();
 
 /**
@@ -331,6 +299,7 @@ static bool GUI_EncoderRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
 /* GUI structure to store information and lvgl objects. */
 static GUI_t gui;
 
+
 /* Default album art image for tracks without embedded albumart*/
 LV_IMG_DECLARE(defaultAlbumArt);
 
@@ -339,6 +308,8 @@ static lv_disp_buf_t dispBuffer;
 
 static lv_color_t vdb_buf1[LV_VDB_BUFF_SIZE] LV_ATTRIBUTE_MEM_ALIGN;
 static lv_color_t vdb_buf2[LV_VDB_BUFF_SIZE] LV_ATTRIBUTE_MEM_ALIGN;
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                  API                                      //
@@ -363,15 +334,11 @@ void GUI_Init(void)
 	// FE_SetDriveChangedCB(GUI_UpdateDriveStatus); TODO!
 }
 
-/**
-* @ Brief Deinitialize the GUI
-*/
 void GUI_Deinit(void)
 {
-	MONITOR_DEINIT;
+	GILI9341_Deinit();
 	lv_deinit();
 }
-
 /**
 * Create a mp3 graphic user interface
 */
@@ -415,22 +382,15 @@ void GUI_Task()
 
 	if(currTime-lastTickTime >= 4)
 	{
-#if defined(_WIN64) || defined(_WIN32)
-
-#else
 		SET_DBG_PIN(2);
-#endif
+
 		lv_tick_inc(currTime-lastTickTime);
 		lastTickTime = currTime;
 
 
 		lv_task_handler();
-#if defined(_WIN64) || defined(_WIN32)
-#else
-		CLEAR_DBG_PIN(2);
-#endif
 
-		
+		CLEAR_DBG_PIN(2);
 
 	}
 }
@@ -458,9 +418,9 @@ bool GUI_PowerOffRequest()
 ///////////////////////////////////////////////////////////////////////////////
 
 
-/**
-* Initialize Hardware abstraction layer for GUI implementation
-*/
+ /**
+  * Initialize Hardware abstraction layer for GUI implementation
+  */
 static void GUI_HalInit(void)
 {
 	lv_disp_buf_init(&dispBuffer, vdb_buf1, vdb_buf2, LV_VDB_BUFF_SIZE);
@@ -559,7 +519,7 @@ static void GUI_CreateMenuScreen(void)
 			lv_label_set_text(label, LV_SYMBOL_RIGHT);
 			lv_obj_align(label, tab, LV_ALIGN_IN_RIGHT_MID, -10, 0);
 		}
-		
+
 		lv_group_add_obj(gui.menuScreen.group, tab);
 		lv_obj_set_event_cb(tab, GUI_MenuEventHandler);
 
@@ -690,52 +650,26 @@ static void GUI_CreateBrowserScreen(void)
 
 static void GUI_CreateSettingsScreen(void)
 {
-
-	/* Create a container for this screen. */
-	lv_obj_t* cont = lv_cont_create(lv_scr_act(), NULL);
-	lv_obj_set_size(cont, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
-	lv_obj_align(cont, lv_scr_act(), LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-	//lv_cont_set_layout(cont, LV_LAYOUT_PRETTY);
-
-	lv_obj_set_event_cb(cont, GUI_SettingsScreenEventHandler);
-
 	/* Create a group for this screen.  */
 	lv_obj_t* group = lv_group_create();
 	lv_group_set_wrap(group, false);
 	lv_group_set_style_mod_cb(group, GUI_BorderlessStyleModCB);
 	lv_group_set_style_mod_edit_cb(group, GUI_BorderlessStyleModCB);
 
-	/*Declare items*/
-	gui.settingsScreen.settingsRootItem = malloc(sizeof(lv_settings_item_t));
-	gui.settingsScreen.settingsRootItem->name = "Settings";
-	gui.settingsScreen.settingsRootItem->value = "";
-	gui.settingsScreen.settingsRootItem->cont = cont;
 
-	lv_obj_t * settingsBtn;
-	lv_settings_set_parent(cont);
-	lv_settings_set_group(group);
-	settingsBtn = lv_settings_create(gui.settingsScreen.settingsRootItem, GUI_SettingsScreenEventHandler);
-	lv_obj_align(settingsBtn, cont, LV_ALIGN_CENTER, 0, 0);
-	lv_obj_set_hidden(settingsBtn, true);
+	lv_obj_t* cont = lv_cont_create(lv_scr_act(), NULL);
+	lv_obj_set_size(cont, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
+	lv_obj_align(cont, lv_scr_act(), LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+	lv_group_add_obj(group, cont);
+	lv_obj_set_event_cb(cont, GUI_SettingsScreenEventHandler);
 
-	/* Add text labels for elaped and remaining time. */
-	lv_obj_t* settingsLabel = lv_label_create(cont, NULL);
-	lv_label_set_text(settingsLabel, "COFIGURACION");
-	lv_obj_align(settingsLabel, settingsBtn, LV_ALIGN_OUT_TOP_MID, 0, -10);
-	
-	gui.settingsScreen.settingsLabel = settingsLabel;
-	gui.settingsScreen.settingsBtn = settingsBtn;
-	gui.settingsScreen.parent = cont;
-	gui.settingsScreen.group = group;
-	
 	// Hide screen for default
 	lv_obj_set_hidden(cont, true);
+
+	gui.settingsScreen.parent = cont;
+	gui.settingsScreen.group = group;
 }
 
-
-/**
- * @brief Event handler callbacks
- */
 static void GUI_CreatePowerScreen(void)
 {
 
@@ -772,8 +706,11 @@ static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event)
 
 	switch (event)
 	{
+		//case LV_EVENT_VALUE_CHANGED:
+	//		lv_group_focus_obj(obj);
+				//break;
 	case LV_EVENT_FOCUSED:
-		lv_tabview_set_tab_act(gui.menuScreen.parent, tabId, true);
+
 		break;
 
 	case LV_EVENT_LONG_PRESSED:
@@ -795,6 +732,25 @@ static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event)
 			else
 				GUI_ShowScreen(tabId);
 			break;
+
+			//case LV_KEY_NEXT:
+		case LV_KEY_RIGHT:
+			if (tabId < TAB_NUM - 1)
+			{
+				lv_tabview_set_tab_act(gui.menuScreen.parent, tabId + 1, true);
+				lv_group_focus_next(gui.menuScreen.group);
+			}
+			break;
+
+			//case LV_KEY_PREV:
+		case LV_KEY_LEFT:
+			if (tabId > 0)
+			{
+				lv_tabview_set_tab_act(gui.menuScreen.parent, tabId - 1, true);
+				lv_group_focus_prev(gui.menuScreen.group);
+			}
+			break;
+
 		}
 		break;
 	}
@@ -828,19 +784,18 @@ static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 			MP3_PauseResume();
 			break;
 
+			//case LV_KEY_NEXT:
 		case LV_KEY_UP:
 			GUI_ShowScreen(MENU_SCREEN);
 			break;
 		case LV_KEY_DOWN:
 			GUI_ShowVolumeBar();
 			break;
-		
-		case LV_KEY_NEXT:
 		case LV_KEY_RIGHT:
 			MP3_Next();
 			break;
 
-		case LV_KEY_PREV:
+			//case LV_KEY_PREV:
 		case LV_KEY_LEFT:
 			MP3_Prev();
 			break;
@@ -903,16 +858,15 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 {
 	lv_key_t pressedKey = LV_KEY_HOME;
-	lv_settings_item_t * act_item = NULL;
 
 	switch (event)
 	{
 
 	case LV_EVENT_FOCUSED:
+
 		break;
 
 	case LV_EVENT_LONG_PRESSED:
-		pressedKey = gui.keypad->proc.types.keypad.last_key;
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
@@ -922,37 +876,25 @@ static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		}
 		break;
 	case LV_EVENT_KEY:
-	case LV_EVENT_PRESSED:
 		pressedKey = gui.keypad->proc.types.keypad.last_key;
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
-			lv_group_focus_obj(gui.settingsScreen.settingsBtn);
+
 			break;
-			
+
+			//case LV_KEY_NEXT:
 		case LV_KEY_UP:
-			lv_obj_set_hidden(gui.settingsScreen.settingsBtn, true);
 			GUI_ShowScreen(MENU_SCREEN);
 			break;
-		
-		case LV_KEY_NEXT:
 		case LV_KEY_RIGHT:
-			break;
 
-		case LV_KEY_PREV:
+
+			//case LV_KEY_PREV:
 		case LV_KEY_LEFT:
-			break;
 
-		default : 
 			break;
 		}
-		break;
-	case LV_EVENT_CLICKED:
-		/*Get the caller item*/
-		act_item = (lv_settings_item_t *)lv_event_get_data();
-
-		/*Create a new page in the menu*/
-		lv_settings_open_page(act_item, GUI_MainSettingsMenuEventCB);
 		break;
 	}
 }
@@ -1002,252 +944,6 @@ static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 	}
 }
 
-/**
- * @brief Settings menu Event handler callbacks
- */
-static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e)
-{
-	(void)btn;  /*Unused*/
-	//int a = gui.header.time.
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
-
-	/*Add the items*/
-	if (e == LV_EVENT_REFRESH) {
-
-		static lv_settings_item_t mainMenuItems[] =
-		{
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Ecualizador",.value = "Ajuste de bajos, \n medios y altos"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Hora",.value = "Ajusta la hora"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
-		};
-
-		uint32_t i;
-		for (i = 0; mainMenuItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
-			lv_settings_add(&mainMenuItems[i]);
-		}
-	}
-	/* Open submenus.
-	 * The submenus will be very simple so use a common event callback for them.
-	 * `act_item` is the clicked list button in the main menu.
-	 * It's name will be the title of the new page*/
-	else if (e == LV_EVENT_CLICKED) {
-		if (strcmp("Ecualizador", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_EcualizadorMenuEventCB);
-		}
-		else if (strcmp("Hora", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_TimeMenuEventCB);
-		}
-		else if (strcmp("Screen timeout", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_ScreenTimeoutMenuEventCB);
-		}
-	}
-}
-
-static void GUI_EcualizadorMenuEventCB(lv_obj_t * btn, lv_event_t e)
-{
-	(void)btn;  /*Unused*/
-
-	static char bajos[16] = { "50 dB" };
-	static char medios[16] = { "50 dB" };
-	static char altos[16] = { "50 dB" };
-	static lv_settings_item_t ecualizadorItems[] = {
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Bajos",.value = bajos,.state = 50},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Medios",.value = medios,.state = 50},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "ALtos",.value = altos,.state = 50},
-		{.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
-	};
-
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
-
-	/*Add items to the submenus*/
-	if (e == LV_EVENT_REFRESH) {
-		uint32_t i;
-		for (i = 0; ecualizadorItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
-			lv_settings_add(&ecualizadorItems[i]);
-		}
-	}
-	/*Handle the items' events*/
-	else if (e == LV_EVENT_VALUE_CHANGED) {
-		sprintf(act_item->value, "%d dB", act_item->state);
-		lv_settings_refr(act_item);
-	}
-}
-
-static void GUI_TimeMenuEventCB(lv_obj_t * obj, lv_event_t e)
-{
-	(void)obj;  /*Unused*/
-
-	/*Get the caller act_item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
-
-	if (e == LV_EVENT_REFRESH) {
-		/*Add the items*/
-		char * time;
-		static char hours_value[3];
-		static char mins_value[3];
-		static lv_settings_item_t timeItems[] =
-		{
-				{.type = LV_SETTINGS_TYPE_NUMSET,.name = "Hora",.value = hours_value},
-				{.type = LV_SETTINGS_TYPE_NUMSET,.name = "Minutos",.value = mins_value},
-				{.type = LV_SETTINGS_TYPE_INV},    /*Mark the last item*/
-		};
-
-		time = GUI_GetTimeString();
-		sprintf(hours_value, strtok(time, ":"));
-		sprintf(mins_value, strtok(NULL, ""));
-		timeItems[0].state = atoi(hours_value);
-		timeItems[1].state = atoi(mins_value);
-
-		uint32_t i;
-		for (i = 0; timeItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
-			lv_settings_add(&timeItems[i]);
-		}
-	}
-	else if (e == LV_EVENT_VALUE_CHANGED) {
-		if (strcmp("Hora", act_item->name) == 0) {
-			if (act_item->state > 23) act_item->state = 0;
-			if (act_item->state < 0) act_item->state = 23;
-
-			sprintf(act_item->value, "%d", act_item->state);
-			lv_settings_refr(act_item);
-
-		}
-		else if (strcmp("Minutos", act_item->name) == 0) {
-			if (act_item->state > 59) act_item->state = 0;
-			if (act_item->state < 0) act_item->state = 59;
-
-			sprintf(act_item->value, "%d", act_item->state);
-			lv_settings_refr(act_item);
-
-		}
-	}
-}
-
-static void GUI_ScreenTimeoutMenuEventCB(lv_obj_t * btn, lv_event_t e)
-{
-	(void)btn;  /*Unused*/
-
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
-
-	/*Add items to the submenus*/
-	if (e == LV_EVENT_REFRESH) {
-		static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_DDLIST,
-					.name = "Backlight timeout",
-					.value = "S\nM\nL\nXL",
-					.state = 0 };
-		lv_settings_add(&item);
-
-	}
-	/*Handle the items' events*/
-	else if (e == LV_EVENT_VALUE_CHANGED) {
-		printf("Backlight timeout: %d\n", act_item->state);
-	}
-}
-
-static void submenu_event_cb(lv_obj_t * btn, lv_event_t e)
-{
-	(void)btn;  /*Unused*/
-
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
-
-	/*Add items to the submenus*/
-	if (e == LV_EVENT_REFRESH) {
-		if (strcmp("Button", act_item->name) == 0) {
-			static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_BTN,
-					.name = "System test",
-					.value = "Start" };
-			lv_settings_add(&item);
-		}
-		else if (strcmp("Slider", act_item->name) == 0) {
-
-			static char value[16] = { "100 V" };
-			static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_SLIDER,
-					.name = "Voltage",
-					.value = value,
-					.state = 0 };
-
-			lv_settings_add(&item);
-		}
-		else if (strcmp("Switch", act_item->name) == 0) {
-
-			static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_SW,
-					.name = "Valve",
-					.value = "Closed",
-					.state = 0 };
-
-			lv_settings_add(&item);
-		}
-		else if (strcmp("Number set", act_item->name) == 0) {
-			static char value[16] = { "12" };
-			static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_NUMSET,
-					.name = "Age",
-					.value = value,
-					.state = 12 };
-
-			lv_settings_add(&item);
-		}
-		else if (strcmp("Drop down list", act_item->name) == 0) {
-			static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_DDLIST,
-					.name = "Size",
-					.value = "S\nM\nL\nXL",
-					.state = 0 };
-
-			lv_settings_add(&item);
-		}
-	}
-	/*Handle the items' events*/
-	else if (e == LV_EVENT_VALUE_CHANGED) {
-		if (strcmp("Voltage", act_item->name) == 0) {
-			sprintf(act_item->value, "%d V", act_item->state);
-			lv_settings_refr(act_item);
-		}
-		else if (strcmp("Age", act_item->name) == 0) {
-			if (act_item->state < 6) act_item->state = 6;
-			if (act_item->state > 99) act_item->state = 99;
-
-			sprintf(act_item->value, "%d", act_item->state);
-			lv_settings_refr(act_item);
-		}
-		else if (strcmp("Valve", act_item->name) == 0) {
-			if (act_item->state) act_item->value = "Open";
-			else act_item->value = "Close";
-
-			lv_settings_refr(act_item);
-		}
-		else if (strcmp("Size", act_item->name) == 0) {
-			printf("Size: %d\n", act_item->state);
-		}
-	}
-	else if (e == LV_EVENT_CLICKED) {
-		if (strcmp("System test", act_item->name) == 0) {
-			if (strcmp(act_item->value, "Start") == 0) {
-				act_item->value = "Stop";
-			}
-			else {
-				act_item->value = "Start";
-			}
-			lv_settings_refr(act_item);
-		}
-	}
-}
-
-
-/**
- * Open a new folder, relative to gui.browserPath.
- */
 static void GUI_ShowScreen(ScreenID_t ID)
 {
 
@@ -1260,8 +956,6 @@ static void GUI_ShowScreen(ScreenID_t ID)
 
 	/* Show selected screen. */
 	lv_obj_set_hidden(newScreen->parent, false);
-	if (ID == SETTINGS_SCREEN)
-		lv_obj_set_hidden(gui.settingsScreen.settingsBtn, false);
 
 	/* Redirect input to screens group of objects. */
 	lv_indev_set_group(gui.encoder, newScreen->group);
@@ -1640,6 +1334,38 @@ static bool GUI_ListFolderContents(char* path)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * @brief Update header information
  * Called periodically within a task, updates time information
@@ -1767,6 +1493,7 @@ static void GUI_SetTrackInfo(char * _fileName)
 	}
 }
 
+
 /**
  * @brief Periodically update track progress
  */
@@ -1792,6 +1519,9 @@ static void GUI_UpdateProgressBar(lv_task_t* task)
 	}
 }
 
+
+
+
 /**
  * @brief Set the status of a drive
  * @param[in] drive Drive number: SD=0, USB=1
@@ -1815,6 +1545,11 @@ void GUI_UpdateDriveStatus(uint8_t drive, bool status)
 	}
 }
 
+
+
+
+
+
 /**
 * 
 */
@@ -1828,6 +1563,10 @@ static void GUI_BorderlessStyleModCB(struct _lv_group_t * objGroup, lv_style_t *
 	//focusStyle->body.main_color = LV_COLOR_WHITE;
 	//focusStyle->body.opa = 0;
 }
+
+
+
+
 
 /**
 * Get time string 
@@ -1874,18 +1613,12 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
     if(Input_ReadNextButton() == 0)
     {
     	data->state = LV_INDEV_STATE_PR;
-    	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
-    		data->key = LV_KEY_RIGHT;
-    	else
-    		data->key = LV_KEY_NEXT;
+    	data->key = LV_KEY_RIGHT;
     }
     else if(Input_ReadPrevButton() == 0)
     {
     	data->state = LV_INDEV_STATE_PR;
-    	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
-    		data->key = LV_KEY_LEFT;
-    	else
-    		data->key = LV_KEY_PREV;
+    	data->key = LV_KEY_LEFT;
     }
 	else if (Input_ReadMenuButton() == 0)
 	{

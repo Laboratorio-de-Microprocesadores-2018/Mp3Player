@@ -10,7 +10,6 @@
 #if defined(_WIN64) || defined(_WIN32)
 #include "SDL.h"
 #include "SDL_mixer.h"
-#define PRINTF printf
 
 #else
 
@@ -52,7 +51,6 @@ static FILINFO 				currentFileInfo;
 static uint32_t 			songsQueue[MAX_FILES_PER_DIR];
 static uint32_t 			queueLength;
 static uint32_t 			curSong;
-static uint32_t				curSongDuration;
 static char 				curPath[256];
 
 static void 				MP3_PlayCurrentSong();
@@ -157,13 +155,9 @@ status_t MP3_Init()
 
 void MP3_Deinit(void)
 {
-	
-#if defined(_WIN64) || defined(_WIN32)
-#else
 	Vumeter_Deinit();
 	Audio_Deinit();
 	MP3FreeDecoder(mp3Decoder);
-#endif
 }
 
 void MP3_SetSongsQueue(uint32_t* songIndexs, uint32_t nSongs)
@@ -344,7 +338,7 @@ uint8_t MP3_GetMaxVolume(void)
 #if defined(_WIN64) || defined(_WIN32)
 	return MIX_MAX_VOLUME/4;
 #else
-	return Audio_GetMaxVolume();
+	return 32; //TODO!! 
 #endif
 }
 

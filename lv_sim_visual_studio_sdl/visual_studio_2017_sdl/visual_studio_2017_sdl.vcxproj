@@ -23,7 +23,7 @@
     <ProjectGuid>{6F59884D-4367-49A9-B6FD-BF60376873CE}</ProjectGuid>
     <RootNamespace>visualstudio2017sdl</RootNamespace>
     <ProjectName>GUI Simulation</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -246,7 +246,6 @@
     <ClCompile Include="lv_examples\lv_apps\benchmark\benchmark_bg.c" />
     <ClCompile Include="lv_examples\lv_apps\demo\demo.c" />
     <ClCompile Include="lv_examples\lv_apps\demo\img_bubble_pattern.c" />
-    <ClCompile Include="lv_examples\lv_apps\settings\lv_settings.c" />
     <ClCompile Include="lv_examples\lv_apps\sysmon\sysmon.c" />
     <ClCompile Include="lv_examples\lv_apps\terminal\terminal.c" />
     <ClCompile Include="lv_examples\lv_apps\tpcal\tpcal.c" />
@@ -424,7 +423,6 @@
     <ClInclude Include="lv_drivers\win_drv.h" />
     <ClInclude Include="lv_examples\lv_apps\benchmark\benchmark.h" />
     <ClInclude Include="lv_examples\lv_apps\demo\demo.h" />
-    <ClInclude Include="lv_examples\lv_apps\settings\lv_settings.h" />
     <ClInclude Include="lv_examples\lv_apps\sysmon\sysmon.h" />
     <ClInclude Include="lv_examples\lv_apps\terminal\terminal.h" />
     <ClInclude Include="lv_examples\lv_apps\tpcal\tpcal.h" />
@@ -477,7 +475,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="lv_examples\lv_apps\settings\lv_settings.mk" />
     <None Include="lv_examples\lv_tutorial\6_images\blue_flower_16.bin" />
     <None Include="lv_examples\lv_tutorial\6_images\blue_flower_32.bin" />
     <None Include="lv_examples\lv_tutorial\6_images\blue_flower_8.bin" />

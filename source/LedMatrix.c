@@ -27,27 +27,23 @@
 #define SCREEN_BUFFER_SIZE  	(NUMBER_OF_LEDS * 3)
 #define SCROLL_PERIOD 			0.17
 
-#define LED_SPI 				SPI0
+#define LED_SPI 				SPI2
 #define LED_DMA_MUX 			DMAMUX
 #define LED_DMA 				DMA0
+#define LED_DMA_SOURCE 			kDmaRequestMux0SPI2
 
 
-
-#define DSPI_MASTER_CLK_FREQ	CLOCK_GetFreq(DSPI0_CLK_SRC)
+#define DSPI_MASTER_CLK_FREQ	CLOCK_GetFreq(DSPI2_CLK_SRC)
 #define LED_PCS_FOR_INIT 		kDSPI_Pcs0
 #define LED_PCS_FOR_TRANSFER 	kDSPI_MasterPcs0
 #define PADDING_SIZE 			13
-#define TRANSFER_SIZE 			384U     /* Transfer dataSize */
+#define TRANSFER_SIZE 			384U         /* Transfer dataSize */
 #define TRANSFER_BAUDRATE 		2500000U /* Transfer baudrate 2.5Mhz */
 #define TX_CHANNEL 				1
 #define RX_CHANNEL 				2
 #define INTERMEDIARY_CHANNEL 	3
 
 #define COLOR_TEST 				1
-
-
-#define LED_MATRIX_USE_DMA
-
 
 /////////////////////////////////////////////////////////////////////////////////
 //                    Enumerations, structures and typedefs                    //
@@ -58,11 +54,8 @@
  * Prototypes
  ******************************************************************************/
 /* DSPI user callback */
-#if defined(LED_MATRIX_USE_DMA)
-static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData);
-#else
+//static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData);
 static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData);
-#endif
 
 
 
@@ -109,35 +102,13 @@ static const uint16_t bitCode[] = {
     0b110110110110
 };
 
-//static const uint16_t bitCode[] = {
-//    0b011011011011,
-//    0b011011011001,
-//    0b011011001011,
-//    0b011011001001,
-//    0b011001011011,
-//    0b011001011001,
-//    0b011001001011,
-//    0b011001001001,
-//    0b001011011011,
-//    0b001011011001,
-//    0b001011001011,
-//    0b001011001001,
-//    0b001001011011,
-//    0b001001011001,
-//    0b001001001011,
-//    0b001001001001
-//};
 
+//static dspi_master_edma_handle_t SPI_handle;
+//static edma_handle_t dspiEdmaMasterRxRegToRxDataHandle;
+//static edma_handle_t dspiEdmabitstreamToIntermediaryHandle;
+//static edma_handle_t dspiEdmaMasterIntermediaryToTxRegHandle;
 
-#if defined(LED_MATRIX_USE_DMA)
-static dspi_master_edma_handle_t SPI_handle;
-static edma_handle_t dspiEdmaMasterRxRegToRxDataHandle;
-static edma_handle_t dspiEdmabitstreamToIntermediaryHandle;
-static edma_handle_t dspiEdmaMasterIntermediaryToTxRegHandle;
-#else
 static dspi_master_handle_t SPI_handle;
-#endif
-
 static dspi_transfer_t transfer;
 static volatile bool isTransferCompleted = false;
 
@@ -164,15 +135,12 @@ static void LedMatrix_ScrollText();
 
 void LedMatrix_Init(void)
 {
-#if defined(LED_MATRIX_USE_DMA)
-	DMAMUX_Init(DMAMUX);
-	DMAMUX_SetSource(LED_DMA_MUX, RX_CHANNEL,kDmaRequestMux0SPI0Rx);
+	/* DMA MUX init */
+	DMAMUX_Init(LED_DMA_MUX);
+	//DMAMUX_SetSource(LED_DMA_MUX, TX_CHANNEL,(uint8_t)LED_DMA_Tx_SOURCE);
+	//DMAMUX_EnableChannel(LED_DMA_MUX, TX_CHANNEL);
+	DMAMUX_SetSource(LED_DMA_MUX, RX_CHANNEL,(uint8_t)LED_DMA_SOURCE);
 	DMAMUX_EnableChannel(LED_DMA_MUX, RX_CHANNEL);
-
-	DMAMUX_SetSource(LED_DMA_MUX, TX_CHANNEL,kDmaRequestMux0SPI0Tx);
-	DMAMUX_EnableChannel(LED_DMA_MUX, TX_CHANNEL);
-
-#endif
 
 	/* SPI master config */
 	dspi_master_config_t masterConfig;
@@ -192,26 +160,29 @@ void LedMatrix_Init(void)
 	masterConfig.enableModifiedTimingFormat = false;
 	masterConfig.samplePoint = kDSPI_SckToSin0Clock;
 
-	DSPI_MasterInit(LED_SPI, &masterConfig, DSPI_MASTER_CLK_FREQ);
+	uint32_t srcClock_Hz = DSPI_MASTER_CLK_FREQ;
+	DSPI_MasterInit(LED_SPI, &masterConfig, srcClock_Hz);
 
-#if defined(LED_MATRIX_USE_DMA)
-	EDMA_CreateHandle(&dspiEdmaMasterRxRegToRxDataHandle, LED_DMA, RX_CHANNEL);
-	EDMA_CreateHandle(&dspiEdmabitstreamToIntermediaryHandle, LED_DMA, INTERMEDIARY_CHANNEL);
-	EDMA_CreateHandle(&dspiEdmaMasterIntermediaryToTxRegHandle, LED_DMA, TX_CHANNEL);
+	/* Set up dspi master */
 
-	DSPI_MasterTransferCreateHandleEDMA(LED_SPI, &SPI_handle, DSPI_MasterUserCallback, NULL,
-			&dspiEdmaMasterRxRegToRxDataHandle,
-			&dspiEdmabitstreamToIntermediaryHandle,
-			&dspiEdmaMasterIntermediaryToTxRegHandle);
-#else
+//	EDMA_CreateHandle(&(dspiEdmaMasterRxRegToRxDataHandle), LED_DMA, RX_CHANNEL);
+//
+//	EDMA_CreateHandle(&(dspiEdmabitstreamToIntermediaryHandle), LED_DMA, INTERMEDIARY_CHANNEL);
+//
+//	EDMA_CreateHandle(&(dspiEdmaMasterIntermediaryToTxRegHandle), LED_DMA, TX_CHANNEL);
+//
+//	DSPI_MasterTransferCreateHandleEDMA(LED_SPI, &SPI_handle, DSPI_MasterUserCallback,
+//										NULL, &dspiEdmaMasterRxRegToRxDataHandle,
+//										&dspiEdmabitstreamToIntermediaryHandle,
+//										&dspiEdmaMasterIntermediaryToTxRegHandle);
+
 	DSPI_MasterTransferCreateHandle(LED_SPI, &SPI_handle, DSPI_MasterUserCallback, NULL);
-#endif
 
 	/* Config transfer */
 	transfer.txData = (uint8_t*)bitstream;
 	transfer.rxData = NULL;
-	transfer.dataSize = (2*PADDING_SIZE+TRANSFER_SIZE)*sizeof(uint16_t);
-	transfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
+	transfer.dataSize = (2*PADDING_SIZE+TRANSFER_SIZE)*2;
+	transfer.configFlags = kDSPI_MasterCtar0 | LED_PCS_FOR_TRANSFER | kDSPI_MasterPcsContinuous;
 
 	memset(&bitstream[0],0,PADDING_SIZE*sizeof(uint16_t));
 	memset(&bitstream[PADDING_SIZE+TRANSFER_SIZE],0,PADDING_SIZE*sizeof(uint16_t));
@@ -221,7 +192,9 @@ void LedMatrix_Init(void)
 
 	init = true;
 
-	LedMatrix_Clear();
+	//sysTickInit();
+	// Add to systick periodic callback to scroll text
+	//sysTickAddCallback(LedMatrix_ScrollText,SCROLL_PERIOD);
 
 	// Startup test
 	LedMatrix_ShortColorTest();
@@ -231,7 +204,6 @@ void LedMatrix_Init(void)
 
 void LedMatrix_Deinit()
 {
-	LedMatrix_Clear();
 	DMAMUX_Deinit(DMAMUX);
 	DSPI_Deinit(LED_SPI);
 }
@@ -305,19 +277,19 @@ void LedMatrix_ShortColorTest(void)
 	static Color W = {.RGB={10,10,10}};
 
 	LedMatrix_PlainColor(G);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	LedMatrix_PlainColor(R);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	LedMatrix_PlainColor(B);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	LedMatrix_PlainColor(W);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	Color screen1[8][8] ={	{R,R,G,G,B,B,W,W},
@@ -329,7 +301,7 @@ void LedMatrix_ShortColorTest(void)
 							{R,R,G,G,B,B,W,W},
 							{R,R,G,G,B,B,W,W}};
 	LedMatrix_PrintScreen(&screen1[0][0]);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	Color screen2[8][8] ={	{R,R,R,R,R,R,R,R},
@@ -341,7 +313,7 @@ void LedMatrix_ShortColorTest(void)
 							{W,W,W,W,W,W,W,W},
 							{W,W,W,W,W,W,W,W}};
 	LedMatrix_PrintScreen(&screen2[0][0]);
-	counter = 0xAFFFFF;
+	counter = 0x5FFFFF;
 	while(counter--);
 
 	LedMatrix_Clear();
@@ -538,20 +510,13 @@ static void LedMatrix_Update()
 {
 	if(init == true)
 	{
-#if defined(LED_MATRIX_USE_DMA)
-		DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
-#else
 		DSPI_MasterTransferNonBlocking(LED_SPI, &SPI_handle, &transfer);
-#endif
-
-
+		//DSPI_MasterTransferEDMA(LED_SPI, &SPI_handle, &transfer);
 	}
 }
-#if defined(LED_MATRIX_USE_DMA)
-static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
-#else
+
+//static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, status_t status, void *userData)
 static void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData)
-#endif
 {
 
     isTransferCompleted = true;
