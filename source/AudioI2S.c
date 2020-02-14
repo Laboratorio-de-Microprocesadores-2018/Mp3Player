@@ -120,6 +120,7 @@ status_t Audio_Init()
 	LM49450_GetDefaultSlaveConfig(&LM49450config);
 	LM49450config.oversampleRate = LM49450_DAC_OSR_125;
 	LM49450config.I2sMode = LM49450_I2s_LeftJustified;
+	LM49450config.defaultDacFilter = false;
 	LM49450config.chargePumpDiv = 73;
 
 
@@ -270,7 +271,7 @@ void Audio_ResetQueue()
 uint32_t Audio_GetCurrentFrameNumber()
 {
 	//NVIC_DisableIRQ(AUDIO_DMA_IRQ_ID);
-	uint32_t n = audioQueue[DMA_Handle.header].frameNumber;
+	uint32_t n = audioQueue[queueDriver].frameNumber;
 	//NVIC_EnableIRQ(AUDIO_DMA_IRQ_ID);
 	return n;
 }
@@ -413,37 +414,31 @@ bool Audio_QueueIsEmpty()
 
 bool Audio_AreHeadphonesPlugged()
 {
-	bool HPR = GPIO_PinRead(HPL_SENSE_GPIO,HPR_SENSE_PIN);
-	bool HPL = GPIO_PinRead(HPL_SENSE_GPIO,HPL_SENSE_PIN);
-
-	return (HPR || HPL);
+	return GPIO_PinRead(HPL_SENSE_GPIO,HPR_SENSE_PIN) || GPIO_PinRead(HPL_SENSE_GPIO,HPL_SENSE_PIN);
 }
 
 void Audio_SetVolume(uint8_t level)
 {
-// TODO
-//	if(headphonesPlugged)
-//	{
-//
-//	}
-//	else
-//	{
-//
-//	}
-	LM49450_SetVolume(level);
+
+	if(Audio_AreHeadphonesPlugged())
+	{
+		LM49450_SetHpVolume(level);
+	}
+	else
+	{
+		LM49450_SetSpkVolume(level);
+	}
 }
 uint8_t Audio_GetVolume(void)
 {
-// TODO
-//	if(headphonesPlugged)
-//	{
-//
-//	}
-//	else
-//	{
-//
-//	}
-	return LM49450_GetVolume();
+	if(Audio_AreHeadphonesPlugged())
+	{
+		return LM49450_GetHpVolume();
+	}
+	else
+	{
+		return LM49450_GetSpkVolume();
+	}
 }
 uint8_t Audio_GetMaxVolume(void)
 {
