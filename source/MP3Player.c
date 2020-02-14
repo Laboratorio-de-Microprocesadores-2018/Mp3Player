@@ -338,7 +338,7 @@ uint8_t MP3_GetMaxVolume(void)
 #if defined(_WIN64) || defined(_WIN32)
 	return MIX_MAX_VOLUME/4;
 #else
-	return 32; //TODO!! 
+	return Audio_GetMaxVolume();
 #endif
 }
 
