@@ -14,8 +14,7 @@
 #include <string.h>
 
 #if defined(_WIN64) || defined(_WIN32)
-#define FR_OK 0
-#define PRINTF printf
+
 #else
 
 #include "fsl_debug_console.h"
@@ -76,9 +75,7 @@ static FATFS g_fileSystems[3];
 
 status_t FE_Init(void)
 {
-#if defined(_WIN64) || defined(_WIN32)
-	return 0;
-#else
+
 
 	/* Save host information. */
 	g_sd.host.base = SD_HOST_BASEADDR;
@@ -94,16 +91,12 @@ status_t FE_Init(void)
 	SYSMPU_Enable(SYSMPU, false);
 
 	return status;
-#endif
 }
 
 
 void FE_Deinit(void)
 {
-#if defined(_WIN64) || defined(_WIN32)
-#else
 	SD_HostDeinit(&g_sd);
-#endif
 }
 
 
@@ -361,8 +354,8 @@ FRESULT FE_GetFileN(const char* path, uint8_t n, FILINFO* fileInfo)
 
 	/* Try to open directory. */
 #if defined(_WIN32) || defined(_WIN64)
-	DIR * dr = NULL;
-	FILINFO* de = NULL;
+	DIR * dr;
+	FILINFO* de;
 #else
 	DIR dr;
 	FILINFO de;

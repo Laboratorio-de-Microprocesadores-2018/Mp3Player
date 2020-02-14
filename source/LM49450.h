@@ -229,11 +229,8 @@ void LM49450_Mute(void);
  *	@brief
  *
  */
-void LM49450_SetHpVolume(uint8_t vol);
-void LM49450_SetSpkVolume(uint8_t vol);
-
-uint8_t LM49450_GetHpVolume(void);
-uint8_t LM49450_GetSpkVolume(void);
+void LM49450_SetVolume(uint8_t vol);
+uint8_t LM49450_GetVolume(void);
 /**
  *	@brief Increase the volume of the output.
  *	@return True if applied, false if maximum reached
