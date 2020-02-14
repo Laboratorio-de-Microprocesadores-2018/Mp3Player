@@ -69,7 +69,7 @@ void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_edma_handle_t *handle, 
 		endOfTransferPtr = NULL;
 
 		GUI_FlushReady();
-		CLEAR_DBG_PIN(3);
+		CLEAR_DBG_PIN(4);
 	}
 }
 
@@ -397,7 +397,7 @@ void ILI9341_SendData(uint8_t * data, uint32_t len)
 {
 	assert(ILI9341_IsBusy()==false);
 
-	SET_DBG_PIN(3);
+	SET_DBG_PIN(4);
 
 	GPIO_PinWrite(LCD_DCRS_GPIO,LCD_DCRS_PIN,DATA);
 

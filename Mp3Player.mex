@@ -43,7 +43,7 @@
                <pin_label pin_num="84" pin_signal="PTC12/UART4_RTS_b/FB_AD27/FTM3_FLT0" label=""/>
                <pin_label pin_num="76" pin_signal="PTC4/LLWU_P8/SPI0_PCS0/UART1_TX/FTM0_CH3/FB_AD11/CMP1_OUT" label="/PWR_EN_5Vn" identifier="PWR_EN_5Vn"/>
                <pin_label pin_num="93" pin_signal="PTD0/LLWU_P12/SPI0_PCS0/UART2_RTS_b/FTM3_CH0/FB_ALE/FB_CS1_b/FB_TS_b" label="/DBG1" identifier="DBG1"/>
-               <pin_label pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL" label="/DBG3" identifier="DBG3"/>
+               <pin_label pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL" label="/LED_DATA" identifier="DBG3;LED_DATA"/>
                <pin_label pin_num="96" pin_signal="PTD3/SPI0_SIN/UART2_TX/FTM3_CH3/FB_AD3/I2C0_SDA" label="/DBG4" identifier="DBG4"/>
                <pin_label pin_num="94" pin_signal="ADC0_SE5b/PTD1/SPI0_SCK/UART2_CTS_b/FTM3_CH1/FB_CS0_b" label="/DBG2" identifier="DBG2"/>
                <pin_label pin_num="32" pin_signal="ADC0_SE18/PTE25/UART4_RX/I2C0_SDA/EWM_IN" label=""/>
@@ -95,7 +95,7 @@
                <pin_label pin_num="63" pin_signal="PTB17/SPI1_SIN/UART0_TX/FTM_CLKIN1/FB_AD16/EWM_OUT_b" label="/LCD_MISO" identifier="LCD_MISO"/>
                <pin_label pin_num="37" pin_signal="PTA3/UART0_RTS_b/FTM0_CH0/JTAG_TMS/SWD_DIO" label=""/>
                <pin_label pin_num="34" pin_signal="PTA0/UART0_CTS_b/UART0_COL_b/FTM0_CH5/JTAG_TCLK/SWD_CLK/EZP_CLK" label=""/>
-               <pin_label pin_num="68" pin_signal="PTB22/SPI2_SOUT/FB_AD29/CMP2_OUT" label="/LED_DATA" identifier="LED_DATA"/>
+               <pin_label pin_num="68" pin_signal="PTB22/SPI2_SOUT/FB_AD29/CMP2_OUT" label=""/>
                <pin_label pin_num="67" pin_signal="PTB21/SPI2_SCK/FB_AD30/CMP1_OUT" label=""/>
                <pin_label pin_num="13" pin_signal="VREGIN" label="/P3V3_MCU" identifier="P3V3_MCU"/>
                <pin_label pin_num="29" pin_signal="EXTAL32" label=""/>
@@ -156,7 +156,7 @@
                         <data>true</data>
                      </feature>
                   </dependency>
-                  <dependency resourceType="Peripheral" resourceId="SPI2" description="Peripheral SPI2 is not initialized" problem_level="1" source="Pins:BOARD_InitPins">
+                  <dependency resourceType="Peripheral" resourceId="SPI0" description="Peripheral SPI0 is not initialized" problem_level="1" source="Pins:BOARD_InitPins">
                      <feature name="initialized" evaluation="equal">
                         <data>true</data>
                      </feature>
@@ -272,7 +272,12 @@
                         <pin_feature name="gpio_init_state" value="true"/>
                      </pin_features>
                   </pin>
-                  <pin peripheral="SPI2" signal="SOUT" pin_num="68" pin_signal="PTB22/SPI2_SOUT/FB_AD29/CMP2_OUT"/>
+                  <pin peripheral="SPI0" signal="SOUT" pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL">
+                     <pin_features>
+                        <pin_feature name="identifier" value="LED_DATA"/>
+                        <pin_feature name="open_drain" value="enable"/>
+                     </pin_features>
+                  </pin>
                   <pin peripheral="GPIOC" signal="GPIO, 2" pin_num="72" pin_signal="ADC0_SE4b/CMP1_IN0/PTC2/SPI0_PCS2/UART1_CTS_b/FTM0_CH1/FB_AD12/I2S0_TX_FS">
                      <pin_features>
                         <pin_feature name="direction" value="INPUT"/>
@@ -342,11 +347,6 @@
                      </pin_features>
                   </pin>
                   <pin peripheral="GPIOD" signal="GPIO, 1" pin_num="94" pin_signal="ADC0_SE5b/PTD1/SPI0_SCK/UART2_CTS_b/FTM3_CH1/FB_CS0_b">
-                     <pin_features>
-                        <pin_feature name="direction" value="OUTPUT"/>
-                     </pin_features>
-                  </pin>
-                  <pin peripheral="GPIOD" signal="GPIO, 2" pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL">
                      <pin_features>
                         <pin_feature name="direction" value="OUTPUT"/>
                      </pin_features>
@@ -577,11 +577,7 @@
                         <pin_feature name="identifier" value=""/>
                      </pin_features>
                   </pin>
-                  <pin peripheral="SPI2" signal="SOUT" pin_num="68" pin_signal="PTB22/SPI2_SOUT/FB_AD29/CMP2_OUT">
-                     <pin_features>
-                        <pin_feature name="identifier" value=""/>
-                     </pin_features>
-                  </pin>
+                  <pin peripheral="SPI2" signal="SOUT" pin_num="68" pin_signal="PTB22/SPI2_SOUT/FB_AD29/CMP2_OUT"/>
                   <pin peripheral="I2C1" signal="SCL" pin_num="82" pin_signal="ADC1_SE6b/PTC10/I2C1_SCL/FTM3_CH6/I2S0_RX_FS/FB_AD5">
                      <pin_features>
                         <pin_feature name="identifier" value=""/>
@@ -679,11 +675,7 @@
                         <pin_feature name="identifier" value=""/>
                      </pin_features>
                   </pin>
-                  <pin peripheral="n/a" signal="disabled" pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL">
-                     <pin_features>
-                        <pin_feature name="identifier" value=""/>
-                     </pin_features>
-                  </pin>
+                  <pin peripheral="n/a" signal="disabled" pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL"/>
                   <pin peripheral="ADC0" signal="SE, 5b" pin_num="94" pin_signal="ADC0_SE5b/PTD1/SPI0_SCK/UART2_CTS_b/FTM3_CH1/FB_CS0_b">
                      <pin_features>
                         <pin_feature name="identifier" value=""/>
@@ -812,7 +804,7 @@
             </function>
          </functions_list>
       </pins>
-      <clocks name="Clocks" version="7.0" enabled="true" update_project_code="true">
+      <clocks name="Clocks" version="7.0" enabled="true" update_project_code="false">
          <generated_project_files>
             <file path="board/clock_config.c" update_enabled="true"/>
             <file path="board/clock_config.h" update_enabled="true"/>
@@ -1043,7 +1035,7 @@
             <component name="system" uuid="8dd3d428-d7df-4a85-a1f3-42d74f07fd59" type_id="system">
                <config_set_global name="global_system_definitions"/>
             </component>
-            <component name="msg" uuid="16f4cfe0-7441-446a-8d5a-bf811c621da2" type_id="msg_6e2baaf3b97dbeef01c0043275f9a0e7">
+            <component name="msg" uuid="0dc67251-41b8-4b6e-81d5-b13e1ee01c75" type_id="msg_6e2baaf3b97dbeef01c0043275f9a0e7">
                <config_set_global name="global_messages"/>
             </component>
          </components>

@@ -223,11 +223,11 @@ static LM49450_Registers registers = {	.CTRL 		 = 0x01,
 										.SPK_3D_CTRL = 0x00,
 										.HP_VOLUME 	 = 0x14,
 										.SPK_VOLUME  = 0x10,
-										.CMP_0_LSB 	 = 0x00,
-										.CMP_0_MSB 	 = 0x00,
-										.CMP_1_LSB 	 = 0x00,
+										.CMP_0_LSB 	 = 0x0F,
+										.CMP_0_MSB 	 = 0xFF,
+										.CMP_1_LSB 	 = 0xFF,
 										.CMP_1_MSB 	 = 0x00,
-										.CMP_2_LSB 	 = 0x00,
+										.CMP_2_LSB 	 = 0xFF,
 										.CMP_2_MSB 	 = 0x00};
 
 
@@ -379,6 +379,8 @@ void LM49450_SlaveInit(LM49450_SlaveConfig * config)
 		PRINTF("LM49450 Config OK! \n");
 	else
 		PRINTF("LM49450 Config ERROR! \n");
+
+
 }
 
 
@@ -433,17 +435,30 @@ void LM49450_Mute()
  *	@brief
  *
  */
-void LM49450_SetVolume(uint8_t vol)
+void LM49450_SetHpVolume(uint8_t vol)
 {
-	assert(0<=vol && vol<32);
+	assert(0<=vol && vol<=32);
 
 	registers.HP_VOLUME = vol;
 	LM49450_WriteReg(7,  registers.HP_VOLUME);
 }
 
-uint8_t LM49450_GetVolume(void)
+void LM49450_SetSpkVolume(uint8_t vol)
+{
+	assert(0<=vol && vol<=32);
+
+	registers.SPK_VOLUME = vol;
+	LM49450_WriteReg(8,  registers.SPK_VOLUME);
+}
+
+uint8_t LM49450_GetHpVolume(void)
 {
 	return registers.HP_VOLUME;
+}
+
+uint8_t LM49450_GetSpkVolume(void)
+{
+	return registers.SPK_VOLUME;
 }
 /**
  *

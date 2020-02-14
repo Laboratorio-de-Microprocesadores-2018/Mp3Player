@@ -537,6 +537,12 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lv_examples\lv_apps\settings\lv_settings.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lv_examples\lv_tests\lv_test_settings\lv_ex_settings_1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lv_drivers\display\fbdev.h">
@@ -1034,6 +1040,9 @@
     <ClInclude Include="..\..\source\FileExplorer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="lv_examples\lv_apps\settings\lv_settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="lv_examples\lv_tutorial\6_images\blue_flower_8.bin">
@@ -1047,5 +1056,6 @@
     </None>
     <None Include="SDL2.dll" />
     <None Include="cpp.hint" />
+    <None Include="lv_examples\lv_apps\settings\lv_settings.mk" />
   </ItemGroup>
 </Project>
