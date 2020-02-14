@@ -5,6 +5,7 @@
 #include "MK64F12.h"
 #include "fsl_debug_console.h"
 #include "fsl_rcm.h"
+#include "fsl_sim.h"
 #include "Audio.h"
 #include "arm_math.h"
 #include "lvgl/src/lv_misc/lv_task.h"
@@ -167,6 +168,7 @@ int main(void)
     {
     	if(GUI_PowerOffRequest())
     	{
+    		SIM_SetUsbVoltRegulatorEnableMode(kSIM_UsbVoltRegEnableInAllModes);
     		MP3_Stop();
     		BOARD_DeInitPins();
     		APP_Deinit();
