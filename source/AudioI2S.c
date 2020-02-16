@@ -425,7 +425,7 @@ uint8_t Audio_GetVolume(void)
 }
 uint8_t Audio_GetMaxVolume(void)
 {
-	return 32;
+	return 31;
 }
 
 
