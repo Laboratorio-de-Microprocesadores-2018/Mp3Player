@@ -251,7 +251,7 @@ void BOARD_InitPins(void)
 
     gpio_pin_config_t LCD_LED_config = {
         .pinDirection = kGPIO_DigitalOutput,
-        .outputLogic = 1U
+        .outputLogic = 0U
     };
     /* Initialize GPIO functionality on pin PTB20 (pin 66)  */
     GPIO_PinInit(LCD_LED_GPIO, LCD_LED_PIN, &LCD_LED_config);

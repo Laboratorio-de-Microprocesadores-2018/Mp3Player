@@ -109,7 +109,8 @@ void APP_Init()
 
 	GUI_Init();
 	GUI_Create();
-
+	GUI_Task();
+	GPIO_PinWrite(LCD_LED_GPIO, LCD_LED_PIN, 1U);	// Turn backlight on after creating GUI.
 	Input_Init();
 
 }
