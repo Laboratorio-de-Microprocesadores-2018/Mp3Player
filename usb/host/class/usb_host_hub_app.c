@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015, Freescale Semiconductor, Inc.
- * Copyright 2016,2019 NXP
+ * Copyright 2016 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -20,9 +20,9 @@
  ******************************************************************************/
 
 /*! @brief HUB lock */
-#define USB_HostHubLock() OSA_MutexLock(hubGlobal->hubMutex,USB_OSA_WAIT_TIMEOUT)
+#define USB_HostHubLock() USB_OsaMutexLock(hubGlobal->hubMutex)
 /*! @brief HUB unlock */
-#define USB_HostHubUnlock() OSA_MutexUnlock(hubGlobal->hubMutex)
+#define USB_HostHubUnlock() USB_OsaMutexUnlock(hubGlobal->hubMutex)
 
 /*******************************************************************************
  * Prototypes
@@ -263,7 +263,7 @@ static void USB_HostHubProcess(usb_host_hub_instance_t *hubInstance)
 
         case kHubRunGetDescriptor:
             /* malloc port instance for the hub's ports */
-            hubInstance->portList = (usb_host_hub_port_instance_t *)OSA_MemoryAllocate(
+            hubInstance->portList = (usb_host_hub_port_instance_t *)USB_OsaMemoryAllocate(
                 hubInstance->portCount * sizeof(usb_host_hub_port_instance_t));
             if (hubInstance->portList == NULL)
             {
@@ -283,7 +283,6 @@ static void USB_HostHubProcess(usb_host_hub_instance_t *hubInstance)
             {
                 break;
             }
-            SUPPRESS_FALL_THROUGH_WARNING();
 
         case kHubRunSetPortPower:
             /* set PORT_POWER for all ports */
@@ -685,7 +684,6 @@ static void USB_HostHubProcessPortDetach(usb_host_hub_instance_t *hubInstance)
 #endif
             else
             {
-                SUPPRESS_FALL_THROUGH_WARNING();
                 /* don't break to check CONNECTION bit */
             }
         case kPortRunGetConnectionBit: /* (3) get port status */
@@ -1151,7 +1149,7 @@ usb_status_t USB_HostHubDeviceEvent(usb_host_handle hostHandle,
     usb_host_hub_instance_t *hubInstance;
     usb_host_hub_instance_t *prevInstance;
     uint32_t infoValue;
-    osa_status_t osaStatus;
+    usb_osa_status_t osaStatus;
     usb_host_hub_global_t *hubGlobal = USB_HostHubGetHubList(hostHandle);
     if (hubGlobal == NULL)
     {
@@ -1204,16 +1202,15 @@ usb_status_t USB_HostHubDeviceEvent(usb_host_handle hostHandle,
             {
                 /* print hub information */
                 USB_HostHelperGetPeripheralInformation(deviceHandle, kUSB_HostGetDeviceLevel, &infoValue);
-                usb_echo("hub attached:level=%u ", infoValue);
+                usb_echo("hub attached:level=%d ", infoValue);
                 USB_HostHelperGetPeripheralInformation(deviceHandle, kUSB_HostGetDeviceAddress, &infoValue);
-                usb_echo("address=%u\r\n", infoValue);
+                usb_echo("address=%d\r\n", infoValue);
 
                 /* initialize hub mutex */
-                if (hubGlobal->hubMutex == (osa_mutex_handle_t)NULL)
+                if (hubGlobal->hubMutex == (usb_osa_mutex_handle)NULL)
                 {
-                    hubGlobal->hubMutex = (osa_mutex_handle_t)(&hubGlobal->mutexBuffer[0]);
-                    osaStatus = OSA_MutexCreate(hubGlobal->hubMutex);
-                    if (osaStatus != KOSA_StatusSuccess)
+                    osaStatus = USB_OsaMutexCreate(&hubGlobal->hubMutex);
+                    if (osaStatus != kStatus_USB_OSA_Success)
                     {
                         hubGlobal->hubMutex = NULL;
 #ifdef HOST_ECHO
@@ -1290,9 +1287,9 @@ usb_status_t USB_HostHubDeviceEvent(usb_host_handle hostHandle,
                 }
                 /* print hub information */
                 USB_HostHelperGetPeripheralInformation(hubInstance->deviceHandle, kUSB_HostGetDeviceLevel, &infoValue);
-                usb_echo("hub detached:level=%u ", infoValue);
+                usb_echo("hub detached:level=%d ", infoValue);
                 USB_HostHelperGetPeripheralInformation(deviceHandle, kUSB_HostGetDeviceAddress, &infoValue);
-                usb_echo("address=%u\r\n", infoValue);
+                usb_echo("address=%d\r\n", infoValue);
                 hubInstance->invalid = 1;
                 /* detach hub ports' devices */
                 for (uint8_t portIndex = 0; portIndex < hubInstance->portCount; ++portIndex)
@@ -1306,7 +1303,7 @@ usb_status_t USB_HostHubDeviceEvent(usb_host_handle hostHandle,
                 }
                 if (hubInstance->portList != NULL)
                 {
-                    OSA_MemoryFree(hubInstance->portList);
+                    USB_OsaMemoryFree(hubInstance->portList);
                 }
                 USB_HostHubDeinit(deviceHandle, hubInstance); /* de-initialize hub instance */
             }
@@ -1316,7 +1313,7 @@ usb_status_t USB_HostHubDeviceEvent(usb_host_handle hostHandle,
             {
                 if (hubGlobal->hubMutex != NULL)
                 {
-                    OSA_MutexDestroy(hubGlobal->hubMutex);
+                    USB_OsaMutexDestroy(hubGlobal->hubMutex);
                     hubGlobal->hubMutex = NULL;
                 }
             }

@@ -2,10 +2,10 @@
 #define _FFCONF_H_
 
 /*---------------------------------------------------------------------------/
-/  FatFs Functional Configurations
+/  FatFs - Configuration file
 /---------------------------------------------------------------------------*/
 
-#define FFCONF_DEF	86604	/* Revision ID */
+#define FFCONF_DEF 63463	/* Revision ID */
 
 /*---------------------------------------------------------------------------/
 / MSDK adaptation configuration
@@ -13,14 +13,6 @@
 #define SD_DISK_ENABLE
 
 #define USB_DISK_ENABLE
-
-/* Available options are:
-/      RAM_DISK_ENABLE
-/      USB_DISK_ENABLE
-/      SD_DISK_ENABLE
-/      MMC_DISK_ENABLE
-/      SDSPI_DISK_ENABLE
-/      NAND_DISK_ENABLE */
 
 /*---------------------------------------------------------------------------/
 / Function Configurations
@@ -181,12 +173,14 @@
 / Drive/Volume Configurations
 /---------------------------------------------------------------------------*/
 
+
 #define FF_VOLUMES		2
 /* Number of volumes (logical drives) to be used. (1-10) */
 
 
 #define FF_STR_VOLUME_ID	1
 #define FF_VOLUME_STRS		"SD","USB"
+
 /* FF_STR_VOLUME_ID switches support for volume ID in arbitrary strings.
 /  When FF_STR_VOLUME_ID is set to 1 or 2, arbitrary strings can be used as drive
 /  number in the path name. FF_VOLUME_STRS defines the volume ID strings for each
@@ -250,7 +244,7 @@
 
 #define FF_FS_EXFAT		0
 /* This option switches support for exFAT filesystem. (0:Disable or 1:Enable)
-/  To enable exFAT, also LFN needs to be enabled. (FF_USE_LFN >= 1)
+/  To enable exFAT, also LFN needs to be enabled.
 /  Note that enabling exFAT discards ANSI C (C89) compatibility. */
 
 
@@ -280,7 +274,6 @@
 /      lock control is independent of re-entrancy. */
 
 
-/* #include <somertos.h>	// O/S definitions */
 #define FF_FS_REENTRANT	0
 #define FF_FS_TIMEOUT	1000
 #define FF_SYNC_t		HANDLE
@@ -300,6 +293,8 @@
 /  The FF_SYNC_t defines O/S dependent sync object type. e.g. HANDLE, ID, OS_EVENT*,
 /  SemaphoreHandle_t and etc. A header file for O/S definitions needs to be
 /  included somewhere in the scope of ff.h. */
+
+/* #include <windows.h>	// O/S definitions  */
 
 
 

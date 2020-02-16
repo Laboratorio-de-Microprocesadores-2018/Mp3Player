@@ -52,7 +52,7 @@ static bool usbStatusChanged = false;
 
 #else
 
-usb_host_handle g_HostHandle;
+extern usb_host_handle g_HostHandle;
 //extern sd_card_t g_sd;
 /* SD card detect configuration */
 static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
@@ -139,6 +139,7 @@ void FE_Task(void)
 	//	}
 
 		// Check changes in SD drive
+	//USB_HostKhciTaskFunction(g_HostHandle);
 	if (sdStatusChanged)
 	{
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 - 2016, Freescale Semiconductor, Inc.
- * Copyright 2016, 2019 NXP
+ * Copyright 2016 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -215,7 +215,9 @@ static usb_status_t USB_HostMsdClearHalt(usb_host_msd_instance_t *msdInstance,
 #endif
         return status;
     }
-
+    /* save the application callback function */
+    msdInstance->controlCallbackFn = NULL;
+    msdInstance->controlCallbackParam = NULL;
     /* initialize transfer */
     transfer->callbackFn = callbackFn;
     transfer->callbackParam = msdInstance;
@@ -677,7 +679,7 @@ static usb_status_t USB_HostMsdProcessCommand(usb_host_msd_instance_t *msdInstan
         case kMSD_CommandTransferCSW: /* ufi CSW phase */
             transfer->direction = USB_IN;
             transfer->transferBuffer = (uint8_t *)&msdInstance->msdCommand.cswBlock;
-            transfer->transferLength = USB_HOST_UFI_CSW_LENGTH;
+            transfer->transferLength = sizeof(usb_host_csw_t);
             transfer->callbackFn = USB_HostMsdCswCallback;
             transfer->callbackParam = msdInstance;
             status = USB_HostRecv(msdInstance->hostHandle, msdInstance->inPipe, transfer);
@@ -886,7 +888,7 @@ usb_status_t USB_HostMsdInit(usb_device_handle deviceHandle, usb_host_class_hand
 {
     uint32_t infoValue;
     usb_status_t status;
-    usb_host_msd_instance_t *msdInstance = (usb_host_msd_instance_t *)OSA_MemoryAllocate(
+    usb_host_msd_instance_t *msdInstance = (usb_host_msd_instance_t *)USB_OsaMemoryAllocate(
         sizeof(usb_host_msd_instance_t)); /* malloc msd class instance */
 
     if (msdInstance == NULL)
@@ -1049,7 +1051,7 @@ usb_status_t USB_HostMsdDeinit(usb_device_handle deviceHandle, usb_host_class_ha
         }
         USB_HostCloseDeviceInterface(deviceHandle,
                                      msdInstance->interfaceHandle); /* notify host driver the interface is closed */
-        OSA_MemoryFree(msdInstance);
+        USB_OsaMemoryFree(msdInstance);
     }
     else
     {
