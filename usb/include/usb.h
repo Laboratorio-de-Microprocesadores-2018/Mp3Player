@@ -12,9 +12,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "fsl_common.h"
-#include "fsl_os_abstraction.h"
+#include "usb_osa.h"
 #include "usb_misc.h"
 #include "usb_spec.h"
+
+
 
 /*!
  * @addtogroup usb_drv
@@ -27,7 +29,7 @@
 /*! @brief Defines USB stack major version */
 #define USB_STACK_VERSION_MAJOR (2U)
 /*! @brief Defines USB stack minor version */
-#define USB_STACK_VERSION_MINOR (5U)
+#define USB_STACK_VERSION_MINOR (1U)
 /*! @brief Defines USB stack bugfix version */
 #define USB_STACK_VERSION_BUGFIX (0U)
 
@@ -37,13 +39,7 @@
 #define MAKE_VERSION(major, minor, bugfix) (((major) << 16) | ((minor) << 8) | (bugfix))
 
 /*! @brief USB stack component version definition, changed with component in yaml together */
-#define USB_STACK_COMPONENT_VERSION MAKE_VERSION(2, 5, 0)
-
-/* 
- * Component ID used by tools
- *
- * FSL_COMPONENT_ID "middleware.usb.stack_common" 
- */
+#define USB_STACK_COMPONENT_VERSION MAKE_VERSION(2,1,0)
 
 /*! @brief USB error code */
 typedef enum _usb_status
@@ -69,9 +65,6 @@ typedef enum _usb_status
     kStatus_USB_MSDStatusFail,  /*!< For MSD, the CSW status means fail */
     kStatus_USB_EHCIAttached,
     kStatus_USB_EHCIDetached,
-    kStatus_USB_DataOverRun,    /*!< The amount of data returned by the endpoint exceeded
-                                     either the size of the maximum data packet allowed 
-                                     from the endpoint or the remaining buffer size. */
 } usb_status_t;
 
 /*! @brief USB host handle type define */

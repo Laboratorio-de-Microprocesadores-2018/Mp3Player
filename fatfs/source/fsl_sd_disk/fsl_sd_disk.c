@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "fsl_sd_disk.h"
+#include "fsl_sysmpu.h"
 
 /*******************************************************************************
  * Definitons
@@ -28,6 +29,13 @@
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+
+/*! @brief SDMMC host detect card configuration */
+static const sdmmchost_detect_card_t s_sdCardDetect = {
+    .cdType = kSDMMCHOST_DetectCardByGpioCD,
+    .cdTimeOut_ms = (0U),//Checks only one time
+};
+
 
 /*! @brief Card descriptor */
 sd_card_t g_sd;
@@ -119,12 +127,14 @@ DRESULT sd_disk_ioctl(uint8_t physicalDrive, uint8_t command, void *buffer)
 
 DSTATUS sd_disk_status(uint8_t physicalDrive)
 {
-    if (physicalDrive != SDDISK)
-    {
-        return STA_NOINIT;
-    }
-
-    return 0;
+	if (physicalDrive != SDDISK)
+	{
+	   return STA_NOINIT;
+	}
+	if(SD_IsCardPresent(0)==false)
+		return STA_NODISK;
+	else
+		return 0;
 }
 
 DSTATUS sd_disk_initialize(uint8_t physicalDrive)
@@ -154,5 +164,27 @@ DSTATUS sd_disk_initialize(uint8_t physicalDrive)
     }
 
     return 0;
+}
+status_t sd_disk_setUp(void)
+{
+	SYSMPU_Enable(SYSMPU, false);
+	 /* Save host information. */
+	g_sd.host.base = SD_HOST_BASEADDR;
+	g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
+
+	/* card detect type */
+	g_sd.usrParam.cd = &s_sdCardDetect;
+
+	/* SD host init function */
+	if (SD_HostInit(&g_sd) != kStatus_Success)
+	{
+		//PRINTF("\r\nSD host init fail\r\n");
+		return kStatus_Fail;
+	}
+	else
+	{
+		return kStatus_Success;
+	}
+
 }
 #endif /* SD_DISK_ENABLE */

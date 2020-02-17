@@ -3,7 +3,7 @@
  * Copyright 2016 NXP
  * All rights reserved.
  *
- *
+ * 
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -13,7 +13,6 @@
 #include "usb_host_config.h"
 #include "usb_host.h"
 #include "usb_host_msd.h"
-#include "ff.h"
 #include "diskio.h"
 
 /*******************************************************************************
@@ -85,6 +84,11 @@ extern DRESULT USB_HostMsdWriteDisk(BYTE pdrv, const BYTE *buff, DWORD sector, U
  * @retval RES_NOTRDY    write disk error.
  */
 extern DRESULT USB_HostMsdIoctlDisk(BYTE pdrv, BYTE cmd, void *buff);
+
+
+status_t USB_DiskSetUp(void);
+
+void USB_HostTaskFn(void);
 
 #endif /* _MSD_DISKIO_H_ */
 

@@ -9,6 +9,10 @@
 extern "C" {
 #endif
 
+
+#include "integer.h"
+#include "fsl_common.h"
+
 /* Definitions of physical drive number for each drive */
 #define SDDISK          0       /* Example: sd disk to physical drive 0 */
 #define USBDISK         1       /* usb disk to physical drive 1 */
@@ -16,6 +20,14 @@ extern "C" {
 
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;
+
+/* Disk Status Bits (DSTATUS) */
+#define STA_OK 			0x00
+#define STA_NOINIT		0x01	/* Drive not initialized */
+#define STA_NODISK		0x02	/* No medium in the drive */
+#define STA_PROTECT		0x04	/* Write protected */
+
+
 
 /* Results of Disk Functions */
 typedef enum {
@@ -36,13 +48,9 @@ DSTATUS disk_status (BYTE pdrv);
 DRESULT disk_read (BYTE pdrv, BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_write (BYTE pdrv, const BYTE* buff, DWORD sector, UINT count);
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
+status_t disk_setUp(BYTE pdrv);
+void	disk_USBTick(void);
 
-
-/* Disk Status Bits (DSTATUS) */
-
-#define STA_NOINIT		0x01	/* Drive not initialized */
-#define STA_NODISK		0x02	/* No medium in the drive */
-#define STA_PROTECT		0x04	/* Write protected */
 
 
 /* Command code for disk_ioctrl fucntion */

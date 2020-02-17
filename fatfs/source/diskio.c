@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015, Freescale Semiconductor, Inc.
- * Copyright 2016-2019 NXP
+ * Copyright 2016-2018 NXP
  * All rights reserved.
  *
  * 
@@ -14,10 +14,9 @@
 /* This is an example of glue functions to attach various exsisting      */
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
-#include "ffconf.h"     /* FatFs configuration options */
-#include "ff.h"			/* Obtains integer types */
-#include "diskio.h"		/* Declarations of disk functions */
 
+#include "ffconf.h"     /* FatFs configuration options */
+#include "diskio.h"     /* FatFs lower layer API */
 #ifdef RAM_DISK_ENABLE
 #include "fsl_ram_disk.h"
 #endif
@@ -296,4 +295,37 @@ DRESULT disk_ioctl (
     }
     return RES_PARERR;
 }
+/*-----------------------------------------------------------------------*/
+/* Initial SetUp Functions                                               */
+/*-----------------------------------------------------------------------*/
+
+status_t disk_setUp(BYTE pdrv)
+{
+	status_t  res;
+	switch (pdrv)
+	{
+#ifdef SD_DISK_ENABLE
+        case SDDISK:
+            res = sd_disk_setUp();
+            return res;
+#endif
+
+#ifdef USB_DISK_ENABLE
+        case USBDISK:
+            res = USB_DiskSetUp();
+            return res;
+#endif
+
+	}
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* USB Task                                        					     */
+/*-----------------------------------------------------------------------*/
+void	disk_USBTick(void)
+{
+	USB_HostTaskFn();
+}
+
 
