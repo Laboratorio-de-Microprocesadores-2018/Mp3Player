@@ -125,7 +125,7 @@ void FE_Task(void)
 		currUSBstatus=newUSBstatus;
 		if(newUSBstatus==STA_OK)//if USB was inserted and could be initiallized
 		{
-			PRINTF("SD inserted\n");
+			PRINTF("USB inserted\n");
 			if (FE_MountDrive(FE_USB) == kStatus_Success)
 			{
 				uint8_t k = FE_CountFiles("/", "*.mp3");
@@ -139,7 +139,7 @@ void FE_Task(void)
 		}
 		else // if USB card was removed
 		{
-			PRINTF("SD removed\n");
+			PRINTF("USB removed\n");
 			FE_UnmountDrive(FE_USB);
 			GUI_UpdateDriveStatus(FE_USB,false);
 		}
