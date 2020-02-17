@@ -34,19 +34,23 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 static int SortAlphaCompare(void* a, void* b);
-static void sdStatusChangeFn(bool isInserted, void* userData);
-static void usbStatusChangeFn(bool isInserted, void* userData);
+//static void sdStatusChangeFn(bool isInserted, void* userData);
+//static void usbStatusChangeFn(bool isInserted, void* userData);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                   Local variable definitions ('static')                   //
 ///////////////////////////////////////////////////////////////////////////////
 
 // Status of storage drives
-static bool sdIsInserted = false;
-static bool sdStatusChanged = false;
 
-static bool usbIsInserted = false;
-static bool usbStatusChanged = false;
+DSTATUS currSDstatus=STA_NODISK;
+DSTATUS currUSBstatus=STA_NODISK;
+
+//static bool sdIsInserted = false;
+//static bool sdStatusChanged = false;
+//
+//static bool usbIsInserted = false;
+//static bool usbStatusChanged = false;
 
 #if defined(_WIN64) || defined(_WIN32)
 
@@ -54,12 +58,12 @@ static bool usbStatusChanged = false;
 
 extern usb_host_handle g_HostHandle;
 //extern sd_card_t g_sd;
-/* SD card detect configuration */
-static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
-													0,
-													sdStatusChangeFn,
-													sdStatusChangeFn,
-													NULL };
+///* SD card detect configuration */
+//static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
+//													0,
+//													sdStatusChangeFn,
+//													sdStatusChangeFn,
+//													NULL };
 /* File system objects */
 static FATFS g_fileSystems[3];
 
@@ -76,27 +80,31 @@ static FATFS g_fileSystems[3];
 status_t FE_Init(void)
 {
 
+#ifdef SD_DISK_ENABLE
+		if(disk_setUp(SDDISK)!=kStatus_Success)
+		{
+			return kStatus_Fail;
+		}
 
-	/* Save host information. */
-	g_sd.host.base = SD_HOST_BASEADDR;
-	g_sd.host.sourceClock_Hz = SD_HOST_CLK_FREQ;
-	g_sd.usrParam.cd = &cardDetectConfig;
+	    g_fileSystems[SDDISK].pdrv=SDDISK;
+#endif
+#ifdef USB_DISK_ENABLE
+	    if(disk_setUp(USBDISK)!=kStatus_Success)
+			{
+				return kStatus_Fail;
+			}
+	    g_fileSystems[USBDISK].pdrv=USBDISK;
+#endif
 
-	status_t status = SD_HostInit(&g_sd);
+	    return kStatus_Success;
 
-	g_fileSystems[SDDISK].pdrv=SDDISK;
-
-	g_fileSystems[USBDISK].pdrv=USBDISK;
-
-	SYSMPU_Enable(SYSMPU, false);
-
-	return status;
 }
 
 
-void FE_Deinit(void)
+void FE_Deinit(void)//METER EN FUNCION DEINIT DE DISKIO
 {
 	SD_HostDeinit(&g_sd);
+	USB_HostDeinit(&g_HostHandle);
 }
 
 
@@ -107,65 +115,60 @@ void FE_Task(void)
 #if defined(_WIN64) || defined(_WIN32)
 #else
 
-	/* USB Task */
-	//USB_HostKhciTaskFunction(hostHandle);
 
-	//	// Check changes in USB drive
-	//	currStatus = FE_DriveStatus(FE_USB);
-	//	if(currStatus != usbStatus)
-	//	{
-	//		usbStatus = currStatus;
-	//		if(usbStatus == true)
-	//		{
-	//			PRINTF("USB inserted\n");
-	//			if(FE_mountDrive(FE_USB)== kStatus_Success)
-	//			{
-	//
-	//				uint8_t k = FE_CountFiles("/","*.mp3");
-	//
-	//				PRINTF("There are %d mp3 files in root folder of the USB\n",k);
-	//
-	//				MP3_Play("/",0);
-	//
-	//			}
-	//			else
-	//				PRINTF("Error mounting USB\n");
-	//		}
-	//		else
-	//		{
-	//			PRINTF("USB removed\n");
-	//
-	//		}
-	//	}
-
-		// Check changes in SD drive
-	//USB_HostKhciTaskFunction(g_HostHandle);
-	if (sdStatusChanged)
+	disk_USBTick();
+	DSTATUS newSDstatus=disk_status(SDDISK);
+	DSTATUS newUSBstatus=disk_status(USBDISK);
+	/*-----------USB change------------------*/
+	if(newUSBstatus!=currUSBstatus)
 	{
+		currUSBstatus=newUSBstatus;
+		if(newUSBstatus==STA_OK)//if USB was inserted and could be initiallized
+		{
+			PRINTF("SD inserted\n");
+			if (FE_MountDrive(FE_USB) == kStatus_Success)
+			{
+				uint8_t k = FE_CountFiles("/", "*.mp3");
 
-		if (sdIsInserted == true)
+				PRINTF("There are %d mp3 files in root folder of the USB\n", k);
+				GUI_UpdateDriveStatus(FE_USB,true);
+
+			}
+			else
+				PRINTF("Error mounting USB\n");
+		}
+		else // if USB card was removed
+		{
+			PRINTF("SD removed\n");
+			FE_UnmountDrive(FE_USB);
+			GUI_UpdateDriveStatus(FE_USB,false);
+		}
+
+	}
+
+	/*-----------SD change------------------*/
+	if (newSDstatus!=currSDstatus)
+	{
+		currSDstatus=newSDstatus;
+		if (newSDstatus==STA_OK)//if SD card was inserted
 		{
 			PRINTF("SD inserted\n");
 			if (FE_MountDrive(FE_SD) == kStatus_Success)
 			{
 				uint8_t k = FE_CountFiles("/", "*.mp3");
-
 				PRINTF("There are %d mp3 files in root folder of the SD\n", k);
-
+				GUI_UpdateDriveStatus(FE_SD,true);
 			}
 			else
 				PRINTF("Error mounting SD\n");
 		}
-
-		if (sdIsInserted == false)
+		if (newSDstatus!=STA_OK)// if SD card was removed
 		{
 			PRINTF("SD removed\n");
 			FE_UnmountDrive(FE_SD);
+			GUI_UpdateDriveStatus(FE_SD,false);
 		}
 
-		GUI_UpdateDriveStatus(FE_SD,sdIsInserted);
-
-		sdStatusChanged = false;
 	}
 #endif
 }
@@ -249,10 +252,15 @@ bool FE_DriveStatus(FE_drive drive)
 	else
 		return false;
 #else
-	if(drive == SDDISK)
-		return sdIsInserted;
-	else if(drive == USBDISK)
-		return usbIsInserted;
+	if(disk_status(g_fileSystems[drive].pdrv)==STA_OK )
+		return true;
+	else
+		return false;
+
+//	if(drive == SDDISK)
+////		return sdIsInserted;
+//	else if(drive == USBDISK)
+//		return usbIsInserted;
 
 	//
 //	 /* Save host information. */
@@ -603,14 +611,14 @@ static int SortAlphaCompare(void* a, void* b)
 }
 
 
-static void sdStatusChangeFn(bool isInserted, void *userData)
-{
-	sdStatusChanged = true;
-	sdIsInserted = isInserted;
-}
-
-static void usbStatusChangeFn(bool isInserted, void* userData)
-{
-	usbStatusChanged = true;
-	usbIsInserted = isInserted;
-}
+//static void sdStatusChangeFn(bool isInserted, void *userData)
+//{
+//	sdStatusChanged = true;
+//	sdIsInserted = isInserted;
+//}
+//
+//static void usbStatusChangeFn(bool isInserted, void* userData)
+//{
+//	usbStatusChanged = true;
+//	usbIsInserted = isInserted;
+//}

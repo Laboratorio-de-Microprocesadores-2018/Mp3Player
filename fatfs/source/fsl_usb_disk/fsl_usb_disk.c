@@ -218,7 +218,7 @@ DSTATUS USB_HostMsdGetDiskStatus(BYTE pdrv)
 	if(g_MsdFatfsInstance.deviceState!=kStatus_DEV_Running)
 		return STA_NODISK;
 	else
-		return 0;
+		return STA_OK;
 }
 
 DRESULT USB_HostMsdReadDisk(BYTE pdrv, BYTE *buff, DWORD sector, UINT count)
