@@ -186,42 +186,25 @@ void Audio_Play(/*uint32_t sampleRate,*/)
 
 void Audio_Pause()
 {
-
 	/* Disable dma */
-	EDMA_AbortTransfer(&DMA_Handle);
-
-	//	/* Disable the channel FIFO */
-	SAI_TxSetChannelFIFOMask(AUDIO_SAI,kSAI_Channel0Mask);// | kSAI_Channel1Mask); STEREO
+	EDMA_StopTransfer(&DMA_Handle);
 
 	/* Disable DMA enable bit */
 	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, false);
 
 	/* Disable Tx */
 	SAI_TxEnable(AUDIO_SAI, false);
-
-
-	/* If Tx is disabled, reset the FIFO pointer and clear error flags */
-	if ((AUDIO_SAI->TCSR & I2S_TCSR_TE_MASK) == 0UL)
-	{
-		AUDIO_SAI->TCSR |= (I2S_TCSR_FR_MASK | I2S_TCSR_SR_MASK);
-		AUDIO_SAI->TCSR &= ~I2S_TCSR_SR_MASK;
-	}
-
-	/* Handle the queue index */
-	audioQueue[queueDriver].samples[0] = 0;
-	audioQueue[queueDriver].nSamples = 0;
-	queueDriver = (queueDriver + 1U) % CIRC_BUFFER_LEN;
-
 }
 
 void Audio_Resume()
 {
 	/* Enable Tx */
-//	SAI_TxEnable(AUDIO_SAI, true);
+	SAI_TxEnable(AUDIO_SAI, true);
 
 	/* Enable DMA */
 	SAI_TxEnableDMA(AUDIO_SAI, kSAI_FIFORequestDMAEnable, true);
 
+	EDMA_StartTransfer(&DMA_Handle);
 
 }
 
@@ -442,7 +425,7 @@ uint8_t Audio_GetVolume(void)
 }
 uint8_t Audio_GetMaxVolume(void)
 {
-	return 32;
+	return 31;
 }
 
 

@@ -227,8 +227,6 @@ static void MP3_PlayCurrentSong()
 		/** Notify new track started playing. */
 //		if(trackChangedCB != NULL)
 //			trackChangedCB(FE_ENTRY_NAME(&currentFileInfo));
-
-
 //		Audio_Play();
 
 		readPtr = readBuf;
@@ -429,13 +427,13 @@ void MP3_Task()
 				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
 					Vumeter_Generate(audioBuf);
 
-					Audio_PushFrame(&audioBuf[0],
-										 mp3FrameInfo.outputSamps,
-										 mp3FrameInfo.nChans,
-										 mp3FrameInfo.samprate,
-										 frameCounter++);
+				Audio_PushFrame(&audioBuf[0],
+								 mp3FrameInfo.outputSamps,
+								 mp3FrameInfo.nChans,
+								 mp3FrameInfo.samprate,
+								 frameCounter++);
 
-					playbackTimeMs += mp3FrameInfo.outputSamps * 1000 / (mp3FrameInfo.samprate * mp3FrameInfo.nChans);
+				playbackTimeMs += mp3FrameInfo.outputSamps * 1000 / (mp3FrameInfo.samprate * mp3FrameInfo.nChans);
 			}
 			else if(s == kStatus_OutOfRange)
 			{
