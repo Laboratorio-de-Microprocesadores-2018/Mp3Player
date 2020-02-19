@@ -16,13 +16,13 @@
 #include "clock_config.h"
 
 /* Get source clock for PIT driver */
-#define INPUT_PIT_SOURCE_CLOCK CLOCK_GetFreq(kCLOCK_BusClk)
-#define INPUT_PIT_HANDLER PIT0_IRQHandler
-#define INPUT_PIT_IRQ_ID PIT0_IRQn
-#define INPUT_PIT_CHNL kPIT_Chnl_1
+#define INPUT_PIT_SOURCE_CLOCK 		CLOCK_GetFreq(kCLOCK_BusClk)
+#define INPUT_PIT_HANDLER 			PIT0_IRQHandler
+#define INPUT_PIT_IRQ_ID			PIT0_IRQn
+#define INPUT_PIT_CHNL 				kPIT_Chnl_1
 
-#define INPUT_FTM FTM2
-#define FTM_QUAD_DECODER_MODULO 20U
+#define INPUT_FTM 					FTM1
+#define FTM_QUAD_DECODER_MODULO  	0xFFFFU
 
 Button prevButton;
 Button nextButton;
@@ -84,6 +84,10 @@ uint8_t Input_ReadEncoderDirection(void)
 	return (uint8_t)(FTM_GetQuadDecoderFlags(INPUT_FTM) & kFTM_QuadDecoderCountingIncreaseFlag);
 }
 
+uint8_t Input_ReadEncoderButton(void)
+{
+	return GPIO_PinRead(ENC_BTN_GPIO,ENC_BTN_PIN);
+}
 void Input_GetEvent(ButtonID * b, ButtonEvent * ev)
 {
 	for(int i=0; i<NumberOfButtons; i++)
