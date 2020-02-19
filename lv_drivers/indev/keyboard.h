@@ -30,8 +30,9 @@ extern "C" {
 #endif
 
 #ifndef MONITOR_SDL_INCLUDE_PATH
-#define MONITOR_SDL_INCLUDE_PATH <SDL2/SDL.h>
+#define MONITOR_SDL_INCLUDE_PATH "SDL.h"
 #endif
+
 
 #include MONITOR_SDL_INCLUDE_PATH
 
@@ -59,6 +60,8 @@ void keyboard_init(void);
  */
 bool keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
 
+uint32_t keyboard_get_last_key(void);
+lv_indev_state_t keyboard_get_state(void);
 /**
  * It is called periodically from the SDL thread to check a key is pressed/released
  * @param event describes the event
