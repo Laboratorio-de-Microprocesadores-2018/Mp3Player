@@ -20,7 +20,7 @@
 #include "lvgl/lvgl.h"
 #include "MP3Player.h"
 #include "FileExplorer.h"
-#include <time.h>
+#include "Calendar.h"
 
 
 #if defined(_WIN64) || defined(_WIN32)
@@ -29,18 +29,17 @@
 #include "lv_drivers/indev/keyboard.h"
 #include "lv_drivers/indev/mousewheel.h"
 #include "lv_drivers/display/monitor.h"
-#include "lv_examples/lv_apps/settings/lv_settings.h"
-#include "lv_drivers/indev/keyboard.h"
-#include "lv_drivers/indev/mousewheel.h"
+#include "lv_settings.h"
 #define PRINTF printf
 
 #else
-#include "Calendar.h"
+#include "fsl_debug_console.h"
 #include "GILI9341.h"
 #include "Input.h"
 #include "CPUTimeMeasurement.h"
-#include "lv_examples/lv_apps/settings/lv_settings.h"
+#include "lv_settings.h"
 #endif
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +64,7 @@
 #define ALBUM_ART_SPACING		(10)
 
 /** Video buffer size. */
-#define LV_VDB_BUFF_SIZE       	(16*1024) //(uint32_t)255
+#define LV_VDB_BUFF_SIZE       	(10*1024) //(uint32_t)255
 
 
 #define GUI_TIME_STRING_BUFFER_LENGTH	9
@@ -78,7 +77,7 @@
 #define MONITOR_INIT		monitor_init()
 #define MONITOR_DEINIT		
 #define MONITOR_FLUSH_CB	monitor_flush
-#define KEYPAD_READ_CB		keyboard_read
+#define KEYPAD_READ_CB		GUI_KeyPadRead
 #define ENCODER_READ_CB		mousewheel_read
 #else
 #define GET_TICK			lv_tick_get()
@@ -147,6 +146,14 @@ typedef struct
 								objects					\
 							}screenName;				\
 
+typedef struct {
+	lv_obj_t* container;
+	lv_obj_t* song;
+	lv_obj_t* artist;
+	lv_obj_t* album;
+	lv_obj_t* date;
+	lv_obj_t* genre;
+}GUI_Metadata_t;
 /**
  * @brief GUI structure definition
  */
@@ -190,6 +197,7 @@ typedef struct
 	lv_obj_t* queueProgress;
 	/*lv_obj_t* Year;*/
 	lv_obj_t* albumArt;
+	GUI_Metadata_t metadata;
 	lv_obj_t* volumeBar;)
 
 	/* Browser screen. */
@@ -203,8 +211,7 @@ typedef struct
 	GUI_SCREEN_DECLARE(
 	settingsScreen,
 	lv_obj_t* settingsBtn;
-	lv_settings_item_t* settingsRootItem;
-	lv_obj_t* settingsLabel;)
+	lv_settings_item_t settingsRootItem;)
 	
 	/* Power screen. */
 	GUI_SCREEN_DECLARE(
@@ -227,7 +234,15 @@ typedef struct
 	bool powerOffRequest;
 }GUI_t;
 
-
+static lv_settings_item_t mainMenuItems[] =
+{
+	   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Equalizer",.value = "Low, mid, and high bands."},
+	   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Time/Date",.value = "Set time and date."},
+	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Display",.value = ""},
+	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Sleep mode",.value = ""},
+	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Alarm",.value = ""},
+	   {.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                   Local function prototypes ('static')                    //
@@ -251,20 +266,23 @@ static void GUI_CreatePowerScreen(void);
 /**
  * @brief Event handler callbacks
  */
-static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event);
-static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event);
-static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event);
-static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event);
+
+static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event);
 static void GUI_VolumeBarEventHandler(lv_obj_t* slider, lv_event_t event);
-/**
- * @brief Settings menu Event handler callbacks
- */
-static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e);
-static void GUI_TimeMenuEventCB(lv_obj_t * obj, lv_event_t e);
-static void GUI_EcualizadorMenuEventCB(lv_obj_t * obj, lv_event_t e);
-static void GUI_ScreenTimeoutMenuEventCB(lv_obj_t * btn, lv_event_t e);
-static void submenu_event_cb(lv_obj_t * btn, lv_event_t e);
+
+static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event);
+
+static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event);
+static void GUI_SettingsScreenRootEventCallback(lv_obj_t* btn, lv_event_t event);
+static void GUI_SettingsScreenTimeEventCallback(lv_obj_t* obj, lv_event_t event);
+static void GUI_SettingsScreenEqualizerEventCallback(lv_obj_t* obj, lv_event_t event);
+static void GUI_SettingsScreenDisplayEventCallback(lv_obj_t* btn, lv_event_t event);
+static void submenu_event_cb(lv_obj_t* btn, lv_event_t event);
+
+static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event);
+
+
 
 /**
  * @brief Hide current screen and show a new one.
@@ -463,6 +481,7 @@ bool GUI_PowerOffRequest()
 */
 static void GUI_HalInit(void)
 {
+
 	lv_disp_buf_init(&dispBuffer, vdb_buf1, vdb_buf2, LV_VDB_BUFF_SIZE);
 
 	MONITOR_INIT;
@@ -636,6 +655,14 @@ static void GUI_CreateMusicScreen()
 	lv_obj_align(queueProgress, Title, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
 	gui.musicScreen.queueProgress = queueProgress;
 
+	// Create metadata display
+	lv_obj_t* metadata = lv_cont_create(cont, NULL);
+	lv_obj_set_size(metadata, ALBUM_ART_SIZE, ALBUM_ART_SIZE);
+	lv_obj_align(metadata, cont, LV_ALIGN_IN_TOP_MID, 0, ALBUM_ART_SPACING);
+	lv_obj_set_protect(metadata, LV_SIGNAL_CHILD_CHG);
+	lv_obj_set_hidden(metadata, true);
+	gui.musicScreen.metadata.container = metadata;
+
 	/* Volume bar */
 	lv_obj_t* volumeBar = lv_slider_create(cont, NULL);
 	lv_obj_set_size(volumeBar, BAR_WIDTH, BAR_HEIGHT);
@@ -646,7 +673,6 @@ static void GUI_CreateMusicScreen()
 	lv_group_add_obj(gui.musicScreen.group, volumeBar);
 	lv_obj_set_hidden(volumeBar,true);
 	gui.musicScreen.volumeBar = volumeBar;
-
 
 	// Hide screen for default
 	lv_obj_set_hidden(cont, true);
@@ -700,30 +726,27 @@ static void GUI_CreateSettingsScreen(void)
 	lv_obj_set_event_cb(cont, GUI_SettingsScreenEventHandler);
 
 	/* Create a group for this screen.  */
-	lv_obj_t* group = lv_group_create();
+	lv_group_t* group = lv_group_create();
 	lv_group_set_wrap(group, false);
 	lv_group_set_style_mod_cb(group, GUI_BorderlessStyleModCB);
 	lv_group_set_style_mod_edit_cb(group, GUI_BorderlessStyleModCB);
 
 	/*Declare items*/
-	gui.settingsScreen.settingsRootItem = malloc(sizeof(lv_settings_item_t));
-	gui.settingsScreen.settingsRootItem->name = "Settings";
-	gui.settingsScreen.settingsRootItem->value = "";
-	gui.settingsScreen.settingsRootItem->cont = cont;
+	gui.settingsScreen.settingsRootItem.name = "Settings";
+	gui.settingsScreen.settingsRootItem.value = "";
+	gui.settingsScreen.settingsRootItem.cont = cont;
 
 	lv_obj_t * settingsBtn;
-	lv_settings_set_parent(cont);
+	lv_settings_set_parent(cont);// gui.menuScreen.tabs[SETTINGS_TAB]);
 	lv_settings_set_group(group);
-	settingsBtn = lv_settings_create(gui.settingsScreen.settingsRootItem, GUI_SettingsScreenEventHandler);
-	lv_obj_align(settingsBtn, cont, LV_ALIGN_CENTER, 0, 0);
-	lv_obj_set_hidden(settingsBtn, true);
-
-	/* Add text labels for elaped and remaining time. */
-	lv_obj_t* settingsLabel = lv_label_create(cont, NULL);
-	lv_label_set_text(settingsLabel, "COFIGURACION");
-	lv_obj_align(settingsLabel, settingsBtn, LV_ALIGN_OUT_TOP_MID, 0, -10);
+	settingsBtn = lv_settings_create(&gui.settingsScreen.settingsRootItem, GUI_SettingsScreenEventHandler);
 	
-	gui.settingsScreen.settingsLabel = settingsLabel;
+
+	//lv_btn_set_style(settingsBtn, LV_BTN_STYLE_REL, &lv_style_transp);
+	//lv_obj_set_hidden(settingsBtn, true);
+
+
+	//gui.settingsScreen.settingsLabel = settingsLabel;
 	gui.settingsScreen.settingsBtn = settingsBtn;
 	gui.settingsScreen.parent = cont;
 	gui.settingsScreen.group = group;
@@ -750,7 +773,7 @@ static void GUI_CreatePowerScreen(void)
 	lv_obj_set_size(cont, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
 	lv_obj_align(cont, lv_scr_act(), LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 
-	lv_obj_set_event_cb(cont, GUI_PowerScreenEventHandler);
+	//lv_obj_set_event_cb(cont, GUI_PowerScreenEventHandler);
 
 	lv_group_add_obj(group, cont);
 
@@ -760,6 +783,32 @@ static void GUI_CreatePowerScreen(void)
 	gui.powerScreen.parent = cont;
 	gui.powerScreen.group = group;
 }
+
+
+
+
+
+static void GUI_MetadataShow()
+{
+	// Create metadata display
+	//lv_obj_t* metadata = lv_cont_create(gui.musicScreen.parent, NULL);
+	//lv_obj_set_size(metadata, ALBUM_ART_SIZE, ALBUM_ART_SIZE);
+	//lv_obj_align(metadata, gui.musicScreen.parent, LV_ALIGN_IN_TOP_MID, 0, ALBUM_ART_SPACING);
+	//gui.musicScreen.metadata = metadata;
+
+	lv_obj_set_hidden(gui.musicScreen.metadata.container, false);
+}
+
+static void GUI_MetadataHide()
+{
+	//lv_obj_del(gui.musicScreen.metadata);
+	//gui.musicScreen.metadata = NULL;
+	
+	lv_obj_set_hidden(gui.musicScreen.metadata.container, true);
+}
+
+
+
 
 static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event)
 {
@@ -795,7 +844,16 @@ static void GUI_MenuEventHandler(lv_obj_t* obj, lv_event_t event)
 			else
 				GUI_ShowScreen(tabId);
 			break;
+
+		//case LV_KEY_RIGHT:
+		//	if(tabId <)
+		//	lv_tabview_set_tab_act(gui.menuScreen.parent, tabId, true);
+		//	break;
+		//case LV_KEY_LEFT:
+		//	lv_tabview_set_tab_act(gui.menuScreen.parent, tabId, true);
+		//	break;
 		}
+
 		break;
 	}
 }
@@ -809,42 +867,93 @@ static void GUI_MusicScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 	{
 
 	case LV_EVENT_FOCUSED:
-
+	{
+	}
 		break;
-
-	case LV_EVENT_LONG_PRESSED:
+	case LV_EVENT_KEY_RELEASED:
+		switch (pressedKey)
+		{
+		case LV_KEY_RIGHT:
+			if (MP3_GetStatus() == MP3_FASTFORWARD)
+			{
+				MP3_Resume();
+				printf("Fastforward stop!\n");
+			}
+			break;
+		case LV_KEY_LEFT:
+			if (MP3_GetStatus() == MP3_REWIND)
+			{
+				MP3_Resume();
+				printf("Rewind stop!\n");
+			}
+			break;
+		case LV_KEY_DOWN:
+			if (gui.musicScreen.metadata.container != NULL)
+			{
+				GUI_MetadataHide();
+			}
+			break;
+		}
+		break;
+	case LV_EVENT_KEY_CLICKED:
+		switch (pressedKey)
+		{
+		case LV_KEY_UP:
+			GUI_ShowScreen(MENU_SCREEN);
+		break;
+		case LV_KEY_RIGHT:
+			if (MP3_GetStatus() == MP3_FASTFORWARD)
+			{
+				MP3_Resume();
+				printf("Fastforward stop!\n");
+			}
+			else
+			{
+				MP3_Next();
+			}
+			
+			break;
+		case LV_KEY_LEFT:
+			if (MP3_GetStatus() == MP3_REWIND)
+			{
+				MP3_Resume();
+				printf("Rewind stop!\n");
+			}
+			else
+			{
+				MP3_Prev();
+			}
+			break;
+		case LV_KEY_DOWN:
+			GUI_ShowVolumeBar();
+			break;
+		}
+		break;
+	case LV_EVENT_KEY_LONG_PRESS:
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
+			gui.powerOffRequest = true;
 			break;
-		case LV_KEY_UP:
 			break;
+		case LV_KEY_RIGHT:
+			MP3_Fastforward();
+			printf("Fastforward!\n");
+			break;
+		case LV_KEY_LEFT:
+			MP3_Rewind();
+			printf("Rewind!\n");
+			break;
+		case LV_KEY_DOWN:
+			GUI_MetadataShow();
 		}
 		break;
 	case LV_EVENT_KEY:
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
-			MP3_PauseResume();
+			MP3_Resume();
 			break;
-
-		case LV_KEY_UP:
-			GUI_ShowScreen(MENU_SCREEN);
-			break;
-		case LV_KEY_DOWN:
-			GUI_ShowVolumeBar();
-			break;
-		
-		case LV_KEY_NEXT:
-		case LV_KEY_RIGHT:
-			MP3_Next();
-			break;
-
-		case LV_KEY_PREV:
-		case LV_KEY_LEFT:
-			MP3_Prev();
-			break;
-
 		}
 		break;
 	}
@@ -860,6 +969,13 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 	case LV_EVENT_PRESSED:
 	{
 		DirEntry_t* direntry = (DirEntry_t*)(obj->user_data);
+
+		if (direntry == NULL)
+		{
+			GUI_ShowScreen(MENU_SCREEN);
+			return;
+		}
+
 		switch (direntry->type)
 		{
 			case ENTRY_FOLDER:
@@ -879,7 +995,9 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 				break;
 			}
 			case ENTRY_FILE:
-				break;
+			{
+			}
+			break;
 		}
 	}
 	break;
@@ -888,7 +1006,6 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		switch (pressedKey)
 		{
 		case LV_KEY_UP:
-			GUI_ShowScreen(MENU_SCREEN);
 			break;
 		}
 		break;
@@ -927,11 +1044,8 @@ static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		switch (pressedKey)
 		{
 		case LV_KEY_ENTER:
-			lv_group_focus_obj(gui.settingsScreen.settingsBtn);
-			break;
-			
 		case LV_KEY_UP:
-			lv_obj_set_hidden(gui.settingsScreen.settingsBtn, true);
+			//lv_obj_set_hidden(gui.settingsScreen.settingsBtn, true);
 			GUI_ShowScreen(MENU_SCREEN);
 			break;
 		
@@ -952,60 +1066,60 @@ static void GUI_SettingsScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 		act_item = (lv_settings_item_t *)lv_event_get_data();
 
 		/*Create a new page in the menu*/
-		lv_settings_open_page(act_item, GUI_MainSettingsMenuEventCB);
+		lv_settings_open_page(act_item, GUI_SettingsScreenRootEventCallback);
 		break;
 	}
 }
 
-static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event)
-{
-	lv_key_t pressedKey = LV_KEY_HOME;
-
-	switch (event)
-	{
-
-	case LV_EVENT_FOCUSED:
-
-		break;
-
-	case LV_EVENT_LONG_PRESSED:
-		switch (pressedKey)
-		{
-		case LV_KEY_ENTER:
-			break;
-		case LV_KEY_UP:
-			break;
-		}
-		break;
-	case LV_EVENT_KEY:
-		pressedKey = gui.keypad->proc.types.keypad.last_key;
-		switch (pressedKey)
-		{
-		case LV_KEY_ENTER:
-
-			break;
-
-			//case LV_KEY_NEXT:
-		case LV_KEY_UP:
-			GUI_ShowScreen(MENU_SCREEN);
-			break;
-		case LV_KEY_RIGHT:
-
-			break;
-
-			//case LV_KEY_PREV:
-		case LV_KEY_LEFT:
-
-			break;
-		}
-		break;
-	}
-}
+//static void GUI_PowerScreenEventHandler(lv_obj_t* obj, lv_event_t event)
+//{
+//	lv_key_t pressedKey = LV_KEY_HOME;
+//
+//	switch (event)
+//	{
+//
+//	case LV_EVENT_FOCUSED:
+//
+//		break;
+//
+//	case LV_EVENT_LONG_PRESSED:
+//		switch (pressedKey)
+//		{
+//		case LV_KEY_ENTER:
+//			break;
+//		case LV_KEY_UP:
+//			break;
+//		}
+//		break;
+//	case LV_EVENT_KEY:
+//		pressedKey = gui.keypad->proc.types.keypad.last_key;
+//		switch (pressedKey)
+//		{
+//		case LV_KEY_ENTER:
+//
+//			break;
+//
+//			//case LV_KEY_NEXT:
+//		case LV_KEY_UP:
+//			GUI_ShowScreen(MENU_SCREEN);
+//			break;
+//		case LV_KEY_RIGHT:
+//
+//			break;
+//
+//			//case LV_KEY_PREV:
+//		case LV_KEY_LEFT:
+//
+//			break;
+//		}
+//		break;
+//	}
+//}
 
 /**
  * @brief Settings menu Event handler callbacks
  */
-static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e)
+static void GUI_SettingsScreenRootEventCallback(lv_obj_t * btn, lv_event_t e)
 {
 	(void)btn;  /*Unused*/
 	//int a = gui.header.time.
@@ -1013,17 +1127,8 @@ static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e)
 	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
 
 	/*Add the items*/
-	if (e == LV_EVENT_REFRESH) {
 
-		static lv_settings_item_t mainMenuItems[] =
-		{
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Ecualizador",.value = "Ajuste de bajos, \n medios y altos"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Hora",.value = "Ajusta la hora"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Screen timeout",.value = "Backlight timeout"},
-			   {.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
-		};
+	if (e == LV_EVENT_REFRESH) {
 
 		uint32_t i;
 		for (i = 0; mainMenuItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
@@ -1035,73 +1140,133 @@ static void GUI_MainSettingsMenuEventCB(lv_obj_t * btn, lv_event_t e)
 	 * `act_item` is the clicked list button in the main menu.
 	 * It's name will be the title of the new page*/
 	else if (e == LV_EVENT_CLICKED) {
-		if (strcmp("Ecualizador", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_EcualizadorMenuEventCB);
+		if (&mainMenuItems[0] == act_item) {
+			lv_settings_open_page(act_item, GUI_SettingsScreenEqualizerEventCallback);
 		}
-		else if (strcmp("Hora", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_TimeMenuEventCB);
+		else if (&mainMenuItems[1] == act_item) {
+			lv_settings_open_page(act_item, GUI_SettingsScreenTimeEventCallback);
 		}
-		else if (strcmp("Screen timeout", act_item->name) == 0) {
-			lv_settings_open_page(act_item, GUI_ScreenTimeoutMenuEventCB);
+		else if (&mainMenuItems[2] == act_item) {
+			lv_settings_open_page(act_item, GUI_SettingsScreenDisplayEventCallback);
 		}
 	}
 }
 
-static void GUI_EcualizadorMenuEventCB(lv_obj_t * btn, lv_event_t e)
+static void GUI_SettingsScreenEqualizerEventCallback(lv_obj_t * btn, lv_event_t e)
 {
 	(void)btn;  /*Unused*/
 
-	static char bajos[16] = { "50 dB" };
-	static char medios[16] = { "50 dB" };
-	static char altos[16] = { "50 dB" };
+	static char enable_str[6];
+
+	static char equalizer_str[MP3_NUM_BANDS][6];
+
+
 	static lv_settings_item_t ecualizadorItems[] = {
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Bajos",.value = bajos,.state = 50},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Medios",.value = medios,.state = 50},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "ALtos",.value = altos,.state = 50},
+		{.type = LV_SETTINGS_TYPE_SW,    .name = "Enable",		.value = enable_str,},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Low",			.value = equalizer_str[0]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Low-Mid",		.value = equalizer_str[1]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Mid",			.value = equalizer_str[2]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Mid-High",	.value = equalizer_str[3]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "High",		.value = equalizer_str[4]},
 		{.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
 	};
 
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
 
 	/*Add items to the submenus*/
 	if (e == LV_EVENT_REFRESH) {
+
+		MP3_EqLevels_t eqLevles;
+		MP3_GetEqualizerLevels(&eqLevles);
+
+		ecualizadorItems[0].state = MP3_IsEqualizerEnable();
+		if (ecualizadorItems[0].state == 1)
+			sprintf(ecualizadorItems[0].value, "true");
+		else
+			sprintf(ecualizadorItems[0].value, "false");
+
+		int8_t eqMin, eqMax;
+		MP3_GetEqualizerLevelLimits(&eqMin,&eqMax);
+
+		for(int i=0; i<MP3_NUM_BANDS; i++)
+		{
+			ecualizadorItems[1+i].rangeMin = eqMin;
+			ecualizadorItems[1+i].rangeMax = eqMax;
+			snprintf(equalizer_str[i], 	6, "%d", eqLevles.band[i]);
+			ecualizadorItems[1+i].state = eqLevles.band[i];
+		}
+
 		uint32_t i;
 		for (i = 0; ecualizadorItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
 			lv_settings_add(&ecualizadorItems[i]);
 		}
 	}
 	/*Handle the items' events*/
-	else if (e == LV_EVENT_VALUE_CHANGED) {
-		sprintf(act_item->value, "%d dB", act_item->state);
+	else if (e == LV_EVENT_VALUE_CHANGED)
+	{
+		/*Get the caller item*/
+		lv_settings_item_t* act_item = (lv_settings_item_t*)lv_event_get_data();
+
+		if (act_item == &ecualizadorItems[0])
+		{
+			if (act_item->state == 1)
+				sprintf(act_item->value, "true");
+			else
+				sprintf(act_item->value, "false");
+			MP3_EqualizerEnable(act_item->state);
+		}
+		else
+		{
+			int i = act_item - ecualizadorItems;
+			MP3_SetEqualizerLevel(i-1, act_item->state );
+			sprintf(act_item->value, "%d", act_item->state);
+		}
+
 		lv_settings_refr(act_item);
 	}
 }
 
-static void GUI_TimeMenuEventCB(lv_obj_t * obj, lv_event_t e)
+static void GUI_SettingsScreenTimeEventCallback(lv_obj_t * obj, lv_event_t e)
 {
 	(void)obj;  /*Unused*/
 
 	/*Get the caller act_item*/
 	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
 
+	static char hours_value[3];
+	static char mins_value[3];
+	static char day_value[3];
+	static char month_value[3];
+	static char year_value[5];
+
+	static lv_settings_item_t timeItems[] =
+	{
+			{.type = LV_SETTINGS_TYPE_LIST_BTN, .name = "Set", .value = ""},
+			{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Hours",.value = hours_value,.rangeMin = 0,.rangeMax = 23},
+			{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Minutes",.value = mins_value,.rangeMin = 0,.rangeMax = 59},
+			{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Day",.value = day_value,.rangeMin = 1,.rangeMax = 31},
+			{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Month",.value = month_value,.rangeMin = 1,.rangeMax = 12},
+			{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Year",.value = year_value,.rangeMin = 0,.rangeMax = 30},
+			{.type = LV_SETTINGS_TYPE_INV},    /*Mark the last item*/
+	};
+
 	if (e == LV_EVENT_REFRESH) {
 		/*Add the items*/
-		char * time;
-		static char hours_value[3];
-		static char mins_value[3];
-		static lv_settings_item_t timeItems[] =
-		{
-				{.type = LV_SETTINGS_TYPE_NUMSET,.name = "Hora",.value = hours_value},
-				{.type = LV_SETTINGS_TYPE_NUMSET,.name = "Minutos",.value = mins_value},
-				{.type = LV_SETTINGS_TYPE_INV},    /*Mark the last item*/
-		};
 
-		time = GUI_GetTimeString();
-		sprintf(hours_value, strtok(time, ":"));
-		sprintf(mins_value, strtok(NULL, ""));
-		timeItems[0].state = atoi(hours_value);
-		timeItems[1].state = atoi(mins_value);
+		CalendarDate_t date;
+		Calendar_GetDate(&date);
+
+		strftime(hours_value, 3, "%H", &date);
+		strftime(mins_value, 3, "%M", &date);
+		strftime(day_value, 3, "%d", &date);
+		strftime(month_value, 3, "%m", &date);
+		strftime(year_value, 5, "%Y", &date);
+
+		timeItems[1].state = date.tm_hour;
+		timeItems[2].state = date.tm_min;
+		timeItems[3].state = date.tm_mday;
+		timeItems[4].state = date.tm_mon;
+		timeItems[5].state = date.tm_year;
+
 
 		uint32_t i;
 		for (i = 0; timeItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
@@ -1109,45 +1274,80 @@ static void GUI_TimeMenuEventCB(lv_obj_t * obj, lv_event_t e)
 		}
 	}
 	else if (e == LV_EVENT_VALUE_CHANGED) {
-		if (strcmp("Hora", act_item->name) == 0) {
-			if (act_item->state > 23) act_item->state = 0;
-			if (act_item->state < 0) act_item->state = 23;
 
+		int i = act_item - &timeItems[0];
+
+		if(i==5)
+			sprintf(act_item->value, "%d", 2000+act_item->state);
+		else
 			sprintf(act_item->value, "%d", act_item->state);
-			lv_settings_refr(act_item);
 
-		}
-		else if (strcmp("Minutos", act_item->name) == 0) {
-			if (act_item->state > 59) act_item->state = 0;
-			if (act_item->state < 0) act_item->state = 59;
+		lv_settings_refr(act_item);
 
-			sprintf(act_item->value, "%d", act_item->state);
-			lv_settings_refr(act_item);
+	}
+	else if (e == LV_EVENT_CLICKED) {
+		if (&timeItems[0] == act_item) {
+
+			CalendarDate_t date;
+			date.tm_sec = 0;
+			date.tm_hour = timeItems[1].state;
+			date.tm_min = timeItems[2].state;
+			date.tm_mday = timeItems[3].state;
+			date.tm_mon = timeItems[4].state;
+			date.tm_year = 2000 + timeItems[5].state;
+			date.tm_wday = 0;
+			date.tm_yday = 0;
+			date.tm_isdst = 0;
+
+			char buffer[80];
+			strftime(buffer, 80, "%H:%M - %d/%m/%Y", &date);
+
+			printf("Set date: %s\n",buffer);
+
+			Calendar_SetDate(&date);
 
 		}
 	}
 }
 
-static void GUI_ScreenTimeoutMenuEventCB(lv_obj_t * btn, lv_event_t e)
+static void GUI_SettingsScreenDisplayEventCallback(lv_obj_t * btn, lv_event_t e)
 {
 	(void)btn;  /*Unused*/
 
-	/*Get the caller item*/
-	lv_settings_item_t * act_item = (lv_settings_item_t *)lv_event_get_data();
+	static char brightness_str[5] = { "0%" };
+	static lv_settings_item_t items[] =
+	{
+				{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Backlight brightness",.value = brightness_str,.state = 0 },
+				{.type = LV_SETTINGS_TYPE_DDLIST,.name = "Backlight timeout",.value = "1\n5\n10\n15\n30\n60",.state = 0 },
+				{.type = LV_SETTINGS_TYPE_INV}
+	};
 
 	/*Add items to the submenus*/
 	if (e == LV_EVENT_REFRESH) {
-		static lv_settings_item_t item = {
-					.type = LV_SETTINGS_TYPE_DDLIST,
-					.name = "Backlight timeout",
-					.value = "S\nM\nL\nXL",
-					.state = 0 };
-		lv_settings_add(&item);
 
+		uint32_t i;
+		for (i = 0; items[i].type != LV_SETTINGS_TYPE_INV; i++) {
+			lv_settings_add(&items[i]);
+		}
 	}
 	/*Handle the items' events*/
 	else if (e == LV_EVENT_VALUE_CHANGED) {
-		printf("Backlight timeout: %d\n", act_item->state);
+		/*Get the caller item*/
+		lv_settings_item_t* act_item = (lv_settings_item_t*)lv_event_get_data();
+
+		if (act_item == &items[0])
+		{
+			act_item->state *= 4;
+			snprintf(act_item->value, 5, "%d%", (act_item->state*100)/255);
+			lv_settings_refr(act_item);
+		}
+		else if (act_item == &items[1])
+		{
+			static int timeoutList[] = { 1,5,10,15,30,60 };
+			int timeout = timeoutList[act_item->state];
+			PRINTF("Backlight timeout: %d\n", timeout);
+		}
+
 	}
 }
 
@@ -1250,7 +1450,6 @@ static void submenu_event_cb(lv_obj_t * btn, lv_event_t e)
  */
 static void GUI_ShowScreen(ScreenID_t ID)
 {
-
 	/* Hide current screen. */
 	if (gui.currentScreen != NULL)
 		lv_obj_set_hidden(gui.currentScreen->parent, true);
@@ -1258,10 +1457,7 @@ static void GUI_ShowScreen(ScreenID_t ID)
 	/* Get new screen pointer. */
 	Screen_t* newScreen = gui.screens[ID];
 
-	/* Show selected screen. */
 	lv_obj_set_hidden(newScreen->parent, false);
-	if (ID == SETTINGS_SCREEN)
-		lv_obj_set_hidden(gui.settingsScreen.settingsBtn, false);
 
 	/* Redirect input to screens group of objects. */
 	lv_indev_set_group(gui.encoder, newScreen->group);
@@ -1362,6 +1558,11 @@ static bool GUI_ListFolderContents(char* path)
 	/* If root folder, only show drives in list. */
 	if (*path == '\0')
 	{
+		/* Add button to go back to menu screen. */
+		button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_NEW_LINE, "Back");
+		button->user_data = NULL;
+		lv_obj_set_event_cb(button, GUI_BrowserScreenEventHandler);
+
 		button = lv_list_add_btn(gui.browserScreen.list, LV_SYMBOL_SD_CARD, "SD");
 		button->user_data = lv_mem_alloc(sizeof(EntryType_t));
 		*(EntryType_t*)button->user_data = ENTRY_FOLDER;
@@ -1674,7 +1875,7 @@ static void GUI_VolumeBarTimeoutTask(lv_task_t* task)
 	(void)task;
 	lv_obj_set_hidden(gui.musicScreen.volumeBar,true);
 	lv_group_focus_obj(gui.musicScreen.parent);
-	lv_group_set_editing(gui.musicScreen.group, false);
+	//lv_group_set_editing(gui.musicScreen.group, false);
 
 }
 
@@ -1684,7 +1885,7 @@ static void GUI_ShowVolumeBar()
 
 	/* Focus the slider and set to editing mode. */
 	lv_group_focus_obj(gui.musicScreen.volumeBar);
-	lv_group_set_editing(gui.musicScreen.group, true);
+	//lv_group_set_editing(gui.musicScreen.group, true);
 
 
 	/* Create task to hide volume bar automatically */
@@ -1844,19 +2045,19 @@ static char * GUI_GetTimeString(void)
 
 #else
 
-	TM_date guiInitialTime = Calendar_GetDate();
+	CalendarDate_t time;
 
-	guiTimeStrng[0] = '\n';
-	uitoa(guiInitialTime.hour, guiTimeStrng, 10);
+	Calendar_GetDate(&time);
 
-	strcat(guiTimeStrng, ":");
-	strcat(guiTimeStrng, uitoa(guiInitialTime.minute, guiTimeTxtBuffer, 10));
-	strcat(guiTimeStrng, ":");
-	strcat(guiTimeStrng, uitoa(guiInitialTime.second, guiTimeTxtBuffer, 10));
+	const char * format[] ={"%H:%M","%H %M"};
+
+	int i = time.tm_sec%2==0;
+
+	strftime(guiTimeStrng, GUI_TIME_STRING_BUFFER_LENGTH, format[i],&time);
+
+	//strftime(guiTimeStrng, GUI_TIME_STRING_BUFFER_LENGTH, "%H:%M - %d/%m/%Y", &date);
 #endif
-
 	return guiTimeStrng;
-
 }
 
 
@@ -1870,53 +2071,98 @@ static bool GUI_KeyPadRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 
+#if defined(_WIN64) || defined(_WIN32)
+	uint32_t lastKey = keyboard_get_last_key();
+#endif
 
+#if defined(_WIN64) || defined(_WIN32)
+	if (lastKey == SDLK_RIGHT)
+#else
     if(Input_ReadNextButton() == 0)
+#endif
     {
     	data->state = LV_INDEV_STATE_PR;
     	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
     		data->key = LV_KEY_RIGHT;
+		else if (gui.currentScreen == gui.screens[SETTINGS_SCREEN])
+			data->key = LV_KEY_UP;
     	else
     		data->key = LV_KEY_NEXT;
     }
+#if defined(_WIN64) || defined(_WIN32)
+	if (lastKey == SDLK_LEFT)
+#else
     else if(Input_ReadPrevButton() == 0)
+#endif
     {
     	data->state = LV_INDEV_STATE_PR;
     	if(gui.currentScreen == gui.screens[MUSIC_SCREEN])
     		data->key = LV_KEY_LEFT;
+		else if (gui.currentScreen == gui.screens[SETTINGS_SCREEN])
+			data->key = LV_KEY_DOWN;
     	else
     		data->key = LV_KEY_PREV;
     }
+#if defined(_WIN64) || defined(_WIN32)
+	if (lastKey == SDLK_UP)
+#else
 	else if (Input_ReadMenuButton() == 0)
+#endif
 	{
 		data->state = LV_INDEV_STATE_PR;
-		data->key = LV_KEY_UP;
+		if (gui.currentScreen == gui.screens[SETTINGS_SCREEN])
+			data->key = LV_KEY_PREV;
+		else
+			data->key = LV_KEY_UP;
 	}
+#if defined(_WIN64) || defined(_WIN32)
+	if (lastKey == SDLK_DOWN)
+#else
 	else if (Input_ReadPlayButton() == 0)
+#endif
 	{
 		data->state = LV_INDEV_STATE_PR;
-		data->key = LV_KEY_DOWN;
+		if (gui.currentScreen == gui.screens[SETTINGS_SCREEN])
+			data->key = LV_KEY_NEXT;
+		else
+			data->key = LV_KEY_DOWN;
 	}
+#if defined(_WIN64) || defined(_WIN32)
+	if(lastKey == SDLK_KP_ENTER || lastKey == '\r')
+#else
 	else if(Input_ReadSelectButton() == 0)
+#endif
        {
        	data->state = LV_INDEV_STATE_PR;
        	data->key = LV_KEY_ENTER;
        }
-
+#if defined(_WIN64) || defined(_WIN32)
+	data->state = keyboard_get_state();
+#endif
     return false;
 }
 
 static bool GUI_EncoderRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
 	(void) indev_drv;      /*Unused*/
-	data->state = LV_INDEV_STATE_REL;
 
-	static uint8_t encoderCount;
-	//encoderCount = Input_ReadEncoderCount();
-	encoderCount = 0;
-	//if (encoderCount != 0)
-		data->enc_diff = encoderCount;
-	//enc_diff = 0;
+	static uint8_t btnState = 1;
+
+	if(Input_ReadEncoderButton() != btnState)
+	{
+		// This line is intentionally before flipping btnState
+		// because indev driver is logic high.
+		data->state = btnState;
+		data->key = LV_KEY_ENTER;
+		btnState ^= 1;
+	}
+
+	static int8_t encoderPrevCount;
+	int8_t encoderCount = Input_ReadEncoderCount();
+
+	data->enc_diff = encoderPrevCount - encoderCount;
+
+	encoderPrevCount = encoderCount;
 
 	return false;       /*No more data to read so return false*/
 }
