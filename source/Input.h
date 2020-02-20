@@ -38,7 +38,7 @@ uint8_t Input_ReadPrevButton(void);
 uint8_t Input_ReadMenuButton(void);
 uint8_t Input_ReadPlayButton(void);
 
-uint8_t Input_ReadEncoderCount(void);
+int8_t Input_ReadEncoderCount(void);
 uint8_t Input_ReadEncoderDirection(void);
 uint8_t Input_ReadEncoderButton(void);
 
