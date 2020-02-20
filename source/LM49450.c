@@ -186,7 +186,7 @@
 
 
 
-typedef struct
+typedef struct __attribute__((packed))
 {
 	uint8_t CTRL;
 	uint8_t CLK;
@@ -197,12 +197,19 @@ typedef struct
 	uint8_t SPK_3D_CTRL;
 	uint8_t HP_VOLUME;
 	uint8_t SPK_VOLUME;
-	uint8_t CMP_0_LSB;
-	uint8_t CMP_0_MSB;
-	uint8_t CMP_1_LSB;
-	uint8_t CMP_1_MSB;
-	uint8_t CMP_2_LSB;
-	uint8_t CMP_2_MSB;
+
+	union { 	__attribute__((packed))
+		uint8_t CMP[6];
+		struct{
+			uint8_t CMP_0;
+			uint8_t CMP_1;
+			uint8_t CMP_2;
+			uint8_t CMP_3;
+			uint8_t CMP_4;
+			uint8_t CMP_5;
+		};
+	};
+
 }LM49450_Registers;
 
 
@@ -223,24 +230,22 @@ static LM49450_Registers registers = {	.CTRL 		 = 0x01,
 										.SPK_3D_CTRL = 0x00,
 										.HP_VOLUME 	 = 0x14,
 										.SPK_VOLUME  = 0x10,
-										.CMP_0_LSB 	 = 0x0F,
-										.CMP_0_MSB 	 = 0xFF,
-										.CMP_1_LSB 	 = 0xFF,
-										.CMP_1_MSB 	 = 0x00,
-										.CMP_2_LSB 	 = 0xFF,
-										.CMP_2_MSB 	 = 0x00};
+										.CMP_0	 	 = 0x7F,
+										.CMP_1 		 = 0x7F,
+										.CMP_2 		 = 0x7F,
+										.CMP_3	 	 = 0x7F,
+										.CMP_4 		 = 0x7F,
+										.CMP_5	 	 = 0x7F};
 
 
 static void LM49450_WriteReg(uint8_t regAddress, uint8_t data)
 {
-	// I2C transfer configuration
-	static i2c_master_transfer_t transfer;
-
-	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR,
-	transfer.direction 	 	 = kI2C_Write,
-	transfer.subaddressSize  = 1,
-	transfer.dataSize 		 = 1,
+	i2c_master_transfer_t transfer;
+	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR;
+	transfer.subaddressSize  = 1;
+	transfer.dataSize 		 = 1;
 	transfer.flags 		 	 = kI2C_TransferDefaultFlag;
+	transfer.direction 	 	 = kI2C_Write,
     transfer.subaddress 	 = regAddress;
     transfer.data  			 = &data;
     I2C_MasterTransferBlocking(LM49450_I2C , &transfer);
@@ -249,14 +254,12 @@ static void LM49450_WriteReg(uint8_t regAddress, uint8_t data)
 
 static void LM49450_ReadReg(uint8_t regAddress, uint8_t* data)
 {
-	// I2C transfer configuration
-	static i2c_master_transfer_t transfer;
-
-	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR,
-	transfer.direction 	 	 = kI2C_Read,
-	transfer.subaddressSize  = 1,
-	transfer.dataSize 		 = 1,
+	i2c_master_transfer_t transfer;
+	transfer.slaveAddress 	 = LM49450_I2C_MASTER_SLAVE_ADDR;
+	transfer.subaddressSize  = 1;
+	transfer.dataSize 		 = 1;
 	transfer.flags 		 	 = kI2C_TransferDefaultFlag;
+	transfer.direction 	 	 = kI2C_Read,
     transfer.subaddress 	 = regAddress;
     transfer.data  			 = data;
     I2C_MasterTransferBlocking(LM49450_I2C , &transfer);
@@ -350,12 +353,13 @@ void LM49450_SlaveInit(LM49450_SlaveConfig * config)
 	LM49450_WriteReg(6,  registers.SPK_3D_CTRL);
 	LM49450_WriteReg(7,  registers.HP_VOLUME);
 	LM49450_WriteReg(8,  registers.SPK_VOLUME);
-	LM49450_WriteReg(10, registers.CMP_0_LSB);
-	LM49450_WriteReg(11, registers.CMP_0_MSB);
-	LM49450_WriteReg(12, registers.CMP_1_LSB);
-	LM49450_WriteReg(13, registers.CMP_1_MSB);
-	LM49450_WriteReg(14, registers.CMP_2_LSB);
-	LM49450_WriteReg(15, registers.CMP_2_MSB);
+	LM49450_WriteReg(9,  registers.CMP_0);
+	LM49450_WriteReg(10, registers.CMP_1);
+	LM49450_WriteReg(11, registers.CMP_2);
+	LM49450_WriteReg(12, registers.CMP_3);
+	LM49450_WriteReg(13, registers.CMP_4);
+	LM49450_WriteReg(14, registers.CMP_5);
+
 
 	LM49450_Registers registersCheck;
 
@@ -368,12 +372,12 @@ void LM49450_SlaveInit(LM49450_SlaveConfig * config)
 	LM49450_ReadReg(6,  &registersCheck.SPK_3D_CTRL);
 	LM49450_ReadReg(7,  &registersCheck.HP_VOLUME);
 	LM49450_ReadReg(8,  &registersCheck.SPK_VOLUME);
-	LM49450_ReadReg(10, &registersCheck.CMP_0_LSB);
-	LM49450_ReadReg(11, &registersCheck.CMP_0_MSB);
-	LM49450_ReadReg(12, &registersCheck.CMP_1_LSB);
-	LM49450_ReadReg(13, &registersCheck.CMP_1_MSB);
-	LM49450_ReadReg(14, &registersCheck.CMP_2_LSB);
-	LM49450_ReadReg(15, &registersCheck.CMP_2_MSB);
+	LM49450_ReadReg(9,  &registersCheck.CMP_0);
+	LM49450_ReadReg(10, &registersCheck.CMP_1);
+	LM49450_ReadReg(11, &registersCheck.CMP_2);
+	LM49450_ReadReg(12, &registersCheck.CMP_3);
+	LM49450_ReadReg(13, &registersCheck.CMP_4);
+	LM49450_ReadReg(14, &registersCheck.CMP_5);
 
 	if(memcmp(&registers,&registersCheck,sizeof(LM49450_Registers))==0)
 		PRINTF("LM49450 Config OK! \n");
@@ -491,6 +495,34 @@ bool LM49450_VolumeDown()
 	}
 	return retval;
 }
+
+void LM49450_EnableEqualizer(bool b)
+{
+	registers.CTRL &= ~CTRL_COMP_MASK;
+	registers.CTRL |= CTRL_COMP(b);
+}
+
+bool LM49450_IsEqualizerEnabled(void)
+{
+	return (bool)(registers.CTRL & CTRL_COMP_MASK);
+}
+
+uint8_t LM49450_GetDacCompFilter(uint8_t band)
+{
+	assert(0<=band && band<=5);
+	LM49450_ReadReg(9+band, &registers.CMP[band]);
+	return registers.CMP[band];
+}
+
+uint8_t LM49450_SetDacCompFilter(uint8_t band,uint8_t level)
+{
+	assert(0<=band && band<=5);
+	assert(0<=level && level<=255);
+
+	registers.CMP[band] = level;
+	LM49450_WriteReg(9+band, level);
+}
+
 
 void LM49450_GetDefault3DConfig(LM49450_3Dconfig * config)
 {

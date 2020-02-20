@@ -246,6 +246,11 @@ bool LM49450_VolumeUp(void);
  */
 bool LM49450_VolumeDown(void);
 
+void LM49450_EnableEqualizer(bool b);
+bool LM49450_IsEqualizerEnabled(void);
+uint8_t LM49450_GetDacCompFilter(uint8_t band);
+uint8_t LM49450_SetDacCompFilter(uint8_t band,uint8_t level);
+
 
 void LM49450_Set3DConfig(LM49450_3Dconfig * config);
 
