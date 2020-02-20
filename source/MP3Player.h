@@ -115,6 +115,9 @@ void MP3_GetEqualizerLevelLimits(int8_t * min, int8_t * max);
 void MP3_SetEqualizerLevel(uint8_t band, int8_t level);
 bool MP3_IsEqualizerEnable(void);
 
+void MP3_SetPlaybackMode(MP3PlaybackMode mode);
+
+MP3PlaybackMode MP3_GetPlaybackMode(void);
 /**
  *
  */

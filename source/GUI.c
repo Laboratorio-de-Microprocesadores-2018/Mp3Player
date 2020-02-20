@@ -244,6 +244,7 @@ static lv_settings_item_t mainMenuItems[] =
 {
 	   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Equalizer",.value = "Low, mid, and high bands."},
 	   {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Time/Date",.value = "Set time and date."},
+	   {.type = LV_SETTINGS_TYPE_DDLIST,.name = "Playback mode",.value = "Loop folder\nLoop one",.state = 0},
 	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Display",.value = ""},
 	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Sleep mode",.value = ""},
 	  // {.type = LV_SETTINGS_TYPE_LIST_BTN,.name = "Alarm",.value = ""},
@@ -1139,6 +1140,7 @@ static void GUI_SettingsScreenRootEventCallback(lv_obj_t * btn, lv_event_t e)
 
 	if (e == LV_EVENT_REFRESH) {
 
+		mainMenuItems[2].state = MP3_GetPlaybackMode();
 		uint32_t i;
 		for (i = 0; mainMenuItems[i].type != LV_SETTINGS_TYPE_INV; i++) {
 			lv_settings_add(&mainMenuItems[i]);
@@ -1148,6 +1150,15 @@ static void GUI_SettingsScreenRootEventCallback(lv_obj_t * btn, lv_event_t e)
 	 * The submenus will be very simple so use a common event callback for them.
 	 * `act_item` is the clicked list button in the main menu.
 	 * It's name will be the title of the new page*/
+	else if (e == LV_EVENT_VALUE_CHANGED)
+	{
+		if (act_item == &mainMenuItems[2])
+		{
+			MP3PlaybackMode playbackModes[] = { MP3_RepeatAll,MP3_RepeatOne};
+			MP3_SetPlaybackMode(playbackModes[act_item->state]);
+			PRINTF("Playback mode: %d\n", playbackModes[act_item->state]);
+		}
+	}
 	else if (e == LV_EVENT_CLICKED) {
 		if (&mainMenuItems[0] == act_item) {
 			lv_settings_open_page(act_item, GUI_SettingsScreenEqualizerEventCallback);
@@ -1155,9 +1166,9 @@ static void GUI_SettingsScreenRootEventCallback(lv_obj_t * btn, lv_event_t e)
 		else if (&mainMenuItems[1] == act_item) {
 			lv_settings_open_page(act_item, GUI_SettingsScreenTimeEventCallback);
 		}
-		else if (&mainMenuItems[2] == act_item) {
-			lv_settings_open_page(act_item, GUI_SettingsScreenDisplayEventCallback);
-		}
+//		else if (&mainMenuItems[2] == act_item) {
+//			lv_settings_open_page(act_item, GUI_SettingsScreenDisplayEventCallback);
+//		}
 	}
 }
 
@@ -1980,7 +1991,12 @@ static void GUI_SetTrackInfo(char * _fileName)
 	//if(MP3_GetPlayMode()==MP3_RepeatAll)
 	{
 		char text[7];
-		sprintf(text, "%d/%d",MP3_GetSongNumber(),MP3_GetQueueLength());
+
+		if(MP3_GetPlaybackMode()==MP3_RepeatOne)
+			sprintf(text, LV_SYMBOL_REFRESH" %d/%d",MP3_GetSongNumber(),MP3_GetQueueLength());
+		else
+			sprintf(text, "%d/%d",MP3_GetSongNumber(),MP3_GetQueueLength());
+
 		lv_label_set_text(gui.musicScreen.queueProgress, text);
 	}
 }

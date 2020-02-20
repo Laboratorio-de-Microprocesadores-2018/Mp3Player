@@ -37,7 +37,7 @@ MP3_EqLevels_t eqLevels;
 
 
 static MP3_Status status;
-MP3PlaybackMode playbackMode;
+MP3PlaybackMode playbackMode = MP3_RepeatAll;
 
 /**
  * Callback called every time a new track starts playing
