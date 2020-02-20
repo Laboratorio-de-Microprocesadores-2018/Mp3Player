@@ -12,6 +12,8 @@
 #include "SDL_mixer.h"
 #define PRINTF printf
 
+static bool equalizerEnable;
+MP3_EqLevels_t eqLevels;
 #else
 
 #include "Audio.h"
@@ -30,7 +32,7 @@
 #define  READ_BUFFER_SIZE  (1024*8)
 
 /* Every 4 frames the vumeter is updated */
-#define VUMETER_UPDATE_MODULO 4
+#define VUMETER_UPDATE_MODULO 3
 
 
 
@@ -128,7 +130,6 @@ status_t MP3_Init()
 
 	Mix_HookMusicFinished(SDL_musicFinished);
 
-	MP3_SetVolume(MP3_GetMaxVolume() / 2);
 #else
 	mp3Decoder = MP3InitDecoder();
 
@@ -146,12 +147,18 @@ status_t MP3_Init()
 	/* Initialize vumeter module. */
 	Vumeter_Init();
 
+
+#endif
+
+	MP3_SetVolume(MP3_GetMaxVolume() / 3);
+
+	playbackMode = MP3_RepeatOne;
+
 	trackChangedCB = NULL;
 
 	status = IDLE;
 
 	return kStatus_Success;
-#endif
 }
 
 
@@ -267,16 +274,89 @@ void MP3_Stop()
 	status = IDLE;
 }
 
+void MP3_Fastforward()
+{
+	status = MP3_FASTFORWARD;
+#if defined(_WIN64) || defined(_WIN32)
+	
+#else
+	
+#endif
+
+}
+void MP3_Rewind()
+{
+	//status = MP3_REWIND; // TODO Unimplemented!!
+#if defined(_WIN64) || defined(_WIN32)
+	
+#else
+	
+#endif
+}
+
+void MP3_EqualizerEnable(bool b)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	printf("Equalizer enable: %d!\n",b);
+	equalizerEnable = b;
+#else
+	Audio_EqualizerEnable(b);
+#endif
+}
+
+void MP3_GetEqualizerLevelLimits(int8_t * min, int8_t * max)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	assert(0); // TODO
+#else
+	Audio_GetEqualizerLevelLimits(min,max);
+#endif
+}
+void MP3_GetEqualizerLevels(MP3_EqLevels_t * levels)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	memcpy(levels, &eqLevels, sizeof(MP3_EqLevels_t));
+#else
+	Audio_GetEqualizerLevels((Audio_EqLevels_t*)levels);
+#endif
+}
+
+void MP3_SetEqualizerLevel(MP3_EqBand_t band, int8_t level)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	printf("Set equalizer band %d level %d\n",band,level);
+	eqLevels.band[band] = level;
+
+	//memcpy(&eqLevels, levels, sizeof(MP3_EqLevels_t));
+#else
+	Audio_SetEqualizerLevel(band,level);
+#endif
+}
+
+bool MP3_IsEqualizerEnable(void)
+{
+#if defined(_WIN64) || defined(_WIN32)
+	return equalizerEnable;
+#else
+	return Audio_IsEqualizerEnable();
+#endif
+}
+
+
 void MP3_Next()
 {
 	if (status != IDLE)
 		MP3_Stop();
 
 	// Move to next song in current folder
-	curSong = (curSong + 1) % queueLength;
+	if(playbackMode == MP3_Shuffle)
+		curSong = (curSong + 1) % queueLength; // TODO!!
+	else
+		curSong = (curSong + 1) % queueLength;
 
 	MP3_PlayCurrentSong();
 }
+
 
 void MP3_Prev()
 {
@@ -289,9 +369,11 @@ void MP3_Prev()
 	MP3_PlayCurrentSong();
 }
 
-void MP3_PauseResume()
+void MP3_Resume()
 {
-	if(status==PLAYING)
+	switch (status)
+	{
+	case PLAYING:
 	{
 #if defined(_WIN64) || defined(_WIN32)
 		Mix_PauseMusic();
@@ -301,7 +383,8 @@ void MP3_PauseResume()
 		status = PAUSE;
 		PRINTF("Paused\n");
 	}
-	else if(status == PAUSE)
+	break;
+	case PAUSE:
 	{
 #if defined(_WIN64) || defined(_WIN32)
 		Mix_ResumeMusic();
@@ -309,8 +392,14 @@ void MP3_PauseResume()
 		Audio_Resume();
 #endif
 		status = PLAYING;
-		PRINTF("Playing '%s' \n",FE_ENTRY_NAME(&currentFileInfo));
+		PRINTF("Playing '%s' \n", FE_ENTRY_NAME(&currentFileInfo));
 
+	}
+	case MP3_REWIND:
+	case MP3_FASTFORWARD:
+	{
+		status = PLAYING;
+	}
 	}
 
 }
@@ -423,6 +512,7 @@ void MP3_Task()
 		break;
 	}
 	case PLAYING:
+	case MP3_FASTFORWARD:
 
 		SET_DBG_PIN(1);
 
@@ -432,16 +522,21 @@ void MP3_Task()
 			status_t s = MP3_DecodeFrame();
 			if(s==kStatus_Success)
 			{
-				if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0)
-					Vumeter_Generate(audioBuf);
-
+				if(status==PLAYING)
+				{
 					Audio_PushFrame(&audioBuf[0],
-										 mp3FrameInfo.outputSamps,
-										 mp3FrameInfo.nChans,
-										 mp3FrameInfo.samprate,
-										 frameCounter++);
+						 mp3FrameInfo.outputSamps,
+						 mp3FrameInfo.nChans,
+						 mp3FrameInfo.samprate,
+						 frameCounter++);
 
-					playbackTimeMs += mp3FrameInfo.outputSamps * 1000 / (mp3FrameInfo.samprate * mp3FrameInfo.nChans);
+					if(Vumeter_BackBufferEmpty()  &&  frameCounter%VUMETER_UPDATE_MODULO == 0) {
+						Vumeter_Generate(audioBuf);
+					}
+				}
+
+				playbackTimeMs += mp3FrameInfo.outputSamps * 1000 / (mp3FrameInfo.samprate * mp3FrameInfo.nChans);
+
 			}
 			else if(s == kStatus_OutOfRange)
 			{
@@ -455,8 +550,11 @@ void MP3_Task()
 			}
 		}
 
-		if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
-			Vumeter_Display();
+		if(status==PLAYING)
+		{
+			if(Audio_GetCurrentFrameNumber()%VUMETER_UPDATE_MODULO == 0)
+				Vumeter_Display();
+		}
 		CLEAR_DBG_PIN(1);
 
 		break;
@@ -467,13 +565,26 @@ void MP3_Task()
 		{
 			// When empties stop playback and close file
 			Audio_Stop();
+
 			FE_CloseFile(&currentFile);
-			MP3_Next();
+
+			// Move to next song in current folder
+			if(playbackMode == MP3_RepeatAll)
+			{
+				curSong = (curSong + 1) % queueLength;
+			}
+			else if(playbackMode == MP3_RepeatOne)
+			{
+				curSong = curSong;
+			}
+//			else if(playbackMode == MP3_Shuffle)
+//			{
+//				curSong = 0;
+//				assert(0); // TODO
+//			}
+
+			MP3_PlayCurrentSong();
 		}
-
-		break;
-
-	case PAUSE_PENDING:
 
 		break;
 
