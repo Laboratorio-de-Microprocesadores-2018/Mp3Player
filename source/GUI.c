@@ -1164,10 +1164,8 @@ static void GUI_SettingsScreenEqualizerEventCallback(lv_obj_t * btn, lv_event_t 
 	static lv_settings_item_t ecualizadorItems[] = {
 		{.type = LV_SETTINGS_TYPE_SW,    .name = "Enable",		.value = enable_str,},
 		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Low",			.value = equalizer_str[0]},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Low-Mid",		.value = equalizer_str[1]},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Mid",			.value = equalizer_str[2]},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Mid-High",	.value = equalizer_str[3]},
-		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "High",		.value = equalizer_str[4]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "Mid",			.value = equalizer_str[1]},
+		{.type = LV_SETTINGS_TYPE_SLIDER,.name = "High",		.value = equalizer_str[2]},
 		{.type = LV_SETTINGS_TYPE_INV},     /*Mark the last item*/
 	};
 
@@ -1191,7 +1189,7 @@ static void GUI_SettingsScreenEqualizerEventCallback(lv_obj_t * btn, lv_event_t 
 		{
 			ecualizadorItems[1+i].rangeMin = eqMin;
 			ecualizadorItems[1+i].rangeMax = eqMax;
-			snprintf(equalizer_str[i], 	6, "%d", eqLevles.band[i]);
+			snprintf(equalizer_str[i], 	6, "%d dB", eqLevles.band[i]);
 			ecualizadorItems[1+i].state = eqLevles.band[i];
 		}
 
@@ -2160,8 +2158,12 @@ static bool GUI_EncoderRead(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 	static int8_t encoderPrevCount;
 	int8_t encoderCount = Input_ReadEncoderCount();
 
-	data->enc_diff = encoderPrevCount - encoderCount;
+	data->enc_diff = (encoderPrevCount - encoderCount)/4;
 
+	if(data->enc_diff != 0)
+	{
+		PRINTF("Enc diff: %d\n",data->enc_diff);
+	}
 	encoderPrevCount = encoderCount;
 
 	return false;       /*No more data to read so return false*/
