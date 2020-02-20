@@ -227,6 +227,12 @@ typedef struct
 	char browserPath[255];
 	uint8_t browserDepth;
 
+	/* Drive number of current song*/
+	int8_t currentDrivePlaying;
+
+	/* Drive number of current browser folder. */
+	int8_t currentDriveBrowsing;
+
 	/* Task to make volume bar hide automatically. */
 	lv_task_t* volumeBarTask;
 
@@ -652,6 +658,7 @@ static void GUI_CreateMusicScreen()
 	lv_obj_t* queueProgress = lv_label_create(cont, Title);
 	lv_label_set_style(queueProgress, LV_LABEL_STYLE_MAIN, gui.theme->style.label.sec);
 	lv_label_set_align(queueProgress, LV_LABEL_ALIGN_RIGHT);
+	lv_label_set_text(queueProgress, "0/0");
 	lv_obj_align(queueProgress, Title, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
 	gui.musicScreen.queueProgress = queueProgress;
 
@@ -989,6 +996,8 @@ static void GUI_BrowserScreenEventHandler(lv_obj_t* obj, lv_event_t event)
 				//sprintf(filePath, "%s\\%s.mp3", gui.browserPath, lv_list_get_btn_text(obj));
 				MP3_SetSongsQueue(gui.browserScreen.songsIndex, gui.browserScreen.nSongs);
 				MP3_Play(gui.browserPath, direntry->index);
+
+				gui.currentDrivePlaying = gui.browserPath[0]-'0';
 
 				/* Show music screen */
 				GUI_ShowScreen(MUSIC_TAB);
@@ -1486,7 +1495,10 @@ static void GUI_OpenFolder(char* folder)
 		depthInc = -1;
 
 		if (gui.browserDepth == 1)
+		{
 			newPath[0] = '\0';
+			gui.currentDriveBrowsing = -1;
+		}
 		else
 			*(strrchr(newPath, '\\')) = '\0';
 	}
@@ -1497,18 +1509,24 @@ static void GUI_OpenFolder(char* folder)
 
 		/* Redirect SD path. */
 		if (strcmp(folder, "SD") == 0)
+		{
 #if defined(_WIN64) || defined(_WIN32)
 			strcat(newPath, "Music");
 #else
 			strcat(newPath, "0:/");
 #endif
+			gui.currentDriveBrowsing = FE_SD;
+		}
 		/* Redirect USB path. */
 		else if (strcmp(folder, "USB") == 0)
+		{
 #if defined(_WIN64) || defined(_WIN32)
 			strcat(newPath, "Music");
 #else
 			strcat(newPath, "1:/");
 #endif
+			gui.currentDriveBrowsing = FE_USB;
+		}
 		/* Folow folder path. */
 		else
 		{
@@ -1577,6 +1595,7 @@ static bool GUI_ListFolderContents(char* path)
 		if (FE_DriveStatus(FE_USB) == false)
 			lv_btn_set_state(button, LV_BTN_STATE_INA);
 
+		gui.currentDriveBrowsing = -1;
 		return true;
 	}
 
@@ -1966,6 +1985,24 @@ static void GUI_SetTrackInfo(char * _fileName)
 	}
 }
 
+static void GUI_ResetTrackInfo()
+{
+	// Set elapesed time to 0
+	lv_label_set_text(gui.musicScreen.elapsedTime, "--:--");
+
+	// Set remaining time to song duration
+	lv_label_set_text(gui.musicScreen.remainingTime,"--:--");
+
+
+	lv_label_set_text(gui.musicScreen.Title,"");
+	lv_label_set_text(gui.musicScreen.Artist, "");
+
+	lv_bar_set_value(gui.musicScreen.progressBar, 0, false);
+
+	lv_label_set_text(gui.musicScreen.queueProgress, "0/0");
+
+}
+
 /**
  * @brief Periodically update track progress
  */
@@ -1998,19 +2035,23 @@ static void GUI_UpdateProgressBar(lv_task_t* task)
  */
 void GUI_UpdateDriveStatus(uint8_t drive, bool status)
 {
-	/* If root folder with drives is currently shown, update it. */
-	if (gui.currentScreen == (Screen_t*)& gui.browserScreen)
+	/* If browser is in root folder, update it. */
+	if (gui.browserDepth == 0)
 	{
-		if (gui.browserDepth == 0)
-		{
-			GUI_ListFolderContents("\0");
-		}
+		GUI_ListFolderContents("\0");
 	}
-	else if(gui.browserPath[0]==('0'+drive) && status == false)
+	/* If user is browsing extracted drive, return to root. */
+	else if(gui.currentDriveBrowsing == drive && status == false)
 	{
 		gui.browserPath[0] = '\0';
 		gui.browserDepth = 0;
 		GUI_ListFolderContents("\0");
+	}
+	/* Reset music screen info. */
+	if(gui.currentDrivePlaying == drive && status == false)
+	{
+		gui.currentDrivePlaying = -1;
+		GUI_ResetTrackInfo();
 	}
 }
 
