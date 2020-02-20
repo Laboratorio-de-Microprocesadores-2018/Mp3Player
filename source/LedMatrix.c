@@ -43,7 +43,7 @@
 #define RX_CHANNEL 				2
 #define INTERMEDIARY_CHANNEL 	3
 
-#define COLOR_TEST 				1
+#define COLOR_TEST 				0
 
 
 #define LED_MATRIX_USE_DMA
