@@ -412,6 +412,23 @@ void BOARD_InitPins(void)
     /* PORTB1 (pin 54) is configured as FTM1_QD_PHB */
     PORT_SetPinMux(ENC_B_PORT, ENC_B_PIN, kPORT_MuxAlt6);
 
+
+    ENC_A_PORT->PCR[ENC_A_PIN] = ((PORTB->PCR[ENC_A_PIN] &
+                       /* Mask bits to zero which are setting */
+                       (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_PFE_MASK | PORT_PCR_ISF_MASK)))
+
+                      /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
+                       * corresponding PE field is set. */
+                      | (uint32_t)(kPORT_PullUp));
+
+    ENC_B_PORT->PCR[ENC_B_PIN] = ((PORTB->PCR[ENC_B_PIN] &
+                       /* Mask bits to zero which are setting */
+                       (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_PFE_MASK | PORT_PCR_ISF_MASK)))
+
+                      /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
+                       * corresponding PE field is set. */
+                      | (uint32_t)(kPORT_PullUp));
+
     /* PORTB10 (pin 58) is configured as SPI1_PCS0 */
     PORT_SetPinMux(LCD_CSn_PORT, LCD_CSn_PIN, kPORT_MuxAlt2);
 
