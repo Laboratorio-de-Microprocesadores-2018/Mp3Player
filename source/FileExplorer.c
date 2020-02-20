@@ -46,12 +46,24 @@ static int SortAlphaCompare(void* a, void* b);
 DSTATUS currSDstatus=STA_NODISK;
 DSTATUS currUSBstatus=STA_NODISK;
 
+//static bool sdIsInserted = false;
+//static bool sdStatusChanged = false;
+//
+//static bool usbIsInserted = false;
+//static bool usbStatusChanged = false;
+
 #if defined(_WIN64) || defined(_WIN32)
 
 #else
 
 extern usb_host_handle g_HostHandle;
-
+//extern sd_card_t g_sd;
+///* SD card detect configuration */
+//static sdmmchost_detect_card_t cardDetectConfig = { kSDMMCHOST_DetectCardByGpioCD,
+//													0,
+//													sdStatusChangeFn,
+//													sdStatusChangeFn,
+//													NULL };
 /* File system objects */
 static FATFS g_fileSystems[3];
 
@@ -76,14 +88,12 @@ status_t FE_Init(void)
 
 	    g_fileSystems[SDDISK].pdrv=SDDISK;
 #endif
-
 #ifdef USB_DISK_ENABLE
 	    if(disk_setUp(USBDISK)!=kStatus_Success)
 		{
 			return kStatus_Fail;
 		}
 	    g_fileSystems[USBDISK].pdrv=USBDISK;
-
 #endif
 
 	    return kStatus_Success;
@@ -91,12 +101,13 @@ status_t FE_Init(void)
 }
 
 
-void FE_Deinit(void)
+void FE_Deinit(void)//METER EN FUNCION DEINIT DE DISKIO
 {
 #ifdef SD_DISK_ENABLE
 	SD_HostDeinit(&g_sd);
 #endif
 }
+
 
 
 
@@ -108,9 +119,8 @@ void FE_Task(void)
 #ifdef USB_DISK_ENABLE
 	disk_USBTick();
 #endif
-
-	DSTATUS newSDstatus = disk_status(SDDISK);
-	DSTATUS newUSBstatus = disk_status(USBDISK);
+	DSTATUS newSDstatus=disk_status(SDDISK);
+	DSTATUS newUSBstatus=disk_status(USBDISK);
 	/*-----------USB change------------------*/
 	if(newUSBstatus!=currUSBstatus)
 	{
@@ -120,8 +130,11 @@ void FE_Task(void)
 			PRINTF("USB inserted\n");
 			if (FE_MountDrive(FE_USB) == kStatus_Success)
 			{
+				uint8_t k = FE_CountFiles("/", "*.mp3");
+
+				PRINTF("There are %d mp3 files in root folder of the USB\n", k);
 				GUI_UpdateDriveStatus(FE_USB,true);
-				PRINTF("USB mounted\n");
+
 			}
 			else
 				PRINTF("Error mounting USB\n");
@@ -139,11 +152,13 @@ void FE_Task(void)
 	if (newSDstatus!=currSDstatus)
 	{
 		currSDstatus=newSDstatus;
-		if (newSDstatus==STA_OK)
+		if (newSDstatus==STA_OK)//if SD card was inserted
 		{
 			PRINTF("SD inserted\n");
 			if (FE_MountDrive(FE_SD) == kStatus_Success)
 			{
+				uint8_t k = FE_CountFiles("/", "*.mp3");
+				PRINTF("There are %d mp3 files in root folder of the SD\n", k);
 				GUI_UpdateDriveStatus(FE_SD,true);
 			}
 			else

@@ -10,7 +10,6 @@
 #include "fsl_smc.h"
 #include "fsl_llwu.h"
 #include "fsl_pmc.h"
-#include "fsl_rcm.h"
 #include "fsl_port.h"
 #include "fsl_debug_console.h"
 
@@ -49,21 +48,6 @@ bool PM_Recover()
 		LLWU_ClearExternalWakeupPinFlag(LLWU, PM_WAKEUP_PIN);
 		PMC_ClearPeriphIOIsolationFlag(PMC);
 	}
-		/* RTC Alarm! */
-	/*	else if(LLWU_GetInternalWakeupModuleFlag(LLWU, 5) == true)
-		{
-			//PRINTF("Wake up with RTC alarm!\n");
-		}*/
-		/** RTC Seconds */
-//		else if(LLWU_GetInternalWakeupModuleFlag(LLWU, 7) == true)
-//		{
-//
-//		}
-	//}
-	/*else if ( resetCause & (kRCM_SourcePor|kRCM_SourceJtag) )
-	{
-		//PRINTF("Power on reset!\n");
-	}*/
 
 	return fromLowPower;
 }
