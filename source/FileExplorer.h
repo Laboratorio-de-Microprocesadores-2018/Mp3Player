@@ -34,7 +34,7 @@
 #if defined(_WIN64) || defined(_WIN32)
 
 /* Replace fsl_common.h */
-#define status_t int32_t;
+typedef int32_t status_t ;
 #define kStatus_Success 0
 
 /* File structure. */

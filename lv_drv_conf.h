@@ -241,7 +241,7 @@
 /*---------------------------------------
  * Mouse or touchpad on PC (using SDL)
  *-------------------------------------*/
-#define USE_MOUSE       1
+#define USE_MOUSE       0
 #ifndef USE_MOUSE
 #  define USE_MOUSE           0
 #endif

@@ -33,13 +33,15 @@
 #include "LM49450.h"
 
 
+
+
 #define AUDIO_SAI 			I2S0
 #define AUDIO_DMA 			DMA0
 #define AUDIO_DMA_CHANNEL	0
 #define AUDIO_DMA_IRQ_ID 	DMA0_IRQn
 
 typedef struct{
-	uint16_t samples[AUDIO_BUFFER_SIZE];
+	int16_t samples[AUDIO_BUFFER_SIZE];
 	uint16_t nSamples;
 	uint32_t sampleRate;
 	uint32_t frameNumber;
@@ -120,8 +122,8 @@ status_t Audio_Init()
 	LM49450_GetDefaultSlaveConfig(&LM49450config);
 	LM49450config.oversampleRate = LM49450_DAC_OSR_125;
 	LM49450config.I2sMode = LM49450_I2s_LeftJustified;
-	LM49450config.defaultDacFilter = false;
 	LM49450config.chargePumpDiv = 73;
+
 
 
 	//LM49450config.reference = LM49450_InternalRef;
@@ -153,6 +155,9 @@ status_t Audio_Init()
 
 	LM49450_Enable(true);
 
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	Equalizer_Init();
+#endif
 
 	return kStatus_Success;
 
@@ -281,11 +286,17 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 	else
 	{
 		PRINTF("Audio_PushFrame() Invalid number of channels: %d\n",nChans);
+		return kStatus_Fail;
 	}
+
 
 	audioQueue[queueUser].nSamples = nSamples/nChans; // STEREO
 	audioQueue[queueUser].sampleRate = sampleRate;
 	audioQueue[queueUser].frameNumber = frameNumber;
+
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+		Equalizer_Apply((int16_t*)audioQueue[queueUser].samples, nSamples/nChans);
+#endif
 
 	edma_transfer_config_t config = {0};
 	EDMA_PrepareTransfer(&config,
@@ -293,7 +304,7 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 							 sizeof(uint16_t),
 							 (void *)SAI_TxGetDataRegisterAddress(I2S0,0),
 							 sizeof(uint16_t), /*  sizeof(uint32_t) STEREO */
-							 sizeof(uint16_t),
+							 sizeof(uint16_t)*4, /* Transfer 4 samples per request*/
 							 audioQueue[queueUser].nSamples * sizeof(uint16_t),// Transfer an entire frame
 							 kEDMA_MemoryToPeripheral); // kEDMA_MemoryToPeripheral STEREO
 
@@ -456,6 +467,54 @@ static void Edma_Callback(edma_handle_t *handle, void *userData, bool transferDo
 
 }
 
+
+void Audio_EqualizerEnable(bool b)
+{
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	Equalizer_Enable(b);
+#else
+	LM49450_EnableEqualizer(b);
+#endif
+}
+
+bool Audio_IsEqualizerEnable()
+{
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	return Equalizer_IsEnable();
+#else
+	return LM49450_IsEqualizerEnabled();
+#endif
+}
+
+void Audio_GetEqualizerLevelLimits(int8_t *min, int8_t *max)
+{
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	Equalizer_GetLevelLimits(min,max);
+#else
+	*min = 0;
+	*max = 32; // TODO: O es 31??
+#endif
+}
+void Audio_GetEqualizerLevels(Audio_EqLevels_t * eq)
+{
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	for(int i=0; i<EQ_NUM_BANDS; i++)
+		eq->band[i] = Equalizer_GetLevel(i);
+#else
+	eq->low = LM49450_GetDacCompFilter(0);
+	eq->mid = LM49450_GetDacCompFilter(1);
+	eq->high = LM49450_GetDacCompFilter(2);
+#endif
+}
+
+void Audio_SetEqualizerLevel(uint8_t band, int8_t level)
+{
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+	Equalizer_SetLevel(band,level);
+#else
+	LM49450_SetDacCompFilter(band,level);
+#endif
+}
 
 
 #endif

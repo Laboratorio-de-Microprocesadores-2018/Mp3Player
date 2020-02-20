@@ -44,6 +44,8 @@ void keyboard_init(void)
     /*Nothing to init*/
 }
 
+
+
 /**
  * Get the last pressed or released character from the PC's keyboard
  * @param indev_drv pointer to the related input device driver
@@ -59,6 +61,15 @@ bool keyboard_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
     return false;
 }
 
+uint32_t keyboard_get_last_key()
+{
+	return last_key;
+}
+
+lv_indev_state_t keyboard_get_state()
+{
+	return state;
+}
 /**
  * It is called periodically from the SDL thread to check a key is pressed/released
  * @param event describes the event

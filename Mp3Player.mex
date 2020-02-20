@@ -38,7 +38,7 @@
                <pin_label pin_num="80" pin_signal="ADC1_SE4b/CMP0_IN2/PTC8/FTM3_CH4/I2S0_MCLK/FB_AD7" label=""/>
                <pin_label pin_num="81" pin_signal="ADC1_SE5b/CMP0_IN3/PTC9/FTM3_CH5/I2S0_RX_BCLK/FB_AD6/FTM2_FLT0" label=""/>
                <pin_label pin_num="77" pin_signal="PTC5/LLWU_P9/SPI0_SCK/LPTMR0_ALT2/I2S0_RXD0/FB_AD10/CMP0_OUT/FTM0_CH2" label="/LED_SENSE_3_3V" identifier="LED_SENSE_3_3V"/>
-               <pin_label pin_num="79" pin_signal="CMP0_IN1/PTC7/SPI0_SIN/USB_SOF_OUT/I2S0_RX_FS/FB_AD8" label=""/>
+               <pin_label pin_num="79" pin_signal="CMP0_IN1/PTC7/SPI0_SIN/USB_SOF_OUT/I2S0_RX_FS/FB_AD8" label="/ENC_BTN" identifier="ENC_BTN"/>
                <pin_label pin_num="70" pin_signal="ADC0_SE14/PTC0/SPI0_PCS4/PDB0_EXTRG/USB_SOF_OUT/FB_AD14/I2S0_TXD1" label="/BTN_NEXT" identifier="BTN_NEXT"/>
                <pin_label pin_num="84" pin_signal="PTC12/UART4_RTS_b/FB_AD27/FTM3_FLT0" label=""/>
                <pin_label pin_num="76" pin_signal="PTC4/LLWU_P8/SPI0_PCS0/UART1_TX/FTM0_CH3/FB_AD11/CMP1_OUT" label="/PWR_EN_5Vn" identifier="PWR_EN_5Vn"/>
@@ -418,9 +418,17 @@
                         <pin_feature name="passive_filter" value="disable"/>
                      </pin_features>
                   </pin>
+
                   <pin peripheral="SPI0" signal="SOUT" pin_num="95" pin_signal="PTD2/LLWU_P13/SPI0_SOUT/UART2_RX/FTM3_CH2/FB_AD4/I2C0_SCL">
                      <pin_features>
                         <pin_feature name="identifier" value=""/>
+             </pin_features>
+                  </pin>
+                  <pin peripheral="GPIOC" signal="GPIO, 7" pin_num="79" pin_signal="CMP0_IN1/PTC7/SPI0_SIN/USB_SOF_OUT/I2S0_RX_FS/FB_AD8">
+                     <pin_features>
+                        <pin_feature name="direction" value="INPUT"/>
+                        <pin_feature name="pull_select" value="up"/>
+                        <pin_feature name="pull_enable" value="enable"/>
                      </pin_features>
                   </pin>
                </pins>

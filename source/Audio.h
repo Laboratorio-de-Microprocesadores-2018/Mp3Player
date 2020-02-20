@@ -15,6 +15,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "fsl_common.h"
 
+
 /////////////////////////////////////////////////////////////////////////////////
 //                       Constants and macro definitions                       //
 /////////////////////////////////////////////////////////////////////////////////
@@ -23,8 +24,24 @@
 
 #define AUDIO_OUTPUT 				I2S_OUTPUT
 
+#define AUDIO_SOFTWARE_EQUALIZER    1U
+
 #define  AUDIO_BUFFER_SIZE 			2304
 #define  CIRC_BUFFER_LEN 			5
+
+#if defined(AUDIO_SOFTWARE_EQUALIZER)
+#include "Equalizer.h"
+#endif
+
+typedef union
+{
+	struct {
+		int8_t low;
+		int8_t mid;
+		int8_t high;
+	};
+	int8_t band[EQ_NUM_BANDS];
+}Audio_EqLevels_t;
 
 /////////////////////////////////////////////////////////////////////////////////
 //                         				API	  		                           //
@@ -133,6 +150,12 @@ uint8_t Audio_GetMaxVolume(void);
  *
  */
 bool Audio_AreHeadphonesPlugged(void);
+
+void Audio_EqualizerEnable(bool b);
+bool Audio_IsEqualizerEnable();
+void Audio_GetEqualizerLevelLimits(int8_t *min, int8_t *max);
+void Audio_GetEqualizerLevels(Audio_EqLevels_t * eq);
+void Audio_SetEqualizerLevel(uint8_t band, int8_t level);
 
 
 #endif /* AUDIO_H_ */
