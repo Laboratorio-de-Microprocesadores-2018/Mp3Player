@@ -368,6 +368,24 @@ void BOARD_InitPins(void)
     /* Initialize GPIO functionality on pin PTD7 (pin 100)  */
     GPIO_PinInit(SD_DETECT_GPIO, SD_DETECT_PIN, &SD_DETECT_config);
 
+    gpio_pin_config_t ENC_BTN_config = {
+		.pinDirection = kGPIO_DigitalInput,
+		.outputLogic = 0U
+	};
+	/* Initialize GPIO functionality on pin PTC7 (pin 79)  */
+	GPIO_PinInit(ENC_BTN_GPIO, ENC_BTN_PIN, &ENC_BTN_config);
+
+	 /* PORTC7 (pin 79) is configured as PTC7 */
+	PORT_SetPinMux(ENC_BTN_PORT, ENC_BTN_PIN, kPORT_MuxAsGpio);
+
+	PORTC->PCR[7] = ((PORTC->PCR[7] &
+					  /* Mask bits to zero which are setting */
+					  (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
+
+					 /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
+					  * corresponding PE field is set. */
+					 | (uint32_t)(kPORT_PullUp));
+
     /* PORTA12 (pin 42) is configured as I2S0_TXD0 */
     PORT_SetPinMux(I2S_SDI_PORT, I2S_SDI_PIN, kPORT_MuxAlt6);
 
@@ -718,33 +736,24 @@ BOARD_DeInitPins:
  * END ****************************************************************************************************************/
 void BOARD_DeInitPins(void)
 {
-    /* Port A Clock Gate Control: Clock enabled */
-    CLOCK_EnableClock(kCLOCK_PortA);
-    /* Port B Clock Gate Control: Clock enabled */
-    CLOCK_EnableClock(kCLOCK_PortB);
-    /* Port C Clock Gate Control: Clock enabled */
-    CLOCK_EnableClock(kCLOCK_PortC);
-    /* Port D Clock Gate Control: Clock enabled */
-    CLOCK_EnableClock(kCLOCK_PortD);
-    /* Port E Clock Gate Control: Clock enabled */
-    CLOCK_EnableClock(kCLOCK_PortE);
+	/* PORTA0 (pin 3x) is configured as NMI_b */
+	PORT_SetPinMux(PORTA, 0U, kPORT_PinDisabledOrAnalog);
 
-    gpio_pin_config_t gpioc_pin76_config = {
-        .pinDirection = kGPIO_DigitalOutput,
-        .outputLogic = 1U
-    };
-    /* Initialize GPIO functionality on pin PTC4 (pin 76)  */
-    GPIO_PinInit(GPIOC, 4U, &gpioc_pin76_config);
+	/* PORTA2 (pin 3x) is configured as NMI_b */
+	PORT_SetPinMux(PORTA, 2U, kPORT_PinDisabledOrAnalog);
 
-    gpio_pin_config_t gpioc_pin86_config = {
-        .pinDirection = kGPIO_DigitalOutput,
-        .outputLogic = 1U
-    };
-    /* Initialize GPIO functionality on pin PTC14 (pin 86)  */
-    GPIO_PinInit(GPIOC, 14U, &gpioc_pin86_config);
+	/* PORTA3 (pin 3x) is configured as NMI_b */
+	PORT_SetPinMux(PORTA, 3U, kPORT_PinDisabledOrAnalog);
+
+	/* PORTA4 (pin 38) is configured as NMI_b */
+	PORT_SetPinMux(PORTA, 4U, kPORT_PinDisabledOrAnalog);
+	//GPIO_PinWrite(GPIOA, 4, 1);
+
+	/* PORTA5 (pin 39) is configured as I2S0_TX_BCLK */
+	PORT_SetPinMux(PORTA, 5U, kPORT_PinDisabledOrAnalog);
 
     /* PORTA12 (pin 42) is configured as I2S0_TXD0 */
-    PORT_SetPinMux(PORTA, 12U, kPORT_MuxAlt6);
+    PORT_SetPinMux(PORTA, 12U, kPORT_PinDisabledOrAnalog);
 
     /* PORTA13 (pin 43) is configured as CMP2_IN1 */
     PORT_SetPinMux(PORTA, 13U, kPORT_PinDisabledOrAnalog);
@@ -764,17 +773,17 @@ void BOARD_DeInitPins(void)
     /* PORTA19 (pin 51) is configured as XTAL0 */
     PORT_SetPinMux(PORTA, 19U, kPORT_PinDisabledOrAnalog);
 
-    /* PORTA4 (pin 38) is configured as NMI_b */
-    PORT_SetPinMux(PORTA, 4U, kPORT_MuxAlt7);
-
-    /* PORTA5 (pin 39) is configured as I2S0_TX_BCLK */
-    PORT_SetPinMux(PORTA, 5U, kPORT_MuxAlt6);
-
     /* PORTB0 (pin 53) is configured as FTM1_QD_PHA */
-    PORT_SetPinMux(PORTB, 0U, kPORT_MuxAlt6);
+    PORT_SetPinMux(PORTB, 0U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB1 (pin 54) is configured as FTM1_QD_PHB */
-    PORT_SetPinMux(PORTB, 1U, kPORT_MuxAlt6);
+    PORT_SetPinMux(PORTB, 1U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTB2 (pin 55) is configured as I2C0_SCL */
+    PORT_SetPinMux(PORTB, 2U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTB3 (pin 56) is configured as I2C0_SDA */
+    PORT_SetPinMux(PORTB, 3U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB10 (pin 58) is configured as ADC1_SE14 */
     PORT_SetPinMux(PORTB, 10U, kPORT_PinDisabledOrAnalog);
@@ -783,10 +792,10 @@ void BOARD_DeInitPins(void)
     PORT_SetPinMux(PORTB, 11U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB16 (pin 62) is configured as SPI1_SOUT */
-    PORT_SetPinMux(PORTB, 16U, kPORT_MuxAlt2);
+    PORT_SetPinMux(PORTB, 16U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB17 (pin 63) is configured as SPI1_SIN */
-    PORT_SetPinMux(PORTB, 17U, kPORT_MuxAlt2);
+    PORT_SetPinMux(PORTB, 17U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB18 (pin 64) is disabled */
     PORT_SetPinMux(PORTB, 18U, kPORT_PinDisabledOrAnalog);
@@ -794,38 +803,47 @@ void BOARD_DeInitPins(void)
     /* PORTB19 (pin 65) is disabled */
     PORT_SetPinMux(PORTB, 19U, kPORT_PinDisabledOrAnalog);
 
-    /* PORTB2 (pin 55) is configured as I2C0_SCL */
-    PORT_SetPinMux(PORTB, 2U, kPORT_MuxAlt2);
-
     /* PORTB20 (pin 66) is disabled */
     PORT_SetPinMux(PORTB, 20U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB22 (pin 68) is configured as SPI2_SOUT */
-    PORT_SetPinMux(PORTB, 22U, kPORT_MuxAlt2);
+    PORT_SetPinMux(PORTB, 22U, kPORT_PinDisabledOrAnalog);
 
     /* PORTB23 (pin 69) is disabled */
     PORT_SetPinMux(PORTB, 23U, kPORT_PinDisabledOrAnalog);
-
-    /* PORTB3 (pin 56) is configured as I2C0_SDA */
-    PORT_SetPinMux(PORTB, 3U, kPORT_MuxAlt2);
 
     /* PORTC0 (pin 70) is configured as ADC0_SE14 */
     PORT_SetPinMux(PORTC, 0U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC1 (pin 71) is configured as LLWU_P6 */
-    PORT_SetPinMux(PORTC, 1U, kPORT_MuxAsGpio);
+    PORT_SetPinMux(PORTC, 1U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTC2 (pin 72) is configured as ADC0_SE4b */
+    PORT_SetPinMux(PORTC, 2U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTC3 (pin 73) is configured as CMP1_IN1 */
+    PORT_SetPinMux(PORTC, 3U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTC4 (pin 76) is configured as PTC4 */
+    PORT_SetPinMux(PORTC, 4U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTC5 (pin 77) is disabled */
+    PORT_SetPinMux(PORTC, 5U, kPORT_PinDisabledOrAnalog);
+
+    /* PORTC7 (pin 79) is disabled */
+    PORT_SetPinMux(PORTC, 7U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC10 (pin 82) is configured as I2C1_SCL */
-    PORT_SetPinMux(PORTC, 10U, kPORT_MuxAlt2);
+    PORT_SetPinMux(PORTC, 10U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC11 (pin 83) is configured as I2C1_SDA */
-    PORT_SetPinMux(PORTC, 11U, kPORT_MuxAlt2);
+    PORT_SetPinMux(PORTC, 11U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC13 (pin 85) is disabled */
     PORT_SetPinMux(PORTC, 13U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC14 (pin 86) is configured as PTC14 */
-    PORT_SetPinMux(PORTC, 14U, kPORT_MuxAsGpio);
+    PORT_SetPinMux(PORTC, 14U, kPORT_PinDisabledOrAnalog);
 
     /* PORTC16 (pin 90) is disabled */
     PORT_SetPinMux(PORTC, 16U, kPORT_PinDisabledOrAnalog);
@@ -836,18 +854,6 @@ void BOARD_DeInitPins(void)
     /* PORTC18 (pin 92) is disabled */
     PORT_SetPinMux(PORTC, 18U, kPORT_PinDisabledOrAnalog);
 
-    /* PORTC2 (pin 72) is configured as ADC0_SE4b */
-    PORT_SetPinMux(PORTC, 2U, kPORT_PinDisabledOrAnalog);
-
-    /* PORTC3 (pin 73) is configured as CMP1_IN1 */
-    PORT_SetPinMux(PORTC, 3U, kPORT_PinDisabledOrAnalog);
-
-    /* PORTC4 (pin 76) is configured as PTC4 */
-    PORT_SetPinMux(PORTC, 4U, kPORT_MuxAsGpio);
-
-    /* PORTC5 (pin 77) is disabled */
-    PORT_SetPinMux(PORTC, 5U, kPORT_PinDisabledOrAnalog);
-
     /* PORTD0 (pin 93) is disabled */
     PORT_SetPinMux(PORTD, 0U, kPORT_PinDisabledOrAnalog);
 
@@ -855,7 +861,7 @@ void BOARD_DeInitPins(void)
     PORT_SetPinMux(PORTD, 1U, kPORT_PinDisabledOrAnalog);
 
     /* PORTD2 (pin 95) is disabled */
-    PORT_SetPinMux(LED_DATA_PORT, LED_DATA_PIN, kPORT_PinDisabledOrAnalog);
+    PORT_SetPinMux(PORTD, 2U, kPORT_PinDisabledOrAnalog);
 
     /* PORTD3 (pin 96) is disabled */
     PORT_SetPinMux(PORTD, 3U, kPORT_PinDisabledOrAnalog);
@@ -864,70 +870,22 @@ void BOARD_DeInitPins(void)
     PORT_SetPinMux(PORTD, 7U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE0 (pin 1) is configured as SDHC0_D1 */
-    PORT_SetPinMux(PORTE, 0U, kPORT_MuxAlt4);
-
-    PORTE->PCR[0] = ((PORTE->PCR[0] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 0U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE1 (pin 2) is configured as SDHC0_D0 */
-    PORT_SetPinMux(PORTE, 1U, kPORT_MuxAlt4);
-
-    PORTE->PCR[1] = ((PORTE->PCR[1] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 1U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE2 (pin 3) is configured as SDHC0_DCLK */
-    PORT_SetPinMux(PORTE, 2U, kPORT_MuxAlt4);
-
-    PORTE->PCR[2] = ((PORTE->PCR[2] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 2U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE3 (pin 4) is configured as SDHC0_CMD */
-    PORT_SetPinMux(PORTE, 3U, kPORT_MuxAlt4);
-
-    PORTE->PCR[3] = ((PORTE->PCR[3] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 3U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE4 (pin 5) is configured as SDHC0_D3 */
-    PORT_SetPinMux(PORTE, 4U, kPORT_MuxAlt4);
-
-    PORTE->PCR[4] = ((PORTE->PCR[4] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 4U, kPORT_PinDisabledOrAnalog);
 
     /* PORTE5 (pin 6) is configured as SDHC0_D2 */
-    PORT_SetPinMux(PORTE, 5U, kPORT_MuxAlt4);
-
-    PORTE->PCR[5] = ((PORTE->PCR[5] &
-                      /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_ISF_MASK)))
-
-                     /* Pull Select: Internal pullup resistor is enabled on the corresponding pin, if the
-                      * corresponding PE field is set. */
-                     | (uint32_t)(kPORT_PullUp));
+    PORT_SetPinMux(PORTE, 5U, kPORT_PinDisabledOrAnalog);
 }
 /***********************************************************************************************************************
  * EOF

@@ -106,12 +106,13 @@ void APP_Init()
 	if(s != kStatus_Success)
 			while(1);
 
+	Input_Init();
 
 	GUI_Init();
 	GUI_Create();
 	GUI_Task();
 	GPIO_PinWrite(LCD_LED_GPIO, LCD_LED_PIN, 1U);	// Turn backlight on after creating GUI.
-	Input_Init();
+
 
 }
 
@@ -123,26 +124,7 @@ void APP_Deinit()
 	FE_Deinit();
 	EDMA_Deinit(DMA0);
 }
-/*
-void APP_LowPowerLoop()
-{
-    for(int i=0; i<NUM_TASKS; i++)
-   	{
-		__disable_irq();
-		if(task[i].HaveToRun())
-		{
-			__enable_irq();
-			task[i].RunPendingTasks();
-		}
-	}
-	//APP_PrepareForSleep();
-	__DSB();
-	__WFI();
-	//APP_RecoverFromSleep();
-	__enable_irq();
-	__ISB();
-}
-*/
+
 void MP3_TaskHook(struct _lv_task_t * task)
 {
 	(void) task;
