@@ -134,10 +134,10 @@ void BOARD_InitBootPins(void);
 #define LCD_LED_PIN 20U    /*!<@brief PORTB pin index: 20 */
                            /* @} */
 
-/*! @name PORTB22 (number 68), /LED_DATA
+/*! @name PORTD2 (number 95), /LED_DATA
   @{ */
-#define LED_DATA_PORT PORTB /*!<@brief PORT device name: PORTB */
-#define LED_DATA_PIN 22U    /*!<@brief PORTB pin index: 22 */
+#define LED_DATA_PORT PORTD /*!<@brief PORT device name: PORTD */
+#define LED_DATA_PIN 2U     /*!<@brief PORTD pin index: 2 */
                             /* @} */
 
 /*! @name PORTC2 (number 72), /BTN_PLAY
@@ -234,13 +234,6 @@ void BOARD_InitBootPins(void);
 #define DBG2_GPIO GPIOD /*!<@brief GPIO device name: GPIOD */
 #define DBG2_PORT PORTD /*!<@brief PORT device name: PORTD */
 #define DBG2_PIN 1U     /*!<@brief PORTD pin index: 1 */
-                        /* @} */
-
-/*! @name PORTD2 (number 95), /DBG3
-  @{ */
-#define DBG3_GPIO GPIOD /*!<@brief GPIO device name: GPIOD */
-#define DBG3_PORT PORTD /*!<@brief PORT device name: PORTD */
-#define DBG3_PIN 2U     /*!<@brief PORTD pin index: 2 */
                         /* @} */
 
 /*! @name PORTD3 (number 96), /DBG4
@@ -344,6 +337,13 @@ void BOARD_InitBootPins(void);
 #define BTN_NEXT_PORT PORTC /*!<@brief PORT device name: PORTC */
 #define BTN_NEXT_PIN 0U     /*!<@brief PORTC pin index: 0 */
                             /* @} */
+
+/*! @name PORTC7 (number 79), /ENC_BTN
+  @{ */
+#define ENC_BTN_GPIO GPIOC /*!<@brief GPIO device name: GPIOC */
+#define ENC_BTN_PORT PORTC /*!<@brief PORT device name: PORTC */
+#define ENC_BTN_PIN 7U     /*!<@brief PORTC pin index: 7 */
+                           /* @} */
 
 /*!
  * @brief Configures pin routing and optionally pin electrical features.
