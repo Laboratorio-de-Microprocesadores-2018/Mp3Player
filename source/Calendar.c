@@ -7,7 +7,6 @@ status_t Calendar_Init()
 	RTC_GetDefaultConfig(&rtcConfig);
 	RTC_Init(RTC, &rtcConfig);
 	RTC_SetClockSource(RTC);
-	// TODO Esperar que el oscilador se estabilice!!
 	RTC_StartTimer(RTC);
 
 	return kStatus_Success;
