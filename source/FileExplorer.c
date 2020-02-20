@@ -321,9 +321,9 @@ FRESULT FE_OpenDir(DIR* dp, const char* path)
 
 
 #if defined(_WIN64) || defined(_WIN32)
-FRESULT FE_ReadDir(DIR* dp, FILINFO** fno)
+FRESULT FE_ReadDir(DIR** dp, FILINFO** fno)
 {
-	*fno = readdir(dp);
+	*fno = readdir(*dp);
 
 	if (*fno != NULL)
 		return 0;
