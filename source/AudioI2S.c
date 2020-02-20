@@ -321,7 +321,7 @@ bool Audio_PushFrame(int16_t* samples, uint16_t nSamples,uint8_t nChans, uint32_
 							 sizeof(uint16_t),
 							 (void *)SAI_TxGetDataRegisterAddress(I2S0,0),
 							 sizeof(uint16_t), /*  sizeof(uint32_t) STEREO */
-							 sizeof(uint16_t),
+							 sizeof(uint16_t)*4, /* Transfer 4 samples per request*/
 							 audioQueue[queueUser].nSamples * sizeof(uint16_t),// Transfer an entire frame
 							 kEDMA_MemoryToPeripheral); // kEDMA_MemoryToPeripheral STEREO
 
