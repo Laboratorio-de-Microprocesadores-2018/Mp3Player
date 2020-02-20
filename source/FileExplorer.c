@@ -90,9 +90,9 @@ status_t FE_Init(void)
 #endif
 #ifdef USB_DISK_ENABLE
 	    if(disk_setUp(USBDISK)!=kStatus_Success)
-			{
-				return kStatus_Fail;
-			}
+		{
+			return kStatus_Fail;
+		}
 	    g_fileSystems[USBDISK].pdrv=USBDISK;
 #endif
 
@@ -103,8 +103,9 @@ status_t FE_Init(void)
 
 void FE_Deinit(void)//METER EN FUNCION DEINIT DE DISKIO
 {
+#ifdef SD_DISK_ENABLE
 	SD_HostDeinit(&g_sd);
-	USB_HostDeinit(&g_HostHandle);
+#endif
 }
 
 
@@ -115,8 +116,9 @@ void FE_Task(void)
 #if defined(_WIN64) || defined(_WIN32)
 #else
 
-
+#ifdef USB_DISK_ENABLE
 	disk_USBTick();
+#endif
 	DSTATUS newSDstatus=disk_status(SDDISK);
 	DSTATUS newUSBstatus=disk_status(USBDISK);
 	/*-----------USB change------------------*/
