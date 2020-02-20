@@ -321,7 +321,7 @@ void MP3_GetEqualizerLevels(MP3_EqLevels_t * levels)
 #endif
 }
 
-void MP3_SetEqualizerLevel(MP3_EqBand_t band, int8_t level)
+void MP3_SetEqualizerLevel(uint8_t band, int8_t level)
 {
 #if defined(_WIN64) || defined(_WIN32)
 	printf("Set equalizer band %d level %d\n",band,level);

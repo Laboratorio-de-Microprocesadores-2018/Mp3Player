@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+
 #if defined(_WIN64) || defined(_WIN32)
 #ifndef kStatus_Success
 #define kStatus_Success 0
@@ -22,10 +23,12 @@
 
 #define status_t int32_t
 #else
+#include "Equalizer.h"
 #include "fsl_common.h"
 #endif
 
 
+#define MP3_NUM_BANDS EQ_NUM_BANDS
 
 /* Player status */
 typedef enum {
@@ -47,26 +50,10 @@ typedef enum
 	MP3_Shuffle
 }MP3PlaybackMode;
 
-typedef enum
-{
-	MP3_LOW,
-	MP3_LOW_MID,
-	MP3_MID,
-	MP3_MID_HIGH,
-	MP3_HIGH,
-	MP3_NUM_BANDS,
-
-}MP3_EqBand_t;
 
 typedef union
 {
-	struct {
-		int8_t low;
-		int8_t lowMid;
-		int8_t mid;
-		int8_t midHigh;
-		int8_t high;
-	};
+
 	int8_t band[MP3_NUM_BANDS];
 }MP3_EqLevels_t;
 
@@ -125,7 +112,7 @@ void MP3_Fastforward(void);
 void MP3_EqualizerEnable(bool b);
 void MP3_GetEqualizerLevels(MP3_EqLevels_t * eqLevels);
 void MP3_GetEqualizerLevelLimits(int8_t * min, int8_t * max);
-void MP3_SetEqualizerLevel(MP3_EqBand_t band, int8_t level);
+void MP3_SetEqualizerLevel(uint8_t band, int8_t level);
 bool MP3_IsEqualizerEnable(void);
 
 /**
