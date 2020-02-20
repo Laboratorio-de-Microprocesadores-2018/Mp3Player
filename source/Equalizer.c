@@ -3,56 +3,26 @@
 
 #include "arm_math.h"
 #include "assert.h"
-///#include "math_helper.h"
 
-/* Number of 2nd order Biquad stages per filter */
-#define NUMSTAGES 		2U
-
-#define EQ_NUM_BANDS 	5U
-
-/* ----------------------------------------------------------------------
-** Q31 state buffers for Band1, Band2, Band3, Band4, Band5
-** ------------------------------------------------------------------- */
-static q15_t biquadStateBand1[4 * NUMSTAGES];
-//static q63_t biquadStateBand2[4 * NUMSTAGES];
-//static q31_t biquadStateBand3[4 * NUMSTAGES];
-//static q31_t biquadStateBand4[4 * NUMSTAGES];
-//static q31_t biquadStateBand5[4 * NUMSTAGES];
-
-
-//static arm_biquad_cas_df1_32x64_ins_q31 	S1;
-static arm_biquad_casd_df1_inst_q15 S1;
-//arm_biquad_cas_df1_32x64_ins_q31 	S2;
-//arm_biquad_casd_df1_inst_q31 		S3;
-//arm_biquad_casd_df1_inst_q31 		S4;
-//arm_biquad_casd_df1_inst_q31 		S5;
 
 
 /* ----------------------------------------------------------------------
-** Q31 input and output buffers
+** Q31 state buffers for B
 ** ------------------------------------------------------------------- */
-static q15_t inputScaled[2500];
-static q15_t output[2500];
-static q15_t outputScaled[2500];
+static q15_t filterState[EQ_NUM_BANDS][4 * EQ_NUM_STAGES ];
+
+
+static arm_biquad_casd_df1_inst_q15 filter[EQ_NUM_BANDS];
+
+/* ----------------------------------------------------------------------
+** Desired gains, in dB, per band
+** ------------------------------------------------------------------- */
+static int8_t gainDB[EQ_NUM_BANDS];
+
 
 
 static bool enable;
-/* ----------------------------------------------------------------------
-** Entire coefficient table.  There are 10 coefficients per 4th order Biquad
-** cascade filter.  The first 10 coefficients correspond to the -9 dB gain
-** setting of band 1; the next 10 coefficient correspond to the -8 dB gain
-** setting of band 1; and so on.  There are 10*19=190 coefficients in total
-** for band 1 (gains = -9, -8, -7, ..., 9).  After this come the 190 coefficients
-** for band 2.
-**
-** The coefficients are in Q29 format and require a postShift of 2.
-** ------------------------------------------------------------------- */
-static const int8_t dBmin = -9;
 
-static const int8_t dBmax = 9;
-
-static const int8_t nSteps = 19;
-//static const int8_t nStages = 2;
 
 #if 0
 const q15_t coeffs[21][6] =
@@ -79,7 +49,6 @@ const q15_t coeffs[21][6] =
 	{0x4165, 0x0000, 0x81be, 0x3d12, 0x81be, 0x3e77},
 	{0x4191, 0x0000, 0x81a9, 0x3cfc, 0x81a9, 0x3e8d}
 };
-#endif
 
 
 const q15_t coeffs[19][12] =
@@ -105,7 +74,6 @@ const q15_t coeffs[19][12] =
 	{0x3b89, 0x0000, 0x937b, 0x3337, 0x6b92, 0xd03c, 0x4000, 0x0000, 0x846b, 0x3c08, 0x7ba6, 0xc41d}
 };
 
-#if 0
 float equalizerCoeffs[13][3][6*3]=
 {
 	{
@@ -176,18 +144,13 @@ float equalizerCoeffs[13][3][6*3]=
 };
 #endif
 
-/* ----------------------------------------------------------------------
-** Desired gains, in dB, per band
-** ------------------------------------------------------------------- */
-int gainDB[EQ_NUM_BANDS] = {0, -3, 6, 4, -6};
-
 
 void Equalizer_Enable(bool b)
 {
 	enable = b;
 	if(b==false)
 	{
-		memset(biquadStateBand1,0,4 * NUMSTAGES);
+		memset(filterState,0,sizeof(filterState));
 	}
 }
 
@@ -199,22 +162,28 @@ bool Equalizer_IsEnable()
 void Equalizer_SetLevel(uint8_t band, int8_t level)
 {
 	assert(0<=band && band<EQ_NUM_BANDS);
-	assert(dBmin<=level && level<=dBmax);
+	assert(EQ_MIN_DB<=level && level<=EQ_MAX_DB);
 
 	gainDB[band] = level;
 
-	if(band == 0)
-	{
-		//arm_float_to_q15(equalizerCoeffs[level - dBmin][0],coeffs,18);
-		S1.pCoeffs = coeffs[level - dBmin];
-		memset(biquadStateBand1,0,4 * NUMSTAGES);
-	}
+	int a = EQ_NUM_STEPS*EQ_NUM_COEFFS*band + EQ_NUM_COEFFS*(level - EQ_MIN_DB);
+
+	filter[band].pCoeffs = getCoeffs(band,level);
+	//memcpy(&filterCoeffs[EQ_NUM_COEFFS*band],getCoeffs(band,level),EQ_NUM_COEFFS*sizeof(q15_t));
+//	if(band == 0)
+//	{
+//		//arm_float_to_q15(equalizerCoeffs[level - dBmin][0],coeffs,18);
+//
+//		//getCoeffs(band,level);
+//		//S1.pCoeffs = coeffs[level - dBmin];
+//		//memset(filterState,0,4 * NUMSTAGES);
+//	}
 }
 
 void Equalizer_GetLevelLimits(int8_t *min, int8_t *max)
 {
-	*min = dBmin;
-	*max = dBmax;
+	*min = EQ_MIN_DB;
+	*max = EQ_MAX_DB;
 }
 
 int8_t Equalizer_GetLevel(uint8_t band)
@@ -275,35 +244,15 @@ void TestFloatToQ15(void)
 void Equalizer_Init()
 {
 
-
-	arm_biquad_cascade_df1_init_q15(
-				&S1,
-				NUMSTAGES,
-				coeffs[gainDB[0] - dBmin],
-				biquadStateBand1, 1);
+	for(int i=0; i< EQ_NUM_BANDS; i++)
+		arm_biquad_cascade_df1_init_q15(
+				&filter[i],
+				EQ_NUM_STAGES,
+				getCoeffs(i,gainDB[i]),
+				filterState[i], 1);
 
 	return;
 
-  /* Initialize the state and coefficient buffers for all Biquad sections */
-//  arm_biquad_cas_df1_32x64_init_q31(&S1, NUMSTAGES,
-//		  (q31_t *) &coeffTable[190*0 + 10*(gainDB[0] + 9)],
-//            &biquadStateBand1Q31[0], 2);
-
-//  arm_biquad_cas_df1_32x64_init_q31(&S2, NUMSTAGES,
-//            (q31_t *) &coeffTable[190*1 + 10*(gainDB[1] + 9)],
-//            &biquadStateBand2Q31[0], 2);
-//
-//  arm_biquad_cascade_df1_init_q31(&S3, NUMSTAGES,
-//          (q31_t *) &coeffTable[190*2 + 10*(gainDB[2] + 9)],
-//          &biquadStateBand3Q31[0], 2);
-//
-//  arm_biquad_cascade_df1_init_q31(&S4, NUMSTAGES,
-//          (q31_t *) &coeffTable[190*3 + 10*(gainDB[3] + 9)],
-//          &biquadStateBand4Q31[0], 2);
-//
-//  arm_biquad_cascade_df1_init_q31(&S5, NUMSTAGES,
-//          (q31_t *) &coeffTable[190*4 + 10*(gainDB[4] + 9)],
-//          &biquadStateBand5Q31[0], 2);
 }
 
 void Equalizer_Apply(int16_t * inputQ15,uint16_t size)
@@ -314,15 +263,19 @@ void Equalizer_Apply(int16_t * inputQ15,uint16_t size)
 		** Scale down by 1/4.  This provides additional headroom so that the
 		** graphic EQ can apply gain.
 		** ------------------------------------------------------------------- */
-		arm_scale_q15(inputQ15, 0x7FFF, -2, inputQ15, size);
+		arm_scale_q15(inputQ15, 0x7FFF, -1, inputQ15, size);
 
-		arm_biquad_cascade_df1_q15(&S1, inputQ15, inputQ15, size);
+
+		arm_biquad_cascade_df1_q15(&filter[0], inputQ15, inputQ15, size);
+		arm_biquad_cascade_df1_q15(&filter[1], inputQ15, inputQ15, size);
+		arm_biquad_cascade_df1_q15(&filter[2], inputQ15, inputQ15, size);
+
 		///memcpy(inputQ15,output,size*sizeof(int16_t));
 
 		/* ----------------------------------------------------------------------
 		** Scale back up
 		** ------------------------------------------------------------------- */
-		arm_scale_q15(inputQ15, 0x7FFF, 2, inputQ15, size);
+		 arm_scale_q15(inputQ15, 0x7FFF, 1, inputQ15, size);
 	}
     return;
 }

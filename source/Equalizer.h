@@ -12,7 +12,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define EQ_NUM_BANDS 5U
+#include "EqualizerDefs.h"
+
 
 void Equalizer_Enable(bool b);
 
