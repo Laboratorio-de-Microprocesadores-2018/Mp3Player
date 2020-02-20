@@ -49,6 +49,8 @@ typedef struct {
         void * ptr;
         int32_t int32;
     }user_data;
+	int8_t rangeMax;
+	int8_t rangeMin;
 }lv_settings_item_t;
 
 

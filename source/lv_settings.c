@@ -131,6 +131,11 @@ lv_obj_t * lv_settings_create(lv_settings_item_t * root_item, lv_event_cb_t even
 
     menu_btn = lv_btn_create(settings_parent, NULL);
     lv_btn_set_fit(menu_btn, LV_FIT_TIGHT);
+	lv_obj_align(menu_btn, NULL, LV_ALIGN_IN_TOP_RIGHT, 0,0);
+
+	//lv_btn_set_style(menu_btn, LV_BTN_STYLE_REL,&lv_style_transp);
+	//lv_btn_set_style(menu_btn, LV_BTN_STYLE_PR, &lv_style_transp);
+
     root_ext_t * ext = lv_obj_allocate_ext_attr(menu_btn, sizeof(root_ext_t));
     ext->item = root_item;
     ext->event_cb = event_cb;
@@ -138,10 +143,7 @@ lv_obj_t * lv_settings_create(lv_settings_item_t * root_item, lv_event_cb_t even
     lv_obj_set_event_cb(menu_btn, root_event_cb);
     if(group) lv_group_add_obj(group, menu_btn);
 
-    lv_obj_t * menu_label = lv_label_create(menu_btn, NULL);
-    lv_label_set_text(menu_label, LV_SYMBOL_LIST);
-
-    lv_obj_set_pos(menu_btn, 0, 0);
+   
 
     lv_ll_init(&history_ll, sizeof(histroy_t));
 
@@ -502,7 +504,7 @@ static void add_slider(lv_obj_t * page, lv_settings_item_t * item)
                                                        lv_obj_get_height(name) +
                                                        style_item_cont.body.padding.inner);
     lv_obj_set_event_cb(slider, slider_event_cb);
-    lv_slider_set_range(slider, 0, 256);
+    lv_slider_set_range(slider, item->rangeMin, item->rangeMax);
     lv_slider_set_value(slider, item->state, LV_ANIM_OFF);
     if(group) lv_group_add_obj(group, slider);
 }
@@ -629,6 +631,8 @@ static void slider_event_cb(lv_obj_t * slider, lv_event_t e)
     lv_obj_t * cont = lv_obj_get_parent(slider);
     item_cont_ext_t * item_ext = lv_obj_get_ext_attr(cont);
 
+	lv_list_focus(slider->par, LV_ANIM_ON);
+
     if(e == LV_EVENT_VALUE_CHANGED) {
         item_ext->item->state = lv_slider_get_value(slider);
         menu_cont_ext_t * menu_ext = lv_obj_get_ext_attr(act_cont);
@@ -650,6 +654,8 @@ static void sw_event_cb(lv_obj_t * sw, lv_event_t e)
 {
     lv_obj_t * cont = lv_obj_get_parent(sw);
     item_cont_ext_t * item_ext = lv_obj_get_ext_attr(cont);
+
+	lv_list_focus(sw->par, LV_ANIM_ON);
 
     if(e == LV_EVENT_VALUE_CHANGED) {
 
@@ -771,6 +777,8 @@ static void header_back_event_cb(lv_obj_t * btn, lv_event_t e)
         }
         else {
             /*No previous menu, so no main container*/
+
+			lv_event_send(settings_parent, LV_EVENT_PRESSED, NULL);
             act_cont = NULL;
         }
     }
