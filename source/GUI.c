@@ -146,12 +146,15 @@ typedef struct
 								objects					\
 							}screenName;				\
 
+
 typedef struct {
 	lv_obj_t* container;
-	lv_obj_t* song;
+	lv_obj_t * title;
 	lv_obj_t* artist;
 	lv_obj_t* album;
-	lv_obj_t* date;
+	lv_obj_t* year;
+	lv_obj_t* comment;
+	lv_obj_t* tracknum;
 	lv_obj_t* genre;
 }GUI_Metadata_t;
 /**
@@ -670,6 +673,50 @@ static void GUI_CreateMusicScreen()
 	lv_obj_set_protect(metadata, LV_SIGNAL_CHILD_CHG);
 	lv_obj_set_hidden(metadata, true);
 	gui.musicScreen.metadata.container = metadata;
+
+	lv_obj_t* label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.container, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Title: ");
+	gui.musicScreen.metadata.title = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.title, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Artist: ");
+	gui.musicScreen.metadata.artist = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.artist, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Album: ");
+	gui.musicScreen.metadata.album = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.album, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Year: ");
+	gui.musicScreen.metadata.year = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.year, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Comment: ");
+	gui.musicScreen.metadata.comment = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.comment, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Track number: ");
+	gui.musicScreen.metadata.tracknum = label;
+
+	label = lv_label_create(metadata, Title);
+	lv_label_set_align(label, LV_LABEL_ALIGN_IN_TOP_MID);
+	lv_obj_align(label, gui.musicScreen.metadata.tracknum, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+	lv_label_set_text(queueProgress, "Genre: ");
+	gui.musicScreen.metadata.genre = label;
 
 	/* Volume bar */
 	lv_obj_t* volumeBar = lv_slider_create(cont, NULL);
@@ -1939,14 +1986,38 @@ static void GUI_SetTrackInfo(char * _fileName)
 	lv_label_set_text(gui.musicScreen.remainingTime, duration);
 
 	// Read track metadata
-	//if (hasMetadata)
-	//{
-		//lv_label_set_text(gui.musicScreen.Title, "Californication");
-		//lv_label_set_text(gui.musicScreen.Album, "Red Hot Chili Peppers");
-		//lv_label_set_text(gui.musicScreen.Artist, "Stadium Arcadium");
-		//lv_label_set_text(gui.musicScreen.Year, "2013");
-	//}
-	//else
+	if (MP3_HasMetadata())
+	{
+		ID3v1_tag metadata = MP3_GetMetadata();
+
+		char buff[50];
+
+		snprintf(buff,50,"Title: %s",metadata.title);
+		lv_label_set_text(gui.musicScreen.metadata.title, buff);
+
+		snprintf(buff,50,"Artist: %s",metadata.artist);
+		lv_label_set_text(gui.musicScreen.metadata.artist, buff);
+
+		snprintf(buff,50,"Album: %s",metadata.album);
+		lv_label_set_text(gui.musicScreen.metadata.album, buff);
+
+		snprintf(buff,50,"Year: %s",metadata.year);
+		lv_label_set_text(gui.musicScreen.metadata.year, buff);
+
+		snprintf(buff,50,"Comment: %s",metadata.comment);
+		lv_label_set_text(gui.musicScreen.metadata.comment, buff);
+
+		snprintf(buff,50,"Track number: %d",metadata.tracknum);
+		lv_label_set_text(gui.musicScreen.metadata.tracknum, buff);
+
+		snprintf(buff,50,"Genre: %d",metadata.genre);
+		lv_label_set_text(gui.musicScreen.metadata.genre, buff);
+
+
+		lv_label_set_text(gui.musicScreen.Title, metadata.title);
+		lv_label_set_text(gui.musicScreen.Artist, metadata.artist);
+	}
+	else
 	{
 		char fileName[255];
 		strcpy(fileName, _fileName);

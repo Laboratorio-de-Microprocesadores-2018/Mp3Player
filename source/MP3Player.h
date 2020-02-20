@@ -51,6 +51,19 @@ typedef enum
 }MP3PlaybackMode;
 
 
+typedef struct
+{
+	char TAG[3];
+	char title[30];
+	char artist[30];
+	char album[30];
+	char year[4];
+	char comment[28];
+	char seperator;
+	char track_num;
+	char genre;
+} ID3v1_tag;
+
 typedef union
 {
 
@@ -103,6 +116,9 @@ void MP3_Stop(void);
  *
  */
 void MP3_Rewind(void);
+
+bool MP3_HasMetadata();
+ID3v1_tag MP3_GetMetadata();
 
 /**
  *

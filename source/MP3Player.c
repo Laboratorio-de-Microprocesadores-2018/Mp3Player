@@ -38,7 +38,7 @@ MP3_EqLevels_t eqLevels;
 
 static MP3_Status status;
 MP3PlaybackMode playbackMode = MP3_RepeatAll;
-
+ID3v1_tag metadata;
 /**
  * Callback called every time a new track starts playing
  */
@@ -411,6 +411,16 @@ MP3_Status MP3_GetStatus()
 	return status;
 }
 
+bool MP3_HasMetadata()
+{
+	return strcmp(metadata.TAG,"TAG")==0;
+}
+
+ID3v1_tag MP3_GetMetadata()
+{
+	return metadata;
+}
+
 void MP3_SetVolume(uint8_t level)
 {
 #if defined(_WIN64) || defined(_WIN32)
@@ -478,6 +488,36 @@ void MP3_Task()
 	{
 		SET_DBG_PIN(1);
 
+		/* Move to end of the file to append data */
+		res = f_lseek(currentFile, f_size(currentFile)-128);
+
+		uint16_t br;
+
+		FRESULT res;
+
+		res = FE_ReadFile(currentFile, metadata.TAG, 3, &br);
+		res = FE_ReadFile(currentFile, metadata.title, 30, &br);
+		res = FE_ReadFile(currentFile, metadata.artist, 30, &br);
+		res = FE_ReadFile(currentFile, metadata.album, 30, &br);
+		res = FE_ReadFile(currentFile, metadata.year, 4, &br);
+		res = FE_ReadFile(currentFile, metadata.comment, 28, &br);
+		res = FE_ReadFile(currentFile, &metadata.seperator, 1, &br);
+		res = FE_ReadFile(currentFile, &metadata.track_num, 1, &br);
+		res = FE_ReadFile(currentFile, &metadata.genre, 1, &br);
+
+		/* Move to start of the file to start playing*/
+		res = f_lseek(currentFile, 0);
+
+		//if(strcmp(metadata.TAG == "TAG") == 0)
+		{
+			PRINTF("%s\n", metadata.title);
+			PRINTF("%s\n", metadata.artist);
+			PRINTF("%s\n", metadata.album);
+			PRINTF("%s\n", metadata.year);
+			PRINTF("%s\n", metadata.comment);
+			PRINTF("%d\n", metadata.track_num);
+			PRINTF("%d\n", metadata.genre);
+		}
 		status_t s = MP3_DecodeFrame();
 		if(s==kStatus_Success)
 		{
